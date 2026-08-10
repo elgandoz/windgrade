@@ -3,10 +3,10 @@
 Nearby wind-station readings on a light offline map, for paraglider XC pilots.
 An XCTrack web widget plus a standalone page.
 
-Each station is an arrow: rotated to wind direction, **filled** by a safety
-rating from the average wind, **outlined** by the same rating applied to the
-gust, with the speed always readable inside it. Drawn over cached terrain, so
-you can see whether a reading came from a valley floor, a summit, or a gorge —
+Each station is an arrow pointing downwind: **filled** by a six-level rating
+from the average wind, **rimmed** by the same scale applied to the gust, with
+the `average/gust` pair always printed beside it. Drawn over terrain, so you
+can see whether a reading came from a valley floor, a summit, or a gorge —
 which is the part a station name can't tell you when you're flying somewhere
 new.
 
@@ -16,8 +16,20 @@ turbulence, lee or rotor is inferred.
 
 ## Status
 
-Phase 0. Only `probe.html` exists — a capability probe that has to be run
-inside XCTrack before the architecture is settled. See `docs/plan.md`.
+Working: the engine, a winds.mobi provider covering 13 station networks, a
+launcher with a widget configurator, an installable list page, and an XCTrack
+overlay whose registration against XCTrack's own map has been measured and
+confirmed on device.
+
+Not built: our own offline PMTiles basemap (Phase 3) and the final polish
+(Phase 4). One question still open — whether a tap can reach a background
+XCTrack widget — decides whether zoom sync is possible at all.
+
+Start at `docs/next-session.md`. Then `docs/plan.md` for the phases,
+`docs/findings.md` for what was measured, `docs/handover.md` for why.
+
+This README is deliberately still thin; rewriting it for pilots is a Phase 4
+task.
 
 ## Running the probe
 
