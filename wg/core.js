@@ -62,7 +62,9 @@ var SPEC = [
     help:"Readings update about every 10 min. Do not poll faster." },
 
   { k:"size",  t:"int", d:50, min:0, max:100,
-    lab:"Size", help:"Font scale, windspion convention." },
+    lab:"Size", help:"Scales text on the pages and markers in the overlay." },
+  { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto",
+    lab:"Theme", help:"Auto follows your phone." },
   { k:"badge", t:"int", d:1, min:0, max:1, only:"widget",
     lab:"Show calibration badge",
     help:"States the assumed zoom so a mis-paired map is visible." }
@@ -81,7 +83,12 @@ function toNum(v) {
 }
 
 function clamp(spec, raw) {
-  var v;
+  var v, i;
+  if (spec.t === "enum") {
+    if (raw === null || raw === undefined) return spec.d;
+    for (i = 0; i < spec.opts.length; i++) if (spec.opts[i] === String(raw)) return String(raw);
+    return spec.d;                                      /* unknown -> default */
+  }
   if (spec.t === "num" || spec.t === "int") {
     v = toNum(raw);
     if (v !== v) return spec.d;                       /* NaN -> default */
@@ -125,20 +132,58 @@ function defaults() {
   for (i = 0; i < SPEC.length; i++) o[SPEC[i].k] = SPEC[i].d;
   return o;
 }
-function initConfig(search) { config = cfg(search); return config; }
-function setConfig(patch) {
-  if (!config) initConfig("");
-  var k, i, sp;
-  for (k in patch) {
-    if (!patch.hasOwnProperty(k)) continue;
-    for (i = 0; i < SPEC.length; i++) {
-      sp = SPEC[i];
-      if (sp.k === k) { config[k] = clamp(sp, patch[k]); break; }
+var CFG_KEY = "cfg";
+
+/* Precedence: defaults < stored < URL. The URL wins because a widget URL
+   pasted into XCTrack, or a link shared to another pilot, must mean what it
+   says regardless of what this device remembered. `opts.store` is opt-in:
+   the overlay widget deliberately does NOT read stored settings, since its
+   whole configuration arrives in the URL. */
+function initConfig(search, opts) {
+  config = defaults();
+  if (opts && opts.store) {
+    var raw = store.get(CFG_KEY), saved, k;
+    if (raw) {
+      try { saved = JSON.parse(raw); } catch (e) { saved = null; }
+      if (saved) for (k in saved) if (saved.hasOwnProperty(k)) setConfig1(k, saved[k]);
     }
+  }
+  var q = parseQuery(search), i, sp;
+  for (i = 0; i < SPEC.length; i++) {
+    sp = SPEC[i];
+    if (q.hasOwnProperty(sp.k)) config[sp.k] = clamp(sp, q[sp.k]);
   }
   return config;
 }
-function resetConfig() { config = defaults(); return config; }
+
+function setConfig1(k, v) {
+  var i;
+  for (i = 0; i < SPEC.length; i++) {
+    if (SPEC[i].k === k) { config[k] = clamp(SPEC[i], v); return true; }
+  }
+  return false;
+}
+function saveConfig() {
+  var o = {}, i, sp;
+  for (i = 0; i < SPEC.length; i++) {
+    sp = SPEC[i];
+    if (sp.ui === false) continue;            /* never persist a position */
+    o[sp.k] = config[sp.k];
+  }
+  store.set(CFG_KEY, JSON.stringify(o));
+}
+function setConfig(patch) {
+  if (!config) initConfig("");
+  var k;
+  for (k in patch) if (patch.hasOwnProperty(k)) setConfig1(k, patch[k]);
+  saveConfig();
+  return config;
+}
+function resetConfig() {
+  config = defaults();
+  store.del(CFG_KEY);
+  return config;
+}
 
 /* Only non-default values reach the URL, so a shared link stays short and
    a later change of default reaches everyone who did not override it. */
@@ -471,7 +516,7 @@ return {
   cfg: cfg, parseQuery: parseQuery, clamp: clamp, toNum: toNum,
   store: store,
   defaults: defaults, initConfig: initConfig, setConfig: setConfig,
-  resetConfig: resetConfig, buildUrl: buildUrl,
+  resetConfig: resetConfig, buildUrl: buildUrl, saveConfig: saveConfig,
   getConfig: function () { if (!config) initConfig(""); return config; },
 
   position: position, readXCTrack: readXCTrack, setGeoFix: setGeoFix,

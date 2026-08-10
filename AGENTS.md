@@ -146,10 +146,18 @@ Three things that will otherwise cost an hour:
 - **winds.mobi sends `access-control-allow-origin: *`**, verified from a localhost
   origin, so no proxy is needed in development or production.
 
-Unlike `hx-call` there is no service worker yet, so an edit appears on the first
-reload rather than the second. If one is ever added, that changes — and its cache
-must key on the path, not the full URL, or XCTrack's `?lat=…&lng=…` reloads miss
-it every time.
+There **is** a service worker now (`sw.js`), so an edit takes two reloads to
+appear: stale-while-revalidate serves the cached copy and fetches yours for next
+time. Hard-reload, or tick *Bypass for network* under DevTools → Application →
+Service workers, and it goes away. Chasing a change that "didn't take" is
+otherwise a good way to lose an hour.
+
+**The service worker caches the app shell and NEVER a reading.** The origin guard
+in `sw.js` is what enforces it — providers are cross-origin, so their responses
+never enter the cache. If a provider is ever added on our own origin, exclude it
+explicitly. Terrain may be cached; terrain does not change, and wind does. A
+cache that served a stale reading as current would defeat the staleness logic
+from behind.
 
 Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC`
 works the same way, e.g. `?zoom=10&peaks=1&stale=45` — or just use the

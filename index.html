@@ -5,18 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A1116">
 <title>Windgrade — nearby wind stations on terrain</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="wg/base.css">
 <style>
-:root{
-  --ink:#0A1116; --panel:#151F27; --panel-hi:#1D2B36; --rule:#2A3B48;
-  --fg:#E8F0F5; --dim:#7B909F; --chart:#54A6DC;
-  --amber:#E9A33C; --amber-bg:#241A0B; --amber-line:#3D2C10;
-  --mono:ui-monospace,"Roboto Mono",monospace;
-  --sans:system-ui,-apple-system,Roboto,sans-serif;
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--ink);color:var(--fg);font:400 16px/1.45 var(--sans);
-  padding:0 0 40px}
-.wrap{max-width:640px;margin:0 auto;padding:20px 14px}
+body{padding:0 0 40px}
+.wrap{max-width:calc(640px * var(--scale));margin:0 auto;padding:20px 14px}
 h1{margin:0 0 4px;font-size:1.5em;letter-spacing:-.01em}
 .sub{margin:0 0 20px;color:var(--dim);font-size:.92em;line-height:1.5}
 .sub b{color:var(--fg)}
@@ -28,13 +23,6 @@ h2{margin:26px 0 8px;font-size:.82em;letter-spacing:.12em;text-transform:upperca
 .pick b{display:block;margin-bottom:3px}
 .pick span{display:block;font-size:.8em;color:var(--dim);line-height:1.4}
 
-.field{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule)}
-.field label{flex:1;min-width:0;font-size:.92em}
-.field label small{display:block;color:var(--dim);font-size:.8em;line-height:1.4}
-.field input[type=number]{width:92px;padding:9px;background:var(--panel);color:var(--fg);
-  border:1px solid var(--rule);border-radius:3px;font:600 1em var(--mono);text-align:right}
-.field input[type=checkbox]{width:22px;height:22px;accent-color:var(--chart)}
-.field .pair{flex:none;font:600 .78em var(--mono);color:var(--chart);min-width:104px;text-align:right}
 
 button{font:600 .9em var(--sans);cursor:pointer}
 #reset{width:100%;padding:10px;margin-top:12px;background:var(--panel-hi);
@@ -167,11 +155,14 @@ a{color:var(--chart)}
 <script src="wg/core.js"></script>
 <script src="wg/qr.js"></script>
 <script src="wg/fields.js"></script>
+<script src="wg/offline.js"></script>
 <script>
 "use strict";
 
-/* Seed from the URL, so a shared link opens the configurator on its settings. */
-WG.initConfig(location.search);
+/* Stored settings first, then the URL on top, so the launcher opens on
+   whatever this device last chose and a shared link still wins. */
+WG.initConfig(location.search, { store: true });
+WG.applyTheme();
 
 var urlBox = document.getElementById("url");
 var qrCanvas = document.getElementById("qrc");
@@ -211,6 +202,7 @@ var fields = WG.fields(document.getElementById("fields"), { onChange: refreshLin
 
 document.getElementById("reset").addEventListener("click", function(){
   WG.resetConfig();
+  WG.applyTheme();
   fields.reload();
   refreshLinks();
 });

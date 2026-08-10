@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated from ARROW in wg/core.js. Regenerate rather than hand-edit. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -32 64 64" width="512" height="512">
+  <rect x="-32" y="-32" width="64" height="64" rx="12" fill="#0A1116"/>
+  <g transform="rotate(35) scale(1.05)" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#FFFFFF" stroke-width="11"/>
+    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#0A1116" stroke-width="8.5"/>
+    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#EE8A1C" stroke-width="5"/>
+    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="#EFCB1F" stroke="#3A4750" stroke-width="1"/>
+  </g>
+</svg>

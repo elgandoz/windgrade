@@ -38,12 +38,22 @@ function buildRow(sp, onInput) {
   row.appendChild(lab);
 
   /* A 0/1 integer with min 0 max 1 is a checkbox to a pilot, however it is
-     stored. Everything else is a number field. */
+     stored. An enum is a select. Everything else is a number field. */
   var isBool = (sp.t === "int" && sp.min === 0 && sp.max === 1);
-  var input = document.createElement("input");
-  if (isBool) {
+  var isEnum = (sp.t === "enum");
+  var input, o, op;
+  if (isEnum) {
+    input = document.createElement("select");
+    for (o = 0; o < sp.opts.length; o++) {
+      op = document.createElement("option");
+      op.value = op.textContent = sp.opts[o];
+      input.appendChild(op);
+    }
+  } else if (isBool) {
+    input = document.createElement("input");
     input.type = "checkbox";
   } else {
+    input = document.createElement("input");
     input.type = "number";
     input.inputMode = "numeric";
     if (sp.min !== undefined) input.min = sp.min;
@@ -75,6 +85,22 @@ function buildRow(sp, onInput) {
   return { el: row, load: load };
 }
 
+/* ── theme and scale ──────────────────────────────────────────────────
+   Deliberately NOT in core.js. That file touches no DOM, which is what lets
+   tools/test-core.js require it in node; putting a documentElement write
+   there would break the whole test path for one convenience. ───────── */
+WG.applyTheme = function () {
+  var c = WG.getConfig(), el = document.documentElement;
+  if (c.theme === "auto") el.removeAttribute("data-theme");
+  else el.setAttribute("data-theme", c.theme);
+  /* `size` drives text here and marker size in the overlay, and the two want
+     different curves: 1 + size/100 put the default at 1.5x and overflowed the
+     chip rows on a 430 px phone. 0.85..1.35 is the useful range for text; the
+     overlay keeps its own mapping. Both stay monotonic in `size`, so the
+     control still means one thing to a pilot. */
+  el.style.setProperty("--scale", (0.85 + c.size / 200).toFixed(3));
+};
+
 WG.fields = function (container, opts) {
   var o = opts || {}, built = [], i, sp;
 
@@ -91,6 +117,7 @@ WG.fields = function (container, opts) {
         var patch = {};
         patch[spec.k] = value;
         WG.setConfig(patch);
+        WG.applyTheme();             /* live: theme and scale, no reload */
         reload();                    /* reflect clamping back into the fields */
         if (o.onChange) o.onChange();
       };

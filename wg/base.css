@@ -1,0 +1,124 @@
+/* ══════════════════════════════════════════════════════════════════════
+   wg/base.css — shared tokens and primitives. Page layout stays inline.
+
+   Theme: light by default, dark when the phone asks for it, and forced
+   either way by <html data-theme="dark|light">, which WG.applyTheme() sets
+   from ?theme=. The dark media block is guarded by :not([data-theme=light])
+   so an explicit light choice still wins on a dark phone.
+
+   --scale comes from ?size= (0-100 -> 1.0-2.0).
+
+   NOT loaded by widget.html. That page's <body> must stay unpainted —
+   XCTrack renders white or absent as transparent, which is what lets the
+   overlay float over its map — so it carries its own few rules instead.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root{
+  --scale:1;
+
+  /* light */
+  --ink:#F4F6F8;
+  --panel:#FFFFFF;
+  --panel-hi:#EDF2F6;
+  --rule:#CBD6DE;
+  --fg:#0F1A21;
+  --dim:#5C7180;
+  --chart:#1E6FA8;
+  --amber:#A96608;
+  --red:#B3271C;
+  --green:#22794B;
+  --amber-bg:#FDF3E0;
+  --amber-line:#E8CFA0;
+  --stale-bg:#FCEDEA;
+  --warn-line:#E8CFA0;
+  --shadow:0 1px 2px rgba(15,26,33,.10);
+
+  --mono:ui-monospace,"Roboto Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#0A1116;
+    --panel:#151F27;
+    --panel-hi:#1D2B36;
+    --rule:#2A3B48;
+    --fg:#E8F0F5;
+    --dim:#7B909F;
+    --chart:#54A6DC;
+    --amber:#E9A33C;
+    --red:#D6483C;
+    --green:#4FB477;
+    --amber-bg:#241A0B;
+    --amber-line:#3D2C10;
+    --stale-bg:#20161A;
+    --warn-line:#5A4520;
+    --shadow:none;
+  }
+}
+
+[data-theme="dark"]{
+  --ink:#0A1116;
+  --panel:#151F27;
+  --panel-hi:#1D2B36;
+  --rule:#2A3B48;
+  --fg:#E8F0F5;
+  --dim:#7B909F;
+  --chart:#54A6DC;
+  --amber:#E9A33C;
+  --red:#D6483C;
+  --green:#4FB477;
+  --amber-bg:#241A0B;
+  --amber-line:#3D2C10;
+  --stale-bg:#20161A;
+  --warn-line:#5A4520;
+  --shadow:none;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+/* Pages hide elements with the `hidden` property, which the browser applies
+   as a low-priority [hidden]{display:none}. Any author rule setting `display`
+   silently outranks it and the element stays visible. Restate it so `hidden`
+   always wins. */
+[hidden]{display:none !important}
+
+html,body{
+  margin:0;
+  color:var(--fg);
+  font:400 calc(14px * var(--scale))/1.4 var(--sans);
+}
+body{background:var(--ink)}
+
+a{color:var(--chart)}
+button,summary{cursor:pointer}
+
+/* ── SPEC-driven settings rows, rendered by wg/fields.js ───────────── */
+.field{display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--rule)}
+.field label{flex:1;min-width:0;font-size:.92em}
+.field label small{display:block;color:var(--dim);font-size:.8em;line-height:1.4}
+.field input[type=number],.field select{
+  width:calc(92px * var(--scale));padding:9px;background:var(--panel);color:var(--fg);
+  border:1px solid var(--rule);border-radius:3px;
+  font:600 1em var(--mono);text-align:right;
+}
+.field select{text-align:left}
+.field input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--chart)}
+/* the live XCTrack scale beside the zoom row: the pairing is the whole point */
+.field .pair{flex:none;font:600 .78em var(--mono);color:var(--chart);
+  min-width:calc(104px * var(--scale));text-align:right}
+
+/* ── small primitives used by both pages ──────────────────────────── */
+.tag{padding:2px 5px;border:1px solid var(--rule);border-radius:2px;
+  font-family:var(--mono);font-size:.72em;color:var(--dim);white-space:nowrap}
+.tag.fresh{color:var(--green);border-color:currentColor}
+.tag.warn{color:var(--amber);border-color:currentColor}
+.tag.stale{color:var(--red);border-color:currentColor}
+
+:focus-visible{outline:2px solid var(--chart);outline-offset:2px}
+
+/* Hover is gated behind a fine pointer. On a touch screen :hover fires on tap
+   and sticks until something else is tapped, leaving a control lit long after
+   use. :active is never gated — the tap-highlight reset above removes the
+   platform's own press feedback, so it is the only confirmation a finger gets. */
