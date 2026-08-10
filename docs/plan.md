@@ -16,7 +16,7 @@ It answers, in one page:
 | Does the origin serve HTTP 206 to a `Range` request? | PMTiles requires byte ranges. |
 | Do the wind APIs send CORS headers? | No CORS means a proxy, which means it is no longer purely static. |
 | WebGL present and sane? | Canvas vs MapLibre. |
-| Does a `tel:` link open the dialer? | Not needed here, but the sibling project needs the answer. |
+| ~~Does a `tel:` link open the dialer?~~ | **Answered by `hx-call`, no probe needed. It does not.** Measured on Android 17 / WebView 150: anchor `tel:`, `tel:` by assignment, `intent://…ACTION_DIAL` and `window.open` all land on "Web page not available", which *strands the widget there until it reloads*. `navigator.clipboard` works, so `hx-call` copies the number instead. Irrelevant to windgrade except as proof that non-http schemes are unusable — and as confirmation that the probe's "Copy results as JSON" button is sound. |
 
 **Cleared.** `docs/findings.md` has the run. Every row above is answered, and
 nothing came back negative enough to need a conversation: no WebGL (Canvas was
@@ -78,6 +78,15 @@ transparent widget. No data, no map — just position, config and layout.
 Includes the four-link position chain above, with the last known position
 written to `localStorage` and a visible indication of which link supplied the
 current fix.
+
+**Two poll rates, and the difference is deliberate.** `hx-call` polls position
+every 60 s and warns not to lower it, because its data changes on a 15–30 minute
+cycle and battery matters more than freshness. That reasoning holds for
+*readings* here too — the ~10 minute fetch cadence. It does **not** hold for the
+overlay in Phase 3b, where position is a *rendering* input that has to track
+XCTrack's own 2 Hz map redraw. Same discipline, different conclusion: gate the
+work, not the poll. Poll at 2 Hz, but redraw only when the projected centre
+shifts by ≥1 px, which at z11 is roughly once every five seconds anyway.
 
 ## Phase 2 — data, no map
 
@@ -146,23 +155,48 @@ the right one: **do not wait on the XCTrack API change** — the devs are slow, 
 #1097 has sat untouched since April 2024. We do not need it.
 
 **The zoom desync is designed out, not mitigated.** Owner's insight: each XC map
-in XCTrack is a widget placed on a page, so this layout uses a **dedicated map
-widget pinned to a fixed scale**. chmd's observation that "there is exactly one XC
-map getting changed when zoom in/zoom out inputs are sent (the map at the bottom
-of the stack)" is what makes this work — a map widget that is not bottom-most
-never receives zoom input, so it holds its configured scale for the whole flight.
-There is then no drifting zoom to detect.
+in XCTrack is a widget placed on a page, and **both scale and rotation are
+per-widget options**. So this layout uses a **dedicated map widget** with the scale
+set to a value from the table and rotation pinned to north-up, and those settings
+hold for the flight. There is no drifting zoom left to detect, and no reliance on
+the pilot remembering anything mid-air.
 
-**Position, however, must track continuously.** Also owner's, and it is the real
-problem with the naïve version: `${lat}` and `${lng}` are substituted **when the
-widget loads**, so a URL-parameter overlay would sit at its start-of-flight
-position while the XC map pans along underneath. The fix is to stop treating the
-URL as the position source:
+chmd's related observation — "there is exactly one XC map getting changed when zoom
+in/zoom out inputs are sent (the map at the bottom of the stack)" — adds a second
+layer of safety: if our map is not the one receiving zoom input, no gesture can
+reach it. Whether a gesture *can* override a per-widget scale on the map that does
+receive it is the one thing left to check, and it does not matter if ours never
+receives any.
 
-- `${lat}` / `${lng}` are a **bootstrap only**, and the fallback when "Allow web
-  page to access XCTrack data" is switched off.
-- `XCTrack.getLocation()`, polled, is the live centre. The probe already confirmed
-  the bridge exists and exposes exactly that method.
+**Position, however, must track continuously**, and the URL cannot do it. The
+owner's instinct was right; `hx-call`'s notes make the mechanism precise, and it
+is worse for an overlay than "stuck at the start position":
+
+> "with `${lat}/${lng}` substitution XCTrack reloads the whole page periodically"
+
+So placeholders *do* update — by **reloading the entire page** at the widget's
+configured refresh rate, which `hx-call` recommends setting to 60–120 s when using
+them. For a map overlay that is the wrong mechanism twice over: a 1–2 minute
+position step is far too coarse, and every step throws away the canvas, the
+station cache and any in-flight fetch.
+
+Hence the required configuration, straight from `hx-call`:
+
+- **Refresh rate 0** — no reload at all — with **"Allow web page to access XCTrack
+  data" ON**. This is the documented pairing: refresh 0 with the JS interface,
+  60–120 s only when relying on placeholders.
+- `XCTrack.getLocation()`, polled at ~2 Hz, is the live centre. It is a **pull**
+  API returning a JSON string or `"null"`, with an `isValid` field — which is why
+  it is polled rather than subscribed. The probe confirmed the bridge exists and
+  exposes exactly that one method.
+- `${lat}` / `${lng}` stay as the **fallback** for a pilot who leaves the JS
+  interface off. `hx-call` also records the failure mode to copy: an unsubstituted
+  placeholder arrives as the literal string `${lat}`, parses to `NaN`, and must be
+  *ignored* so the chain falls through to the next source rather than rendering a
+  wrong position.
+- **"Allow tapping on the web page when locked" must be ON** if the widget is ever
+  to be interactive in flight. `hx-call` lists this as one of the two settings
+  pilots reliably get wrong.
 
 **And this is cheap, which is the non-obvious part.** At z11 the ground resolution
 is 52 m/px, so a glider at 40 km/h (11.1 m/s) moves **0.21 px/s** — about one
@@ -190,15 +224,16 @@ and uses plain Web Mercator maths. What remains unavailable:
 | Needed | Available? |
 |---|---|
 | Map centre | Live, via polled `getLocation()` |
-| Zoom | Not exposed, but **fixed by configuration** and pairable via the table |
-| Rotation (north-up vs track-up) | **No.** `heading` is exposed, but not whether the map is using it — so the pilot must select north-up |
-| Widget rect vs map rect alignment | **No** |
+| Zoom | Not exposed, but **fixed per widget** and pairable via the table |
+| Rotation | **Fixed per widget** — north-up pins and holds |
+| Widget rect vs map rect alignment | **No.** The remaining unknown |
 
-**The risk that remains.** Rotation and alignment, not zoom. If the map is left
-track-up, or the widget rectangle does not sit exactly over the map rectangle, the
-arrows land on the wrong terrain *while still looking authoritative* — a valley
-station read as a summit station. That is the confident wrong answer `AGENTS.md`
-forbids, and it is worse than no map.
+**The risk that remains is alignment.** Zoom and rotation are both pinned by
+configuration, so what is left is whether the widget rectangle sits exactly over
+the map rectangle, and whether the pilot set the pair up correctly in the first
+place. If either is off, the arrows land on the wrong terrain *while still looking
+authoritative* — a valley station read as a summit station. That is the confident
+wrong answer `AGENTS.md` forbids, and it is worse than no map.
 
 Mitigations, in order of how much they actually buy:
 
@@ -213,21 +248,39 @@ Mitigations, in order of how much they actually buy:
   page below a transparent XC map, which would put airspace lines and the track
   across our arrows.
 
-**Feasibility unknowns to settle before building — all measurable in one test
-layout:**
+**Feasibility — all five unknowns answered, 2026-08-10.** Four by the owner, one
+by deduction. The questions were: CSS or device pixels; does the map centre on the
+pilot; does a non-bottom map hold its scale; is north-up per widget; and are
+`${lat}`/`${lng}` load-time only.
 
-1. **Is the map scale in CSS pixels or device pixels?** The probe measured DPR 3.
-   Guessing wrong scales every offset by 3×. This is the single biggest risk to
-   registration.
-2. **Does XCTrack centre the map exactly on the pilot,** or offset it (many
-   navigators place the aircraft low on screen when moving)?
-3. **Does a non-bottom-most map widget really hold its scale** against zoom input?
-4. **Is north-up settable per map widget** or only globally?
-5. **Does XCTrack ever re-substitute `${lat}`/`${lng}`** — i.e. reload the widget —
-   or is it strictly load-time?
+1. **Scale is a per-widget option, chosen in kilometres** from the same list as
+   the table's "Map scale" column. The pilot picks `6 km`; no config-file editing.
+   **But the label is not the geometry.** At z11 a 448 px widget spans 23.3 km,
+   not 6 km, so `6 km` denotes something else — a scale-bar length or a nominal
+   radius. Never derive the projection from the label; use chmd's verified table.
+   Because OSM zoom is a *resolution* in m/px, the pairing holds at any widget
+   size: widget size changes the area covered, not the scale.
+2. **CSS pixels, by deduction.** chmd verified alignment against spotair, a web
+   map whose z11 is CSS-pixel based. Had XCTrack's scale been in device pixels the
+   airspace outlines could not have matched at DPR 3. So compute geometry in CSS
+   px and cap the canvas backing store at DPR 1–2 per `AGENTS.md`. Still worth
+   confirming in the airspace test — this was the largest single risk.
+3. **The map centres on the pilot**, with a small lag before redrawing. XCTrack's
+   screen redraw rate is a **global** setting, currently 2 Hz. At z11 that lag is
+   0.5 s × 0.21 px/s ≈ **0.1 px** — negligible. Poll `getLocation()` at the same
+   ~2 Hz so both layers lag equally and the *relative* offset stays near zero.
+   This scales with zoom: at z15 (3.3 m/px) the same glider moves 3.4 px/s, so
+   0.5 s is 1.7 px and matching the cadence begins to matter.
+4. **Rotation is per widget**, so north-up pins on our dedicated map and holds
+   for the flight.
+5. **Placeholders do trigger reloads** — see the correction below.
 
-Answer 1 and 2 with chmd's airspace method below; 3 and 4 by trying it; 5 by
-logging whether the page ever re-navigates.
+What "non-bottom map" meant, since it was unclear: chmd reported that zoom input
+reaches only the map at the bottom of the widget stack, so I was reaching for a
+map that no gesture can re-zoom. Given that scale is a per-widget setting like
+rotation, the concern largely dissolves. The only residue worth a glance during
+the test: **can a zoom gesture override the per-widget scale on whichever map does
+receive it?** If ours never receives zoom input, it cannot.
 
 **Acceptance test, borrowed from chmd:** overlay against a layer that exists in
 both renderings and toggle it. Airspace boundaries are hard-edged and shared, so

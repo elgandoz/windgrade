@@ -74,11 +74,34 @@ station on terrain is the whole point.
 ## Reused from `hx-call`
 
 The sibling repo's `hx/core.js` is the engine base: position sources
-(`XCTrack.getLocation()` → URL params → browser geolocation), the `SPEC`
-config pattern that drives both URL parameters and the settings UI from one
-array, distance/bearing ranking, and the guarded `localStorage` wrapper. Copy
-it, don't couple to it — two dependency-free static sites shouldn't share a
-library at this size.
+(`XCTrack.getLocation()` → URL params → browser geolocation → **last known
+position**), the `SPEC` config pattern that drives both URL parameters and the
+settings UI from one array, distance/bearing ranking, and the guarded
+`localStorage` wrapper. Copy it, don't couple to it — two dependency-free static
+sites shouldn't share a library at this size.
+
+**Read `/Users/marcus/Repos/hx-call/CLAUDE.md` and `hx-call/docs/background.md`
+before touching widget plumbing.** They record measured XCTrack behaviour that
+does not need rediscovering. The load-bearing ones:
+
+- **`tel:` and all non-http schemes are dead** in XCTrack's WebView, and worse,
+  they strand the widget on an error page until it reloads. `navigator.clipboard`
+  works.
+- **`${lat}`/`${lng}` substitution makes XCTrack reload the whole page** on the
+  widget's refresh rate. So: **refresh rate 0 and the JS interface on** — never
+  placeholders as the live position source. An unsubstituted placeholder arrives
+  as the literal `${lat}` and must be ignored, not parsed.
+- `getLocation()` is a **pull** API returning a JSON string or `"null"` with
+  `isValid`, gated on *"Allow web page to access XCTrack data"*. Poll it.
+- *"Allow tapping on the web page when locked"* must be ON for in-flight
+  interaction.
+- Any service-worker cache must key on **path, not full URL**, or XCTrack's
+  `?lat=…&lng=…` reloads miss it every time.
+- Distance ranking uses equirectangular maths with a cached `cos(lat)` — 0.5%
+  worst case in Switzerland. The Phase 3b overlay is the exception and needs real
+  Web Mercator, because it must agree with a tile projection.
+- Keep `core.js` free of the DOM: it returns state, pages draw. That is what
+  stops the widget and the standalone page from drifting apart.
 
 ## Conventions
 

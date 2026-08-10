@@ -369,6 +369,68 @@ XCTrack's WebView — separate partition, effectively a separate browser. So the
 missed in an earlier draft and would have invalidated the whole offline design.
 It is the reason `probe.html` exists.
 
+## What `hx-call` already established about XCTrack
+
+Read `/Users/marcus/Repos/hx-call/CLAUDE.md` and
+`hx-call/docs/background.md` before touching widget plumbing. That project paid
+for this knowledge with measurements; none of it needs re-deriving.
+
+**Measured, not assumed:**
+
+- **`tel:` and every non-http scheme are unusable.** On Android 17 / WebView 150,
+  an anchor `tel:`, `tel:` by assignment, `intent://…ACTION_DIAL` and
+  `window.open` all landed on "Web page not available" — and that *strands the
+  widget there until it reloads*. `navigator.clipboard` works, which is what
+  `hx-call` uses instead, and which also means the probe's copy-as-JSON button is
+  sound.
+- **`${lat}` / `${lng}` substitution makes XCTrack reload the whole page
+  periodically**, at the widget's refresh rate. `hx-call` leans on that — it is
+  what carries its re-check clock across via `localStorage`. For us it is a
+  hazard, and it dictates refresh rate 0 plus the JS interface. See Phase 3b.
+- **An unsubstituted placeholder arrives as the literal `${lat}`** and parses to
+  `NaN`. Ignore it and fall through to the next position source rather than
+  rendering a wrong position.
+- **`getLocation()` is a pull API** returning a JSON string or `"null"` with an
+  `isValid` field, available only when *"Allow web page to access XCTrack data"*
+  is on. Hence polling, not callbacks.
+- **Two settings pilots reliably get wrong:** *"Allow tapping on the web page when
+  locked"* must be ON for any interaction in flight, and refresh rate should be 0
+  with the JS interface (60–120 s only with placeholders).
+- **Service-worker cache entries must be keyed on the path, not the full URL**, or
+  XCTrack's `?lat=…&lng=…` reloads miss the cache every time.
+- **Equirectangular distance with a cached `cos(lat)`** drifts 0.5% worst-case
+  across Swiss test points — ~130 m on a 26 km radius. Cheaper than haversine and
+  accurate enough for ranking. Note this is for *ranking* only; the Phase 3b
+  overlay needs true Web Mercator, because it has to agree with a tile projection
+  rather than merely sort a list.
+
+**Patterns worth inheriting:**
+
+- **`core.js` touches no DOM and renders nothing.** It hands pages a state object
+  and pages only draw. That is what stops the widget and the standalone page from
+  drifting apart, and it keeps the engine testable in node.
+- **`SPEC` is the single source of truth** for URL parameters *and* the settings
+  UI, already clamped. Never hand-write a settings field.
+- **Stale-while-revalidate, never cache-first.** `hx-call`'s reason was that a
+  corrected phone number must be able to reach a pilot who already has the page.
+  Ours is sharper: a cached *reading* must never be served as current.
+- **Offline is an enhancement, never a dependency** — registration swallows every
+  failure so an old WebView still gets a working page.
+- **Render nothing rather than something wrong.** The widget draws an empty
+  transparent panel when there is no position; the standalone page keeps the
+  nearest entry, because there a blank page reads as broken. Two views, two
+  correct answers.
+- **`bern.pdcs.ch` fails *active*, not merely red** — anything other than an
+  explicit fresh `false` renders as active, and after 4 minutes without a
+  connection every zone reverts to active. The transferable principle is that a
+  fallback should land on the cautious reading, not the reassuring one. For us
+  that means stale readings go red, never quietly green.
+
+**What does not transfer.** `hx-call` ships a fixed dataset and works with no
+network at all; that is its whole product. Windgrade's readings are live by
+nature and cannot work offline — only the terrain can. Do not import the
+"offline-first" framing along with the code.
+
 ## Prior art
 
 - **windspion** (pdcs.ch, Lukas Buchs) — XCTrack widget listing wind stations.
