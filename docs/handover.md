@@ -275,6 +275,40 @@ margin of a larger shape behind. That keeps both readings as full-saturation
 blocks of colour rather than a block plus a thin line, which is what makes the
 gust legible at small sizes and through gloves.
 
+#### How to actually build it, learned the hard way (2026-08-10)
+
+Two mistakes, both visible in the first implementation and both worth naming
+because the second is counter-intuitive.
+
+**Do not make the rim by scaling a second copy of the shape.** Uniformly scaling
+a *notched* outline pinches the gap near the notch, so the rim varies in width
+and stops reading as a rim at all — the marker looks like a chevron outline
+instead of a dart with a border. Draw **one** path four times as concentric
+stroke outsets of decreasing width: halo, near-black, gust colour, then the
+average fill with a thin inner stroke on top. Widths live in `BANDS`.
+
+**Width is a trade against the rim, and it bites hard.** The gust stroke is
+centred on the outline, so half of it eats *inward*, and the average fill is
+only whatever interior survives. Measured on the first attempt: a 14-wide dart
+with a 6.5 rim left the fill **0.25 units** across near the middle — the primary
+channel reduced to a sliver by its own border. 18 wide with a 5 rim leaves 2.3
+there and 5.4 towards the rear. So a slimmer arrow is not free; narrowing the
+dart requires narrowing the rim with it.
+
+Also: **keep the vertical extents symmetric about y=0.** Rotation happens about
+the origin, so a path spanning −15…11 orbits a point 2 units above its own
+centre and visibly wobbles as the wind direction changes.
+
+**The halo stack is confirmed by looking.** `tools/arrow.html` renders every
+fill × rim pair over dark terrain, light terrain, mid-grey, forest and water.
+White halo outside the near-black stroke keeps a **black** fill legible on dark
+ground *and* a **white** fill legible on light ground, in one stack — which is
+what the halo question was about.
+
+`tools/arrow.svg` is the editable master: reshape the dart in any vector editor
+and copy the `d` back into `ARROW` in `wg/core.js`, which is the single source
+for every marker.
+
 #### Direction: the arrow points DOWNWIND
 
 Settled by the owner, 2026-08-10. The arrow points where the air is *going*, not

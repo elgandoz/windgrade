@@ -300,9 +300,46 @@ var PALETTE = {
   black:  { fill:"#14181C", ink:"#FFFFFF" },
   unknown:{ fill:"#7B909F", ink:"#0A1116" }
 };
-var STROKE_INNER = "#3A4750";   /* 1px, dark grey  */
-var STROKE_OUTER = "#0A1116";   /* 2px, near black */
+var STROKE_INNER = "#3A4750";   /* dark grey, innermost  */
+var STROKE_OUTER = "#0A1116";   /* near black */
 var HALO         = "#FFFFFF";   /* outside the outer stroke */
+
+/* ── marker geometry ──────────────────────────────────────────────────
+   A broad swept dart: apex forward, trailing edge notched inward so the
+   rear corners sweep back. Tune these two strings and everything that
+   draws a marker follows; tools/arrow.svg is the editable copy.
+
+   CENTRED ON (0,0) ON PURPOSE. The first version spanned y -15..11, so
+   its bounding-box centre sat at y=-2 while rotation happened about the
+   origin — the arrow visibly orbited a point above itself. Keep the
+   vertical extents symmetric or that returns.
+
+   Rendered by STROKE OUTSET, not by drawing a second scaled copy. Scaling
+   a notched shape uniformly pinches the gap near the notch and the rim
+   stops looking like a rim; concentric strokes of decreasing width give an
+   even border. Draw order is halo, near-black, gust colour, then the
+   average fill with a thin inner stroke on top.
+
+   The strokes inflate width and length by the same absolute amount, so they
+   push a narrow shape towards square: 18x23.5 here renders as roughly 29x35
+   once the 11-wide halo is on. Aim the base path slimmer than the look you
+   want.
+
+   WIDTH IS A TRADE AGAINST THE RIM, and it bites hard. The gust stroke is
+   centred on the outline, so half of it eats inward, and the average fill is
+   whatever interior survives. At 14 wide with a 6.5 rim the fill collapsed to
+   0.25 units near the middle — the primary channel reduced to a sliver. 18
+   wide with a 5 rim leaves 2.3 there and 5.4 towards the rear, which reads as
+   a fill with a border rather than the reverse. Narrow the dart further only
+   if the rim narrows with it. ─────────────────────────────────────────── */
+var ARROW = "M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z"; /* 18 x 23.5, notch 30% */
+var LEAF  = "M0,-11.75 L4,11.75 L0,5.75 L-4,11.75 Z"; /* calm: 8 wide, no direction */
+
+/* Concentric stroke widths, widest first. Each band's visible thickness is
+   half the difference to the next one in: halo 1.25, near-black 1.75, gust
+   2.5 outward from the outline. */
+var BANDS = { halo: 11, outer: 8.5, gust: 5, inner: 1 };
+var VIEWBOX = "-18 -18 36 36";              /* fits the widest stroke */
 
 function levelName(i) { return (i < 0) ? "unknown" : LEVELS[i]; }
 function colour(i)    { return PALETTE[levelName(i)]; }
@@ -366,6 +403,7 @@ return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
   AVG_BANDS: AVG_BANDS, GUST_BANDS: GUST_BANDS, PALETTE: PALETTE,
   STROKE_INNER: STROKE_INNER, STROKE_OUTER: STROKE_OUTER, HALO: HALO,
+  ARROW: ARROW, LEAF: LEAF, BANDS: BANDS, VIEWBOX: VIEWBOX,
 
   cfg: cfg, parseQuery: parseQuery, clamp: clamp, toNum: toNum,
   store: store,

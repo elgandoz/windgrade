@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Windgrade — marker geometry</title>
+<style>
+body{margin:0;background:#0A1116;color:#E8F0F5;
+  font:400 13px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:12px}
+h1{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7B909F;margin:0 0 3px}
+p.n{font-size:11px;color:#7B909F;margin:0 0 12px;max-width:70ch;line-height:1.5}
+h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#7B909F;
+  margin:18px 0 6px;border-bottom:1px solid #2A3B48;padding-bottom:3px}
+table{border-collapse:collapse}
+td,th{padding:2px;text-align:center;font:400 9px ui-monospace,monospace;color:#7B909F}
+th{font-weight:400}
+.bg{display:inline-block;padding:2px;border-radius:3px}
+.cell{width:46px;height:46px;display:block}
+#surf{display:flex;gap:0;flex-wrap:wrap;margin:6px 0 0}
+#surf div{flex:1 1 90px;padding:8px 4px;text-align:center;min-width:90px}
+button{padding:8px 11px;margin:0 5px 8px 0;background:#1D2B36;border:1px solid #2A3B48;
+  border-radius:3px;color:#E8F0F5;font:600 12px system-ui;cursor:pointer}
+button.on{border-color:#54A6DC;color:#54A6DC}
+code{font:400 11px ui-monospace,monospace;color:#54A6DC;background:#151F27;padding:2px 5px;border-radius:2px}
+</style>
+</head>
+<body>
+
+<h1>Marker geometry</h1>
+<p class="n">
+Every average band (fill, rows) against every gust band (rim, columns). The
+diagonal is ordinary gusting; <b>above</b> the diagonal the rim is hotter than
+the fill, which is the calm-average-hiding-violent-gusts case; <b>below</b> it the
+rim is cooler, meaning unusually steady air. Bottom row shows the same marker on
+the backgrounds it has to survive — dark terrain, light terrain, and mid-grey.
+</p>
+
+<div>
+  <button id="bHalo" class="on">Halo</button>
+  <button id="bOuter" class="on">Near-black</button>
+  <button id="bRot">Rotate 45°</button>
+  <button id="bBig">Large</button>
+  <button id="bLeaf">Calm glyph</button>
+</div>
+<div>Path: <code id="pth"></code></div>
+
+<h2>fill (average) × rim (gust)</h2>
+<div id="grid"></div>
+
+<h2>Against backgrounds</h2>
+<div id="surf"></div>
+
+<script src="../wg/core.js"></script>
+<script>
+"use strict";
+var halo = true, outer = true, rot = 0, big = false, leaf = false;
+
+function svg(ai, gi, px){
+  var a = WG.colour(ai), g = WG.colour(gi), B = WG.BANDS;
+  var d = leaf ? WG.LEAF : WG.ARROW;
+  var s = '<svg class="cell" viewBox="' + WG.VIEWBOX + '" width="' + px + '" height="' + px + '">';
+  s += '<g transform="rotate(' + rot + ')" stroke-linejoin="round" stroke-linecap="round">';
+  if (halo)  s += '<path d="' + d + '" fill="none" stroke="' + WG.HALO + '" stroke-width="' + B.halo + '"/>';
+  if (outer) s += '<path d="' + d + '" fill="none" stroke="' + WG.STROKE_OUTER + '" stroke-width="' + B.outer + '"/>';
+  s += '<path d="' + d + '" fill="none" stroke="' + g.fill + '" stroke-width="' + B.gust + '"/>';
+  s += '<path d="' + d + '" fill="' + a.fill + '" stroke="' + WG.STROKE_INNER + '" stroke-width="' + B.inner + '"/>';
+  return s + '</g></svg>';
+}
+
+/* Representative value in each band, so the labels are real readings. */
+var AVGV  = [3, 10, 19, 27, 33, 42];
+var GUSTV = [9, 19, 28, 35, 41, 50];
+
+function draw(){
+  var px = big ? 76 : 46, i, j, h = "<table><tr><th></th>";
+  for (j = 0; j < 6; j++) h += "<th>" + WG.LEVELS[j] + "<br>" + GUSTV[j] + "</th>";
+  h += "</tr>";
+  for (i = 0; i < 6; i++){
+    h += "<tr><th>" + WG.LEVELS[i] + "<br>" + AVGV[i] + "</th>";
+    for (j = 0; j < 6; j++) h += "<td>" + svg(i, j, px) + "</td>";
+    h += "</tr>";
+  }
+  document.getElementById("grid").innerHTML = h + "</table>";
+
+  var surfaces = [["dark terrain","#12181C"],["light terrain","#F6F1EC"],
+                  ["mid grey","#8A9AA6"],["forest","#3E5540"],["water","#2C5C86"]];
+  var s = "";
+  for (i = 0; i < surfaces.length; i++){
+    s += '<div style="background:' + surfaces[i][1] + '">' +
+         svg(0, 0, 54) + svg(2, 3, 54) + svg(5, 5, 54) +
+         '<div style="color:#000;mix-blend-mode:difference;font-size:9px">' +
+         surfaces[i][0] + '</div></div>';
+  }
+  document.getElementById("surf").innerHTML = s;
+  document.getElementById("pth").textContent = leaf ? WG.LEAF : WG.ARROW;
+}
+
+function tog(id, fn){
+  document.getElementById(id).addEventListener("click", function(){
+    fn(); this.className = this.className ? "" : "on"; draw();
+  });
+}
+tog("bHalo",  function(){ halo = !halo; });
+tog("bOuter", function(){ outer = !outer; });
+tog("bRot",   function(){ rot = rot ? 0 : 45; });
+tog("bBig",   function(){ big = !big; });
+tog("bLeaf",  function(){ leaf = !leaf; });
+draw();
+</script>
+</body>
+</html>

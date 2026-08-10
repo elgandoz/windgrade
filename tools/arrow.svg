@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Windgrade marker — the editable master.
+
+  Open in any vector editor, reshape the dart, save, then copy the `d`
+  attribute back into ARROW in wg/core.js. Everything that draws a marker
+  reads it from there, so one edit updates the chips page and the overlay.
+
+  ── the construction ────────────────────────────────────────────────────
+  ONE path, drawn four times as concentric stroke outsets of decreasing
+  width. Do NOT rebuild this as two scaled copies of the shape: scaling a
+  notched outline pinches the gap near the notch and the rim stops reading
+  as a rim. Widths are in wg/core.js as BANDS.
+
+      halo   12   white          outermost, keeps a BLACK fill off dark terrain
+      outer   9   near black     keeps a WHITE fill off light terrain
+      gust  6.5   GUST colour    the rim — reads the gust threshold table
+      fill  1.2   AVERAGE colour the body, with a thin dark-grey stroke
+
+  Each band's visible thickness is half the difference to the next one in.
+
+  ── two rules that are easy to break ───────────────────────────────────
+  1. KEEP THE VERTICAL EXTENTS SYMMETRIC about y=0. Rotation happens about
+     the origin, so an off-centre path makes the arrow orbit its own point.
+     The first version spanned -15..11 and visibly wobbled.
+  2. The base path must be SLIMMER than the look you want. Strokes add the
+     same absolute amount to width and length, so they push a narrow shape
+     towards square. 14x24 here renders as roughly 26x36.
+
+  Points DOWNWIND — apex towards where the air is going. Callers rotate by
+  (w-dir + 180), because providers report a from-bearing.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-18 -18 36 36" width="288" height="288">
+
+  <!-- checkerboard, so the halo is visible against light AND dark -->
+  <defs>
+    <pattern id="chk" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#8A9AA6"/>
+      <rect width="4" height="4" fill="#E6ECF0"/>
+      <rect x="4" y="4" width="4" height="4" fill="#E6ECF0"/>
+    </pattern>
+
+    <!-- EDIT THIS ONE PATH -->
+    <path id="dart" d="M0,-12 L7,12 L0,5 L-7,12 Z"/>
+    <!-- calm variant: no direction is implied at zero wind -->
+    <path id="leaf" d="M0,-11 L3.5,11 L0,6 L-3.5,11 Z"/>
+  </defs>
+
+  <rect x="-18" y="-18" width="36" height="36" fill="url(#chk)"/>
+
+  <!-- example: average in the yellow band, gust in the orange band -->
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <use href="#dart" fill="none" stroke="#FFFFFF" stroke-width="12"/>
+    <use href="#dart" fill="none" stroke="#0A1116" stroke-width="9"/>
+    <use href="#dart" fill="none" stroke="#EE8A1C" stroke-width="6.5"/>
+    <use href="#dart" fill="#EFCB1F" stroke="#3A4750" stroke-width="1.2"/>
+  </g>
+</svg>

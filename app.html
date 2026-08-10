@@ -106,28 +106,25 @@ function paintErr(){
    Points DOWNWIND: bearing + 180, since w-dir is a from-bearing.
    Calm or unknown direction gets a narrow symmetric leaf instead, because
    at zero wind a direction would be invented. ────────────────────── */
-var DART = "M0,-15 L13,11 L0,4 L-13,11 Z";
-var LEAF = "M0,-15 L5,8 L0,3 L-5,8 Z";
+function band(d, fill, stroke, w){
+  return '<path d="' + d + '" fill="' + fill + '" stroke="' + stroke +
+         '" stroke-width="' + w + '" stroke-linejoin="round" stroke-linecap="round"/>';
+}
 
 function marker(st){
-  var a = WG.colour(st.rAvg), g = WG.colour(st.rGust);
+  var a = WG.colour(st.rAvg), g = WG.colour(st.rGust), B = WG.BANDS;
   var calm = !(st.dir === st.dir) || (st.avg === 0 && st.gust === 0);
-  var d = calm ? LEAF : DART;
-  var rot = calm ? 0 : ((st.dir + 180) % 360);
-  var s = '<svg class="mk" viewBox="-22 -22 44 44" aria-hidden="true">';
+  var d = calm ? WG.LEAF : WG.ARROW;
+  var rot = calm ? 0 : ((st.dir + 180) % 360);   /* w-dir is a FROM bearing */
+
+  var s = '<svg class="mk" viewBox="' + WG.VIEWBOX + '" aria-hidden="true">';
   s += '<g transform="rotate(' + rot.toFixed(1) + ')">';
-  /* halo outside everything: the only thing that keeps a black fill off a
-     dark map. Toggleable here so the choice can be made by looking. */
-  if (halo) s += '<path d="' + d + '" fill="none" stroke="' + WG.HALO +
-                 '" stroke-width="7" stroke-linejoin="round" opacity=".9"/>';
-  /* gust arrow: larger, near-black outer stroke */
-  s += '<path d="' + d + '" fill="' + g.fill + '" stroke="' + WG.STROKE_OUTER +
-       '" stroke-width="2" stroke-linejoin="round"/>';
-  /* average arrow: scaled down so the gust colour shows as a rim. The thin
-     inner stroke is what stops the two collapsing when both land in the
-     same band — the common case. */
-  s += '<g transform="scale(0.62)"><path d="' + d + '" fill="' + a.fill +
-       '" stroke="' + WG.STROKE_INNER + '" stroke-width="1.6" stroke-linejoin="round"/></g>';
+  /* Concentric outsets, widest first. Each band shows as a ring of half
+     the width difference to the next. */
+  if (halo) s += band(d, "none", WG.HALO, B.halo);          /* outermost */
+  s += band(d, "none", WG.STROKE_OUTER, B.outer);           /* near black */
+  s += band(d, "none", g.fill, B.gust);                     /* GUST rim */
+  s += band(d, a.fill, WG.STROKE_INNER, B.inner);           /* AVERAGE fill */
   s += '</g></svg>';
   return s;
 }
@@ -268,7 +265,7 @@ function tick(){
 
   el("hdr").textContent =
     "src=" + fix.src + "  " + fix.lat.toFixed(5) + "," + fix.lon.toFixed(5) +
-    (fix.alt === fix.alt ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
+    (isFinite(fix.alt) ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
     "z" + C.zoom + " ≙ XCT " + (WG.XCT_SCALE[C.zoom] || "?") +
     "  fetch " + Math.round(WG.bboxKm(fix, C) ) + " km box" +
     (meta1 ? "  ·  " + meta1 : "") +
