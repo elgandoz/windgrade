@@ -109,9 +109,12 @@ a{color:var(--chart)}
       it your position.</li>
     <li>Set <b>refresh rate to 0</b>. Anything else makes XCTrack reload the page
       every minute or two and throw away everything it has drawn.</li>
-    <li>Turn on <b>Allow tapping on the web page when locked</b> if you want it to
-      respond to touch, and <b>Disable unlocking</b> so a stray swipe doesn't
-      rearrange the page.</li>
+    <li>Leave <b>Allow tapping on the web page when locked</b> <b>OFF</b>. The
+      overlay has nothing to tap, and with it on the widget swallows every tap
+      over its area — including the ones meant for your own zoom buttons
+      underneath. Measured; see <code>docs/findings.md</code>.</li>
+    <li>Turn on <b>Disable unlocking</b> so a stray swipe doesn't rearrange the
+      page.</li>
   </ol>
 
   <p class="note">
@@ -141,7 +144,7 @@ a{color:var(--chart)}
   <h2>Tools</h2>
   <div class="tools">
     <a href="tools/registration.html">Overlay registration<small>Check the map scale pairing</small></a>
-    <a href="tools/tap.html">Tap pass-through<small>Does a tap reach XCTrack too?</small></a>
+    <a href="tools/tap.html">Tap pass-through<small>Answered: no. Kept to re-test</small></a>
     <a href="tools/arrow.html">Marker geometry<small>Every fill × rim pair</small></a>
     <a href="tools/arrow.svg">arrow.svg<small>Editable master shape</small></a>
     <a href="probe.html">Capability probe<small>WebView storage, CORS, WebGL</small></a>

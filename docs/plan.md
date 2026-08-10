@@ -358,160 +358,47 @@ something useful in the air than Phase 2 → 3. Shipping 3b first, and treating 
 own basemap as the durable answer that follows, is probably the better order.
 Owner's call.
 
-## Phase 3c — zoom sync (owner's idea, 2026-08-10)
+## Phase 3c — zoom sync  ❌ REJECTED 2026-08-11
 
-**The problem it solves.** The overlay's zoom is fixed by configuration and the
-map's is fixed by its widget setting. That works, but a pilot who wants to zoom
-has to change two things in two places, and if they change only one the arrows
-sit on the wrong terrain.
+**Tested, answered no, removed the same day.** A tap over the web widget never
+reaches an XCTrack widget underneath it — not in any mode, not in either layer
+order. The widget and the zoom buttons are strictly exclusive, so the overlay can
+never learn that the map zoomed, and a zoom it cannot see is arrows on the wrong
+terrain with nothing to detect it. Raw log and the full table in
+`docs/findings.md`.
 
-**The owner's existing habit, which is the mechanism.** On every map page they
-place two zoom buttons covering the top and bottom halves of the map area, then
-send both to the **background** — a background widget's tap area stays live even
-with the map in the foreground. So the whole map is already a two-zone zoom
-control, invisible and muscle-memory.
+`pointer-events: none` was the last hope and it is the informative failure: the
+page stopped being a hit target and XCTrack *still* received nothing. The WebView
+consumes the Android `MotionEvent` regardless of what the page does with it, so no
+CSS or JS trick can decline it on the page's behalf.
 
-The proposal: give our widget the same two zones. One tap then zooms both layers,
-and they stay in step.
+**Removed:** the `zspan` parameter and the `coarsestStep` / `coarsestZoom` /
+`finestStep` helpers. `widget.html` fetches at the configured zoom again. Total
+cost of the detour: one probe, one parameter, three helpers — because `zspan`
+defaulted to 0, nothing ever shipped a wider fetch on the strength of an
+unproven feature.
 
-### Range: 3 steps each way, and it is a prefetch decision
+**Kept, and not part of this feature:** `zoomForStep`, `stepForZoom` and
+`XCT_LADDER`. They are how the configurator offers XCTrack's own 23 scale labels,
+and they are what made `5km` and `10km` selectable at all. The closed-form ladder
+derivation stands on its own measurement.
 
-Owner's figure, and the reason is that **the overlay cannot pan** — stepping out
-is the only way to see surrounding space. Three ladder steps is 2^1.5 = 2.83x in
-scale, so from the 8 km base:
+**Kept as evidence:** `tools/tap.html`, with the verdict written into it. If a
+future XCTrack build ever answers "both", the feature becomes buildable and the
+maths is already done.
 
-```
-out 3 -> step 22, 20km     base -> step 25, 8km     in 3 -> step 28, 2500m
-```
+**What the probe found instead, which matters more.** With *Allow tapping on the
+web page when locked* **ON**, the overlay swallows every tap over its area —
+including the ones meant for the pilot's own zoom buttons underneath. The overlay
+has nothing to tap; it is a passive layer. So the setup instructions now say to
+leave tapping **OFF**, and the pilot keeps the zoom controls they already rely on.
+A probe built to test a feature turned up a regression in the recommended setup,
+which was worth more than the feature.
 
-The consequence is not about zooming, it is about **what to fetch**. If the box is
-sized for the current zoom, stepping out reveals a ring with no stations in it.
-Two options, and the measurement settles it:
-
-| Fetch box for | Stations | Bytes |
-|---|---|---|
-| base (8 km view + 20 km pad) | 72 | 17.9 KB |
-| 3 steps out (20 km view + 20 km pad) | 217 | **53.8 KB** |
-
-54 KB per ~10 minute cycle, nowhere near the 500-station limit. So **always fetch
-for the coarsest reachable zoom** rather than refetching on every zoom change:
-stepping out is then instant with no blank ring, and the call count stays at one
-per data cycle, which is what winds.mobi's "do not overload" rule asks for.
-`max` and the collision declutter still decide how many of those 217 get drawn.
-
-Implemented already: `zspan` (default 3) with `WG.coarsestStep` / `coarsestZoom` /
-`finestStep`, clamped to the ladder ends so the range can never point off it.
-
-### The configurator now speaks XCTrack's language
-
-Owner: the steps are the same list as XCTrack's, and the configurator should use
-them. It does. `step` replaced the old OSM `zoom` parameter — an integer 12–34
-rendered as a select of XCTrack's own 23 labels, so a pilot picks `8km` in both
-places and never meets a zoom number. Old `?zoom=` URLs still resolve, mapped onto
-the nearest step.
-
-This also fixes a real gap: offering only integer OSM zooms exposed just 11 of the
-23 steps, so `5km` and `10km` — the two the owner named as useful for an area
-overview — could not be selected at all.
-
-### What makes it plausible
-
-**We can follow XCTrack's ladder exactly, half-steps included.** Its scale is an
-integer `mapWidget_scale.value` from 12 to 34, and one step is √2 in scale — half
-an OSM zoom level. Derived from chmd's table and confirmed against all three
-measured points to within 0.04 m/px:
-
-```
-z = (value - 3) / 2          m/px = 156543.034 · cos(lat) / 2^z / 0.942
-```
-
-Our projector already takes a **fractional** zoom, so a half-step is not a special
-case: step 24 renders at z 10.5 and 77.73 m/px. `WG.zoomForStep` /
-`WG.stepForZoom` and `WG.XCT_LADDER` are in `core.js` with tests. That also
-explains, in closed form, why 5 km and 10 km never lined up: they are steps 26 and
-24, half a level off the integers.
-
-So the widget can hold a ladder *step*, move it ±1 per tap, and render correctly
-at every position. The maths is not the risk.
-
-### The one unknown that decides the whole feature
-
-**Does a tap on the web widget also reach a background zoom button?**
-
-Four possible outcomes, and each implies a different design:
-
-| Outcome | What it means |
-|---|---|
-| Both receive the tap | The feature works. One tap, both layers step together. |
-| Only the WebView | The map does not zoom. The widget would silently drift — worse than no feature. |
-| Only the background button | The map zooms, the widget cannot know. Same silent drift. |
-| Neither | Tapping is off; nothing to build. |
-
-Everything hangs on this, and it is not documented anywhere. An Android WebView
-normally consumes touches it handles, so pass-through is genuinely uncertain —
-`pointer-events: none` stops *web content* from handling a touch but does not
-necessarily stop the WebView from swallowing the `MotionEvent`.
-
-**Test it before building anything.** A page that logs every touch with
-coordinates and a timestamp on screen (there is no console in XCTrack), stacked
-over a map with the two background zoom buttons. Tap the top half and read off
-which layer reacted. Repeat with *Allow tapping on the web page when locked* both
-on and off, and with a `pointer-events: none` zone, since those may differ.
-
-### Even if pass-through works, this is dead reckoning
-
-The widget would be *inferring* the map's zoom from taps it believes both layers
-received. That holds until a tap is lost, or the zoom changes by any other route —
-auto-zoom, a button on another page, the pilot editing the scale setting. Then the
-arrows are wrong and nothing in the API can detect it.
-
-`AGENTS.md` forbids exactly that, so the feature only ships with:
-
-- **A visible step, always.** The badge already names the assumed scale; with sync
-  it must name the *tracked* one, so a pilot can read it against the scale XCTrack
-  itself shows. Two labels disagreeing is the whole safety mechanism.
-- **A cheap resync.** One gesture returns the widget to its configured zoom — a
-  long press, or a third zone. Recovering must be easier than noticing.
-- **Degradation to today's behaviour**, not to guesswork: with sync off, or after
-  a resync, the widget is back to a fixed scale that is correct by construction.
-- **Never a silent step.** If a tap changes the widget's zoom, the badge changes
-  visibly at the same instant.
-
-### Fallbacks, by outcome
-
-- **Only the WebView gets the tap:** the widget's zones can still drive *its* zoom,
-  but the map will not follow — so this is only worth shipping if XCTrack's zoom
-  can be driven some other way, which today it cannot. Prefer no feature.
-- **Only the background button:** put our layer *underneath* a transparent XC map
-  instead, as chmd does. Taps then reach the map, and the widget is back to
-  needing the zoom API it cannot have. Also prefer no feature.
-### If the probe fails: what to remove
-
-Owner's point, and the right instinct — this feature is speculative, so it must be
-cheap to abandon. It already is, deliberately:
-
-- **`zspan` defaults to 0**, so nothing costs anything today. Widening the fetch
-  is 54 KB against 18 KB, and paying that for an unproven feature would be
-  exactly the wrong trade. `coarsestStep` collapses to the base step at 0, so the
-  current behaviour is the cheap one and the wide path is dormant, not dead code
-  waiting to be discovered.
-- **The list never uses it.** `app.html` fetches at the base zoom, because a page
-  with no viewport has nothing to zoom.
-
-To remove the feature entirely: drop the `zspan` row from `SPEC`, and
-`coarsestStep` / `coarsestZoom` / `finestStep` from `core.js`, then make
-`widget.html` fetch at `WG.zoomOf(C)`. That is the whole surface.
-
-**Keep the rest regardless.** `zoomForStep`, `stepForZoom` and `XCT_LADDER` are not
-part of this feature — they are how the configurator offers XCTrack's own scale
-labels, and they are what made `5km` and `10km` selectable at all. The closed-form
-ladder derivation stands on its own measurement.
-
-- **Either way:** the fixed-scale design already works, and issues
-  [#1097](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1097) /
-  [#1235](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1235) remain
-  the clean fix. This feature is an attempt to route around a two-year-old gap,
-  and it is worth exactly as much as the pass-through test says it is.
+**Still open from it:** only "tapping off + widget in the background" preserves the
+zoom buttons. Does XCTrack's XC map then draw over the arrows? That is chmd's stack
+— web page below, transparent XC map above — which works visually but runs airspace
+lines and the track across the markers. Needs one look on device.
 
 ## Phase 4 — polish
 

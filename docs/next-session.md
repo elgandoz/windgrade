@@ -31,12 +31,24 @@ decluttering need one look in XCTrack.
 
 ---
 
-## The blocking question, and it is one test
+## The blocking question — ANSWERED 2026-08-11: no
 
-**Does a tap on a web widget also reach a background XCTrack widget?**
+**A tap on a web widget never reaches a background XCTrack widget.** Tested in all
+three modes and both layer orders; `pointer-events: none` gave nothing to either
+side, so the WebView consumes the event regardless of what the page does. Zoom sync
+was removed the same day. Raw log in `docs/findings.md`, verdict written into
+`tools/tap.html`, rejection reasoning in `plan.md` under Phase 3c.
 
-Everything about zoom sync (Phase 3c) depends on it, and nothing else is blocked by
-it. Run `tools/tap.html`:
+**The useful finding was a side effect:** with *Allow tapping* ON the overlay
+swallows every tap over its area, killing the pilot's own zoom buttons. It has
+nothing to tap, so the setup now says leave tapping **OFF**.
+
+**One thing still to look at on device:** only "tapping off + widget in the
+background" preserves the zoom buttons — does the XC map then draw over the arrows?
+
+<details><summary>How the probe was run, kept for re-testing a future XCTrack</summary>
+
+Run `tools/tap.html`:
 
 1. A page with an XC map widget and the owner's usual two background zoom buttons
    (top half zooms in, bottom half out).
@@ -55,25 +67,18 @@ it. Run `tools/tap.html`:
 | **map only** | The widget cannot know. Silent drift — **do not build**. |
 | **neither** | Tapping is off. Nothing to build. |
 
-If `pe-none` is the only mode where the map zooms, that *is* the finding: the
-WebView swallows the event, and a zone that declines it lets XCTrack through.
-
-**Removal path if it fails** is written in `plan.md` under Phase 3c. Short version:
-drop the `zspan` SPEC row, `coarsestStep`/`coarsestZoom`/`finestStep`, and make
-`widget.html` fetch at `WG.zoomOf(C)`. `zspan` already defaults to **0**, so
-nothing is paying for the feature today. Keep `zoomForStep`, `stepForZoom` and
-`XCT_LADDER` regardless — they are the configurator's scale list, not this feature.
+</details>
 
 ---
 
 ## Open items, in the owner's stated order
 
-1. **Run the tap probe** (above). Decides Phase 3c.
-2. **Look at `widget.html` on the phone.** The only unverified rendering.
-3. **Phase 3** — our own PMTiles basemap, for the standalone page. Still the durable
+1. **Look at `widget.html` on the phone.** The only unverified rendering — and
+   check whether a background-layered widget is drawn over by the XC map.
+2. **Phase 3** — our own PMTiles basemap, for the standalone page. Still the durable
    answer; 3b was the cheap one that shipped first. Two unresolved risks live here:
    byte ranges against a real `.pmtiles` (see below) and the ~50 MB pack ceiling.
-4. **Phase 4 polish** — owner said keep this last. Includes a proper README rewrite,
+3. **Phase 4 polish** — owner said keep this last. Includes a proper README rewrite,
    `radar orientation`, and any remaining parameters.
 
 **Not blocking, do when convenient:**

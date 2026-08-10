@@ -68,10 +68,6 @@ var SPEC = [
   { k:"step",  t:"ladder", d:25, min:12, max:34,
     lab:"Map scale",
     help:"Set XCTrack's XC map widget to the same value." },
-  { k:"zspan", t:"int", d:0, min:0, max:6, only:"widget",
-    lab:"Zoom range (steps)",
-    help:"How far out the overlay may follow a zoom. Widens the fetch, so it " +
-         "stays 0 until tap pass-through is proven — see Phase 3c." },
   { k:"pad",   t:"int", d:20, min:0, max:60,
     lab:"Fetch margin (km)",
     help:"Area fetched beyond the view. A cache radius, not a display radius." },
@@ -160,14 +156,12 @@ function cfg(search) {
   return out;
 }
 
-/* The zoom the overlay renders at, and the coarsest it may follow to. The
-   fetch box is sized for the COARSEST, measured at 54 KB against 18 KB for the
-   base — cheap enough that zooming out is instant instead of waiting on a
-   refetch, and it keeps the call count at one per data cycle. */
-function zoomOf(c)        { return zoomForStep(c.step); }
-function coarsestStep(c)  { return Math.max(XCT_STEP_MIN, c.step - (c.zspan || 0)); }
-function coarsestZoom(c)  { return zoomForStep(coarsestStep(c)); }
-function finestStep(c)    { return Math.min(XCT_STEP_MAX, c.step + (c.zspan || 0)); }
+/* The zoom the overlay renders at. There was briefly a range around it, for
+   following XCTrack's zoom; that is gone — the 2026-08-11 probe established
+   that a tap can never reach both the widget and a zoom button, so the overlay
+   can never learn that the map zoomed. The scale is fixed by configuration,
+   which is what makes it correct by construction. See docs/findings.md. */
+function zoomOf(c) { return zoomForStep(c.step); }
 
 /* ── a live config object, for the launcher and any settings sheet ────
    `cfg(search)` is the pure parse used by the pages at load. This is the
@@ -558,8 +552,7 @@ return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
   XCT_LADDER: XCT_LADDER, XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
-  zoomOf: zoomOf, coarsestStep: coarsestStep, coarsestZoom: coarsestZoom,
-  finestStep: finestStep,
+  zoomOf: zoomOf,
   AVG_BANDS: AVG_BANDS, GUST_BANDS: GUST_BANDS, PALETTE: PALETTE,
   STROKE_INNER: STROKE_INNER, STROKE_OUTER: STROKE_OUTER, HALO: HALO,
   ARROW: ARROW, LEAF: LEAF, BANDS: BANDS, VIEWBOX: VIEWBOX, REACH: REACH,

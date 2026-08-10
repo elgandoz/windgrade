@@ -249,8 +249,6 @@ function render(fix){
 function refresh(fix){
   if (fetching || !fix) return;
   fetching = true;
-  /* Base zoom, not the coarsest: zspan exists for the overlay's zoom
-     following, and the list never zooms. */
   var bbox = WG.bboxAround(fix, WG.zoomOf(C), VIEW_W, VIEW_H, C.pad);
   PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list, meta){
     fetching = false;

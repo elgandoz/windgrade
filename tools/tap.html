@@ -66,6 +66,17 @@ body.pe-none .zone{pointer-events:none;border-style:dotted}
    tools/tap.html — does a tap on a web widget ALSO reach a background
    XCTrack widget?
 
+   ANSWERED 2026-08-11: NO. Not in any mode, and not in either layer order.
+   With tapping on, the WebView takes the whole event chain and XCTrack gets
+   nothing. With pointer-events:none the page gets nothing AND XCTrack still
+   gets nothing, so the WebView consumes the MotionEvent regardless of what the
+   page does — no CSS or JS trick can decline it. Only "tapping OFF + widget in
+   the background" lets the zoom buttons work, and then the page is blind.
+
+   Zoom sync (Phase 3c) was removed on the strength of this. The file stays so a
+   future XCTrack build can be re-tested cheaply: if this ever answers "both",
+   the feature becomes buildable. Full log in docs/findings.md.
+
    Everything about Phase 3c (zoom sync) hangs on this one answer, and it is
    not documented anywhere. An Android WebView normally consumes touches it
    handles, so pass-through is genuinely uncertain.

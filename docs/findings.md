@@ -4,6 +4,85 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — tap pass-through: NO. Zoom sync is not possible.
+
+**Verdict: Phase 3c is dead.** A tap over the web widget never reaches an
+XCTrack widget underneath it, in any mode or layer order. The widget and the
+zoom buttons are strictly exclusive — one of them gets the tap, never both — so
+there is no way for the overlay to learn that the map zoomed. Built and removed
+the same day; `tools/tap.html` is kept as the evidence and as the way to re-test
+a future XCTrack build.
+
+Run with `tools/tap.html` over an XC map carrying the owner's usual two
+background zoom buttons.
+
+```
+windgrade tap probe
+mode listen
+XCTrack getLocation -> null
+viewport 448x978
+
+IN/click = 1        OUT/click = 1
+IN/mousedown = 1    OUT/mousedown = 1
+IN/pointerdown = 2  OUT/pointerdown = 2
+IN/touchend = 2     OUT/touchend = 2
+IN/touchstart = 2   OUT/touchstart = 2
+
+00:07:13.947  listen  OUT  click       @295,647
+00:07:13.946  listen  OUT  mousedown   @295,647
+00:07:13.943  listen  OUT  touchend    @295,647
+00:07:13.845  listen  OUT  touchstart  @295,647
+00:07:13.842  listen  OUT  pointerdown @295,647
+00:07:13.012  listen  IN   click       @366,348
+00:07:13.011  listen  IN   mousedown   @366,348
+00:07:13.007  listen  IN   touchend    @366,348
+00:07:12.901  listen  IN   touchstart  @366,348
+00:07:12.900  listen  IN   pointerdown @366,348
+00:06:49.551  prevent OUT  touchend    @239,819
+00:06:49.467  prevent OUT  touchstart  @239,819
+00:06:49.465  prevent OUT  pointerdown @239,819
+00:06:43.093  prevent IN   touchend    @340,301
+00:06:42.987  prevent IN   touchstart  @340,301
+00:06:42.987  prevent IN   pointerdown @340,301
+```
+
+| Configuration | Web widget | Map / zoom buttons |
+|---|---|---|
+| `listen`, tapping ON | full chain: pointerdown, touchstart, touchend, mousedown, click | **no zoom** |
+| `prevent`, tapping ON | pointerdown, touchstart, touchend (no mousedown/click — `preventDefault` suppressed the synthetic mouse events, so the control worked) | **no zoom** |
+| `pe-none`, tapping ON | **nothing** | **no zoom** |
+| tapping OFF, widget foreground | still intercepts; hold-to-reload fires | **no zoom** |
+| tapping OFF, widget **background** | nothing | **zoom buttons work** |
+
+Layer order makes **no difference while tapping is on** — the owner moved the
+buttons between foreground and background and the widget intercepted either way.
+
+**`pe-none` is the informative failure.** With `pointer-events: none` the web
+content is not a hit target, yet XCTrack still received nothing. So the WebView
+consumes the Android `MotionEvent` regardless of what the page does with it, and
+no CSS or JS trick can decline it on the page's behalf. That closes the last
+plausible route.
+
+#### The consequence that matters for the shipped widget
+
+Not the dead feature — this one:
+
+> **With "Allow tapping on the web page when locked" ON, the overlay swallows
+> every tap over its area, so the pilot's own zoom buttons stop working there.**
+
+The overlay has nothing to tap. It is a passive layer. So tapping should be
+**OFF**, and the pilot keeps the zoom controls they already rely on. The probe
+turned up a regression in the recommended setup, which is worth more than the
+feature it was built to test.
+
+Open question for the owner, since only one arrangement preserves the zoom
+buttons: with the widget in the **background** and tapping off, does XCTrack's XC
+map draw over the arrows? That is chmd's stack (web page below, transparent XC
+map above), and it works visually, but airspace lines and the track then cross
+the markers.
+
+---
+
 ### 2026-08-10 — provider research: winds.mobi, and the XCTrack widget API
 
 **Verdict:** changes Phase 2's data source and closes open decision 4. Also

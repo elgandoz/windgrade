@@ -59,27 +59,6 @@ eq("10km is NOT an integer zoom (it is step 24)", WG.XCT_LADDER[24], "10km");
 eq("ladder spans 23 steps", WG.XCT_STEP_MAX - WG.XCT_STEP_MIN + 1, 23);
 eq("fractional zoom renders: step 24 m/px", WG.mppXct(47.361, 10.5), 77.73, 0.02);
 
-head("zoom range: how far the overlay may follow");
-var zc = WG.cfg("");
-/* Default 0 on purpose: widening the fetch costs 54 KB against 18 KB, and the
-   feature it serves is unproven until tools/tap.html says otherwise. */
-eq("default zspan is 0 until pass-through is proven", zc.zspan, 0);
-eq("zspan 0 leaves the fetch box at the base zoom",
-   WG.coarsestZoom(zc), WG.zoomOf(zc));
-eq("base step -> z11", WG.zoomOf(zc), 11);
-var z3 = WG.cfg("?zspan=3");
-eq("3 steps out is 20km", WG.XCT_LADDER[WG.coarsestStep(z3)], "20km");
-eq("3 steps in is 2500m", WG.XCT_LADDER[WG.finestStep(z3)], "2500m");
-eq("coarsest zoom is 1.5 levels below base", WG.zoomOf(z3) - WG.coarsestZoom(z3), 1.5);
-eq("range clamps at the ladder end, never past it",
-   WG.coarsestStep({ step:13, zspan:6 }), WG.XCT_STEP_MIN);
-eq("and at the fine end", WG.finestStep({ step:33, zspan:6 }), WG.XCT_STEP_MAX);
-eq("zspan 0 means no following", WG.coarsestStep({ step:25, zspan:0 }), 25);
-/* The fetch box must be sized for the coarsest reachable zoom, or stepping out
-   shows a blank ring. Measured: 54 KB vs 18 KB, one call either way. */
-var bBase = WG.bboxAround({ lat:47.0447, lon:8.643 }, WG.zoomOf(z3), 448, 978, z3.pad);
-var bWide = WG.bboxAround({ lat:47.0447, lon:8.643 }, WG.coarsestZoom(z3), 448, 978, z3.pad);
-eq("the prefetch box is wider than the base view", (bWide.e - bWide.w) > (bBase.e - bBase.w), true);
 
 head("legacy ?zoom= keeps working");
 eq("zoom=10 maps to the 15km step", WG.XCT_LADDER[WG.cfg("?zoom=10").step], "15km");
