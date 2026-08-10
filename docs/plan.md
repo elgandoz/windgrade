@@ -136,7 +136,23 @@ Ships something useful on its own, and is where the rating scale gets tuned.
   written in Chrome is not visible to XCTrack's WebView. Check quota and call
   `persist()` before downloading.
 
-## Phase 3b — the overlay widget (alternative, owner's idea 2026-08-10)
+## Phase 3b — the overlay widget  ✅ REGISTRATION CONFIRMED 2026-08-10
+
+**It works.** `tools/registration.html`, stacked on an XCTrack map widget at
+**8 km / North-up** with a valid GPS fix, aligned to the owner's satisfaction
+against airspace edges. Full numbers in `findings.md`. The calibration:
+
+```
+XCTrack "8 km"  ==  our z11 × 0.942  ==  54.95 m/px  ==  fractional OSM zoom 10.914
+```
+
+**The correction is the finding.** XCTrack's ladder is *not* on integer OSM zoom
+levels — it sits a constant 1.062× coarser, −0.086 of a zoom level. chmd's table
+gets the pairing right (8 km ↔ z11) and the scale wrong, so it cannot be used
+without this factor. Two follow-ups before the factor is trusted: check it still
+holds at 15 km/z10 and 4 km/z12, and re-check it at a different latitude.
+
+
 
 A second, much cheaper widget: **draw only the arrows on a transparent page and
 let it sit over XCTrack's own map.** No basemap of ours at all.

@@ -265,8 +265,81 @@ against chmd's eleven OSM-aligned steps gives a consistent ~1.25× relabel:
 600 km) sits half a zoom level away and cannot land on an integer OSM zoom, however
 round those numbers look.
 
-Still a hypothesis — `tools/registration.html` exists to test it, and carries √2
-multipliers in case the other subset turns out to be the aligned one.
+### 2026-08-10 — overlay registration MEASURED: XCTrack is not on integer OSM zooms
+
+**Verdict: Phase 3b is viable.** The overlay registers against XCTrack's own map,
+but only with a constant scale correction — the scale ladder is *not* on integer
+OSM zoom levels, so chmd's table cannot be used as-is.
+
+Measured with `tools/registration.html` stacked on an XCTrack map widget set to
+**8 km / North-up**, valid GPS fix, verified against airspace edges. Owner's
+verdict: "perfect".
+
+```
+z11 ≙ XCT 8km ×0.942 N↑
+src=xctrack  47.36100,8.57825  valid=true
+altGps=536.8  stdBaroAlt=504.7  hdg=116.2  brgGps=162.4
+EFF 54.95 m/px    zEff 10.914
+ground 24.62×53.74 km  diag 59.11 km
+view 448×978 css  dpr3→2
+airspace 359 rings  drawn=20  filter=<1137m
+```
+
+**The calibration:**
+
+| | |
+|---|---|
+| XCTrack scale setting | **8 km** |
+| Our nominal zoom | z11 (51.78 m/px at 47.36°N) |
+| Multiplier needed | **×0.942** |
+| Effective resolution | **54.95 m/px** |
+| Fractional OSM zoom | **10.914** |
+| Offset from z11 | **−0.086 of a zoom level**, i.e. 1/0.942 = 1.062× coarser |
+
+So XCTrack's ladder sits a constant ~6.2% coarser than the OSM levels it otherwise
+resembles. The label is a setting name, not a resolution, and it is **not** a
+power-of-two OSM step. My earlier ~1.25×-relabel table got the *pairing* right
+(8 km ↔ z11, not z10 or z12) but the *scale* wrong.
+
+No principled derivation was found for 0.942 — it is empirical. It is close to
+2√2⁄3 = 0.9428, which is almost certainly numerology; do not build on that.
+
+**Still open, and cheap to settle:**
+
+- **Does the single constant hold at every ladder step?** Only if the ladder
+  doubles exactly. Test 15 km against z10 and 4 km against z12 at the same
+  ×0.942. If it holds, the model is one constant. If it drifts, we need a
+  measured per-step table — and note the label list already hints at this, since
+  15 km ÷ 8 km = 1.875, not 2.
+- **Is 0.942 latitude-independent?** It is if XCTrack also scales by cos(lat), as
+  any Mercator must. Switzerland spans 45.8–47.8°N, where cos differs by 3.7%, so
+  re-check in Valais or Ticino before trusting it nationwide.
+- **Our airspace altitude filter is more restrictive than XCTrack's.** At
+  `altGps 536.8` we drew 20 rings with a 1137 m ceiling, while XCTrack was still
+  labelling `1700 m–2300 m` and `2300 m–∞` beside the aircraft. So "floor below
+  alt + 600" is not quite the rule. Cosmetic for calibration; matters only if we
+  ever want the sets to match exactly.
+
+#### Phase 0's altitude question, finally answered with real values
+
+The same readout closes it. Both fields are present and populated:
+
+```
+altGps = 536.8      stdBaroAlt = 504.7      hdg = 116.2      brgGps = 162.4
+```
+
+`altGps` and `stdBaroAlt` differ by **32.1 m** — which is the QNH deviation from
+the 1013.25 hPa standard, exactly the trap recorded earlier. Confirmation that
+`stdBaroAlt` must never be compared against a station's altitude. `heading` and
+`bearingGps` are both live, so a track-up rotation or a radar orientation has the
+data it would need.
+
+---
+
+Earlier note, superseded by the measurement above: the ~1.25× relabel table was a
+hypothesis that `tools/registration.html` was built to test. It carried √2
+multipliers in case the other alternating subset was the aligned one; the real
+answer turned out to be neither.
 
 **Only the odd values map.** The reason the alignment is exact rather than
 coincidental: XCTrack's integer steps the scale by about √2, so two steps double

@@ -33,7 +33,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 </div>
 <div id="btns">
   <button id="bZo">z-</button><button id="bZi">z+</button><br>
-  <button id="bFd">-2%</button><button id="bR1">1:1</button><button id="bFu">+2%</button><br>
+  <button id="bFd">-2%</button><button id="bR1">CAL</button><button id="bFu">+2%</button><br>
   <button id="bAs">AS</button><button id="bAlt">ALT</button><button id="bGr">GR</button>
 </div>
 
@@ -89,6 +89,18 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 var SCALE_LABEL = {5:"500km",6:"250km",7:"120km",8:"60km",9:"30km",
                    10:"15km",11:"8km",12:"4km",13:"2km",14:"1km",15:"500m"};
 var FINE = 1.02;   /* one tap = 2% */
+
+/* ── MEASURED CALIBRATION, 2026-08-10 ─────────────────────────────────
+   XCTrack "8 km" over a 448x978 css widget at 47.361N aligned with our
+   z11 at x0.942 — confirmed against airspace edges with a valid GPS fix.
+   That is 54.95 m/px, i.e. a fractional OSM zoom of 10.914, so XCTrack's
+   scale ladder is NOT on integer OSM zoom levels: it sits a constant
+   1/0.942 = 1.062 coarser, an offset of -0.086 of a zoom level.
+
+   Whether this single constant holds at every ladder step is still open —
+   it does only if the ladder doubles exactly. Test 15 km against z10 and
+   4 km against z12 with this same multiplier. ─────────────────────── */
+var CAL = 0.942;
 var AIRSPACE_URL = "https://airspace.shv-fsvl.ch/api/v2/geojson/airspaces";
 var LS_KEY = "wg.reg.lastfix";
 var DPR_CAP = 2;          /* AGENTS.md: cap the backing store at 1-2 */
@@ -96,7 +108,7 @@ var POLL_MS = 500;        /* match XCTrack's 2 Hz map redraw */
 var RINGS_KM = [5, 10, 20, 40];
 
 var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
-var zoom = 11, mul = 1, showAS = true, showGR = true, showALT = true;
+var zoom = 11, mul = CAL, showAS = true, showGR = true, showALT = true;
 var asDrawn = 0;
 var W = 0, H = 0, dpr = 1;
 var fix = null, fixSrc = "none", rawLoc = "";
@@ -384,12 +396,12 @@ bind("bZi", function(){ if (zoom < 15) zoom++; });
 bind("bZo", function(){ if (zoom > 5)  zoom--; });
 bind("bFu", function(){ mul *= FINE; });
 bind("bFd", function(){ mul /= FINE; });
-bind("bR1", function(){ mul = 1; });
+bind("bR1", function(){ mul = (Math.abs(mul-CAL) < 1e-9) ? 1 : CAL; });  /* CAL <-> 1.0 */
 bind("bAs", function(){ showAS = !showAS; });
 bind("bAlt", function(){ showALT = !showALT; });
 bind("bGr", function(){ showGR = !showGR; });
 function syncBtns(){
-  document.getElementById("bR1").className = (Math.abs(mul-1) < 1e-9) ? "" : "on";
+  document.getElementById("bR1").className = (Math.abs(mul-CAL) < 1e-9) ? "on" : "";
   document.getElementById("bAs").className  = showAS  ? "on" : "";
   document.getElementById("bAlt").className = showALT ? "on" : "";
   document.getElementById("bGr").className  = showGR  ? "on" : "";
