@@ -15,7 +15,11 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
   background:rgba(10,17,22,.78);color:#E8F0F5;
   font:600 11px/1.25 ui-monospace,"Roboto Mono",monospace;white-space:pre}
 #badge.bad{background:rgba(126,26,20,.92)}
-#badge.off{background:rgba(120,84,12,.92)}
+#badge.off{background:rgba(120,84,12,.94)}
+/* When the scale is offset, reset IS the task — so the badge stops being a
+   compact label and becomes a full-width, thumb-sized target. Costs screen
+   only while it is relevant, and it is unmissable exactly when it matters. */
+#badge.off{right:0;padding:11px 10px;font-size:13px;text-align:center}
 /* Only present when ztap=1. Invisible: they exist to catch a tap, not to be
    looked at. Nothing else in this widget is a hit target, deliberately —
    with tapping enabled the WebView swallows every touch over its area, so a
@@ -104,10 +108,30 @@ function draw(fix, ranked){
     var P = WG.projector(fix, WG.zoomForStep(curStep), W, H, WG.CAL);
     var box = WG.REACH * scale, placed = [], i, st, x, y, k, hit;
 
+    /* Rectangles a marker may not cover. The scale bar is the check that the
+       pairing is right, and the badge is how a mis-pairing announces itself;
+       a marker drawn over either removes the thing it was there to reveal. */
+    var keepOut = [];
+    if (C.bar){
+      var barPx = WG.XCT_METRES[curStep] / P.res;
+      keepOut.push([0, H - 78, 20 + (barPx > 0 ? barPx : 0), H]);
+    }
+    if (C.badge) keepOut.push([0, 0, 190, 26]);
+    function blocked(px, py){
+      for (var q = 0; q < keepOut.length; q++){
+        var r = keepOut[q];
+        if (px > r[0] - box * 0.7 && px < r[2] + box * 0.7 &&
+            py > r[1] - box * 0.7 && py < r[3] + box * 0.7) return true;
+      }
+      return false;
+    }
+
     for (i = 0; i < ranked.length; i++){
       st = ranked[i];
       x = P.x(st.lon); y = P.y(st.lat);
       if (x < -box || x > W + box || y < -box || y > H + box) continue;
+
+      if (blocked(x, y)) continue;
 
       hit = false;
       for (k = 0; k < placed.length; k++){

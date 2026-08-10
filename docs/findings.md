@@ -4,6 +4,42 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — overlay verified on device, and the scale bars agree
+
+**Verdict:** `widget.html` renders correctly in XCTrack. The last unverified piece
+of Phase 3b is closed, and the scale bar did the job it was built for on its first
+run.
+
+Owner's screenshot, XC map deliberately left empty so the bars stand out:
+
+- **Markers render as designed** — halo, gust rim, average fill, and the
+  `avg/gust` pair below each arrow with its white casing. Legible against a black
+  map. 12 shown, well spaced by the collision declutter.
+- Badge top-left reads `8km N↑ 12`.
+- **Our scale bar sits directly above XCTrack's, and the two are the same
+  length.** Measured off the screenshot at ~150 and ~145 CSS px for 8 km, which is
+  agreement within the error of reading a JPEG.
+
+That last point is the calibration confirming itself passively, with no test run
+and no arithmetic by the pilot. It is now a permanent check: if the 0.942 constant
+is wrong at another latitude, the bars will simply stop matching.
+
+**Manual zoom works.** The owner placed `−` / `+` buttons outside the widget
+rectangle; tapping the widget changed its scale and the buttons still drove the
+map, exactly as the overlap-only conflict predicted.
+
+**Two faults visible in the screenshot, both fixed:**
+
+1. A marker was drawn across both scale bars. A marker over the bar removes the
+   check the bar exists for, so the bar and the badge are now keep-out
+   rectangles that the declutter avoids.
+2. Owner: "the target area is unobtrusive but very small." The reset — tapping
+   the badge — was a ~110×20 px target. When the scale is offset, resetting *is*
+   the task, so the badge now becomes a full-width, thumb-sized amber bar for
+   exactly as long as it is relevant, and returns to a compact label afterwards.
+
+---
+
 ### 2026-08-11 — tap pass-through: NO. Zoom sync is not possible.
 
 **Verdict: Phase 3c is dead.** A tap over the web widget never reaches an

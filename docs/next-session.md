@@ -21,14 +21,17 @@ ready to post.
 | `wg/marker.js` | marker, canvas + SVG from one geometry source |
 | `app.html` | list page, installable PWA, settings sheet, light/dark/auto |
 | `index.html` | launcher: configurator, copy-paste URL, QR, tool links |
-| `widget.html` | the XCTrack overlay. **Layout unverified on device** — see below |
+| `widget.html` | the XCTrack overlay. **Verified on device 2026-08-11** |
 | Overlay registration | measured and confirmed against airspace edges |
 
-**The one thing not visually verified:** `widget.html`'s marker layout on a phone.
-`getImageData` proves it draws (~7,255 opaque px for 19 markers) and the canvas
-renderer is verified in isolation via `tools/arrow.html`, but headless screenshots
-cannot capture an asynchronously drawn canvas. Positions, label placement and
-decluttering need one look in XCTrack.
+**Verified on device 2026-08-11.** Markers, labels, declutter and the scale bar all
+render correctly in XCTrack, and our bar matched XCTrack's own to within reading
+error — the calibration confirming itself passively. Screenshot analysis in
+`findings.md`.
+
+Still true that **headless screenshots cannot capture an asynchronously drawn
+canvas**, so changes to `widget.html`'s rendering still need a device check; the
+laptop can only verify `app.html` and `tools/arrow.html` visually.
 
 ---
 
@@ -80,8 +83,11 @@ Run `tools/tap.html`:
 
 ## Open items, in the owner's stated order
 
-1. **Look at `widget.html` on the phone.** The only unverified rendering — and
-   check whether a background-layered widget is drawn over by the XC map.
+1. **Check the two fixes from 2026-08-11 on device** — markers now keep off the
+   scale bar and badge, and the reset target grows to full width while the scale
+   is offset. Also still open: whether a background-layered widget is drawn over
+   by the XC map, which is the only arrangement preserving the pilot's zoom
+   buttons.
 2. **Phase 3** — our own PMTiles basemap, for the standalone page. Still the durable
    answer; 3b was the cheap one that shipped first. Two unresolved risks live here:
    byte ranges against a real `.pmtiles` (see below) and the ~50 MB pack ceiling.
