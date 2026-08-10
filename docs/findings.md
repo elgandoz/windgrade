@@ -231,6 +231,43 @@ XCTrack stores the XC map scale as an integer, `mapWidget_scale.value`, in the
 
 `osm_zoom = floor(mapWidget_scale.value / 2) - 1`
 
+**The labels are build-specific — chmd's do not exist in the owner's XCTrack.**
+Reported 2026-08-10: the zoom slider offers 23 values, none of which are 6 km or
+12 km:
+
+```
+300m 500m 600m 1km 1200m 2km 2500m 4km 5km 8km 10km 15km
+20km 30km 40km 60km 80km 120km 150km 250km 300km 500km 600km
+```
+
+Twenty-three is exactly chmd's `mapWidget_scale.value` span of 12–34, and **every
+second step doubles** (verified: two-step ratios are 2.00 apart from three rounding
+artefacts at 2.08/1.88). So the underlying geometry is the same; only the printed
+labels changed. Taking the alternating subset that lines up position-for-position
+against chmd's eleven OSM-aligned steps gives a consistent ~1.25× relabel:
+
+| OSM zoom | chmd's label | this build |
+|---|---|---|
+| z15 | 400 m | **500 m** |
+| z14 | 800 m | **1 km** |
+| z13 | 1500 m | **2 km** |
+| z12 | 3 km | **4 km** |
+| **z11** | **6 km** | **8 km** |
+| z10 | 12 km | **15 km** |
+| z9 | 25 km | **30 km** |
+| z8 | 50 km | **60 km** |
+| z7 | 100 km | **120 km** |
+| z6 | 200 km | **250 km** |
+| z5 | 400 km | **500 km** |
+
+**Calibrate with 8 km or 15 km, not 5 km or 10 km.** The other alternating subset
+(300 m, 600 m, 1.2 km, 2.5 km, 5 km, 10 km, 20 km, 40 km, 80 km, 150 km, 300 km,
+600 km) sits half a zoom level away and cannot land on an integer OSM zoom, however
+round those numbers look.
+
+Still a hypothesis — `tools/registration.html` exists to test it, and carries √2
+multipliers in case the other subset turns out to be the aligned one.
+
 **Only the odd values map.** The reason the alignment is exact rather than
 coincidental: XCTrack's integer steps the scale by about √2, so two steps double
 it, while OSM zoom doubles per level. Every second XCTrack step therefore lands

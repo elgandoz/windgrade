@@ -66,10 +66,29 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
    for the buttons.
    ══════════════════════════════════════════════════════════════ */
 
-/* ── the table from xctrack-public#1235, followed blindly on purpose ── */
-var SCALE_LABEL = {5:"400km",6:"200km",7:"100km",8:"50km",9:"25km",
-                   10:"12km",11:"6km",12:"3km",13:"1500m",14:"800m",15:"400m"};
-var MULTS = [1, 1.5, 2, 3, 0.5, 0.667];
+/* ── scale ↔ OSM zoom ────────────────────────────────────────────────
+   chmd's table in xctrack-public#1235 lists labels this build does not
+   have. Their OSM-aligned steps were 400m/800m/1500m/3km/6km/12km/25km/
+   50km/100km/200km/400km; the owner's slider offers 23 values —  exactly
+   chmd's mapWidget_scale.value span of 12..34 — of which every second one
+   doubles. Taking the alternating subset that lines up position-for-
+   position gives a consistent ~1.25x relabel:
+
+     z15 500m   z14 1km    z13 2km    z12 4km   z11 8km   z10 15km
+     z9  30km   z8  60km   z7  120km  z6  250km z5  500km
+
+   So this build's "8 km" should be chmd's "6 km", i.e. OSM z11. The other
+   alternating subset (300m/600m/1.2km/2.5km/5km/10km/20km/40km/80km/
+   150km/300km/600km) sits half a zoom level away and cannot land on an
+   integer OSM zoom — which is why 5 km and 10 km are the wrong ones to
+   calibrate with even though they look like round numbers.
+
+   All of this is a hypothesis. The buttons are here to test it, and the
+   sqrt2 multipliers exist in case the other subset turns out to be the
+   aligned one after all. ──────────────────────────────────────────── */
+var SCALE_LABEL = {5:"500km",6:"250km",7:"120km",8:"60km",9:"30km",
+                   10:"15km",11:"8km",12:"4km",13:"2km",14:"1km",15:"500m"};
+var MULTS = [1, 1.414, 0.707, 2, 0.5, 1.5, 0.667, 3];
 var AIRSPACE_URL = "https://airspace.shv-fsvl.ch/api/v2/geojson/airspaces";
 var LS_KEY = "wg.reg.lastfix";
 var DPR_CAP = 2;          /* AGENTS.md: cap the backing store at 1-2 */
