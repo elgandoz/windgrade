@@ -1,14 +1,24 @@
 # Windgrade
 
 An XCTrack web widget (plus a standalone page) that shows nearby **wind-station
-readings on a light offline map**, each rendered as an arrow coloured by a
-safety rating. For paraglider XC pilots flying areas they don't know.
+readings on terrain**, each rendered as an arrow coloured by a rating scale. For
+paraglider XC pilots flying areas they don't know.
 
-**Status: Phase 0 cleared, Phase 1 not started.** The capability probe has been
-run inside XCTrack and `docs/findings.md` holds the results — read it before
-proposing anything, because it settles the renderer, the offline story and the
-data source. Nothing is built yet except `probe.html`. Read `docs/plan.md` for
-the phases and `docs/handover.md` for why every decision was made the way it was.
+Two ways to get the terrain, and the cheap one came first: **Phase 3b** overlays
+transparent arrows on XCTrack's *own* map, which needs no basemap of ours at all.
+**Phase 3** ships our own offline PMTiles basemap, and remains the durable answer
+for the standalone page.
+
+**Status: Phases 1, 2 and 3b built. Phase 3 (our own basemap) and Phase 4 not
+started.** Working: the engine, the winds.mobi provider, a launcher, a list page
+and the XCTrack overlay whose registration against XCTrack's own map is measured
+and confirmed. Read `docs/findings.md` before proposing anything — it settles the
+renderer, the data source and the map calibration. Then `docs/plan.md` for the
+phases and `docs/handover.md` for why each decision was made the way it was.
+
+Still open: sync the widget zoom to the map automatically (owner has a plan),
+the `User-Agent` question for winds.mobi, and a latitude check on the 0.942
+calibration constant.
 
 `windgrade` is a placeholder name — renaming is a folder move and three lines
 of docs.
