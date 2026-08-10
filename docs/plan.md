@@ -510,6 +510,25 @@ away from XCTrack.
 must live outside the widget rectangle. That is the same constraint the manual
 zoom already had, and it is the price of any interactivity at all.
 
+Every one of these is in the launcher's configurator, generated from `SPEC`, and
+the launcher carries an "Interactive mode (optional)" section explaining the
+trade — including that turning tapping on costs the pilot their own zoom buttons
+over the widget area.
+
+### Placement, after the first device run
+
+- **The two scale bars are compared by eye**, so they are now aligned: same left
+  inset (15 px, matching XCTrack's), label centred over the bar at XCTrack's own
+  size, and `barY` to tune the vertical gap. That last one is a parameter rather
+  than a constant because XCTrack's bar height is device-specific and guessing it
+  wrong is the difference between "easy to compare" and "useless".
+- **The off-scale warning moved from the top to the bottom**, beside the scale bar
+  it is about and the zoom buttons that caused it. It was previously at the top,
+  far from both.
+- **The zoom buttons lift clear of the warning** when it appears. The warning
+  shows *because* the pilot zoomed, so burying the control they would reach for
+  next was exactly backwards.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

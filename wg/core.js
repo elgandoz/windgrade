@@ -109,6 +109,10 @@ var SPEC = [
   { k:"bar",   t:"int", d:1, min:0, max:1, only:"widget",
     lab:"Show scale bar",
     help:"Draws our scale bar above XCTrack's own. Equal lengths = correctly paired." },
+  { k:"barY",  t:"int", d:34, min:0, max:200, only:"widget",
+    lab:"Scale bar height (px)",
+    help:"Distance from the bottom. Tune so it sits just above XCTrack's own bar — " +
+         "the closer the two are, the easier they are to compare." },
   { k:"popup", t:"int", d:30, min:0, max:300, only:"widget",
     lab:"Popup timeout (s)",
     help:"Tap a marker for its recent trend. 0 keeps it open until dismissed." },

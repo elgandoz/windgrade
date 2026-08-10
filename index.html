@@ -131,6 +131,36 @@ a{color:var(--chart)}
     list page never goes blank, because there a blank page just reads as broken.
   </p>
 
+  <h2>Interactive mode (optional)</h2>
+  <p class="note">
+    Leave these at zero for normal use. They all need <b>Allow tapping on the web
+    page when locked</b> turned <b>ON</b> — and with that on, the overlay swallows
+    every tap over its area, so <b>your own zoom buttons must be moved outside the
+    widget rectangle</b> or they stop working. Measured, not assumed.
+  </p>
+  <ol>
+    <li><b>Popup timeout</b> — tap a marker for its recent trend: the last few
+      hours of readings as small arrows, oldest left. Tap anywhere to dismiss, or
+      let it time out. <code>0</code> keeps it open until dismissed.</li>
+    <li><b>Trend length</b> — how far back the popup reaches.</li>
+    <li><b>Visible zoom buttons</b> — a small <code>+</code>/<code>−</code> pair,
+      bottom right.</li>
+    <li><b>Tap zones to change scale</b> — the top and bottom halves of the widget
+      become invisible zoom controls. Combines with the buttons. A tap on a marker
+      always opens its popup first, so the two never fight.</li>
+  </ol>
+  <p class="note">
+    Changing the overlay's scale does <b>not</b> change the map — nothing in
+    XCTrack's interface lets a web widget do that. So the widget says so at the
+    bottom until you set the map yourself, and the two scale bars are how you
+    confirm you got it right: <b>same length means correctly paired.</b>
+  </p>
+  <p class="note">
+    <b>Scale bar height</b> nudges our bar up or down so it sits just above
+    XCTrack's own. They are compared by eye, so the closer together the better —
+    the right value depends on your screen, so set it once and forget it.
+  </p>
+
   <p class="warn">
     <b>The colours are not a safety verdict.</b> They are a rough aid on a
     supplied scale, not an assessment of whether a flight is safe. Everything
