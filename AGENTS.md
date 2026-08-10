@@ -103,6 +103,19 @@ does not need rediscovering. The load-bearing ones:
 - Keep `core.js` free of the DOM: it returns state, pages draw. That is what
   stops the widget and the standalone page from drifting apart.
 
+**The overlay calibration is measured, do not re-derive it.** For the Phase 3b
+widget that sits over XCTrack's own map:
+
+```
+m/px = 156543.034 · cos(lat) / 2^z / 0.942     4km=z12  8km=z11  15km=z10  30km=z9
+```
+
+XCTrack's map scale is a *resolution* on an exact power-of-two ladder, but it is
+**not** on integer OSM zoom levels — it runs 1.062× coarser, hence the 0.942.
+Verified at three ladder steps against airspace edges; `docs/findings.md` has the
+numbers and `tools/registration.html` reproduces it. The printed km labels are
+rounded and must never be used to compute geometry.
+
 ## Conventions
 
 - Plain ES5-compatible JS in shipped pages. Old Android WebViews.

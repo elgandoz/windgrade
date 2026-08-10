@@ -304,16 +304,45 @@ power-of-two OSM step. My earlier ~1.25×-relabel table got the *pairing* right
 No principled derivation was found for 0.942 — it is empirical. It is close to
 2√2⁄3 = 0.9428, which is almost certainly numerology; do not build on that.
 
-**Still open, and cheap to settle:**
+#### Confirmed at three ladder steps — one constant covers everything
 
-- **Does the single constant hold at every ladder step?** Only if the ladder
-  doubles exactly. Test 15 km against z10 and 4 km against z12 at the same
-  ×0.942. If it holds, the model is one constant. If it drifts, we need a
-  measured per-step table — and note the label list already hints at this, since
-  15 km ÷ 8 km = 1.875, not 2.
+Owner re-ran at 15 km and 4 km without touching the multiplier. "They hold
+perfectly."
+
+| XCTrack | Our zoom | Predicted m/px | Measured | `zEff` |
+|---|---|---|---|---|
+| 15 km | z10 | 109.93 | **109.89** | **9.914** |
+| 8 km | z11 | 54.96 | **54.95** | **10.914** |
+| 4 km | z12 | 27.48 | **27.47** | **11.914** |
+
+`zEff` spacing is **exactly 1.000** between steps. Two conclusions follow, and the
+second is the one that matters:
+
+1. **The ladder is exact powers of two, and the printed labels are rounded.**
+   15 ÷ 8 = 1.875 and 8 ÷ 4 = 2.0, so if the labels were honest the zoom spacing
+   would have been log₂(1.875) = 0.907 between the first pair. It was 1.000. The
+   labels are cosmetic; the underlying resolution ladder doubles cleanly.
+2. **XCTrack's scale is a *resolution*, not a fit-to-widget ground distance.** A
+   fit-to-widget model with those labels would have produced the 0.907 spacing.
+   It did not — so the setting means metres per pixel, and the correct zoom does
+   **not** depend on widget size. This was the biggest remaining structural risk
+   and it is now closed by inference from the spacing alone.
+
+So the whole calibration is one constant:
+
+```
+effective m/px  =  156543.034 · cos(lat) / 2^z / 0.942
+XCTrack label   ->  4 km = z12, 8 km = z11, 15 km = z10, 30 km = z9, …
+```
+
+**Still open, low risk:**
+
 - **Is 0.942 latitude-independent?** It is if XCTrack also scales by cos(lat), as
   any Mercator must. Switzerland spans 45.8–47.8°N, where cos differs by 3.7%, so
-  re-check in Valais or Ticino before trusting it nationwide.
+  worth one check in Valais or Ticino before trusting it nationwide.
+- **Widget-size independence is inferred, not measured.** All three runs used the
+  same 448×978 widget. The spacing argument above makes a resolution model near
+  certain, but one run at a different widget size would settle it outright.
 - **Our airspace altitude filter is more restrictive than XCTrack's.** At
   `altGps 536.8` we drew 20 rings with a 1137 m ceiling, while XCTrack was still
   labelling `1700 m–2300 m` and `2300 m–∞` beside the aircraft. So "floor below

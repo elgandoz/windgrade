@@ -149,8 +149,21 @@ XCTrack "8 km"  ==  our z11 × 0.942  ==  54.95 m/px  ==  fractional OSM zoom 10
 **The correction is the finding.** XCTrack's ladder is *not* on integer OSM zoom
 levels — it sits a constant 1.062× coarser, −0.086 of a zoom level. chmd's table
 gets the pairing right (8 km ↔ z11) and the scale wrong, so it cannot be used
-without this factor. Two follow-ups before the factor is trusted: check it still
-holds at 15 km/z10 and 4 km/z12, and re-check it at a different latitude.
+without this factor.
+
+**Confirmed at three steps** (15 km/z10, 8 km/z11, 4 km/z12) with `zEff` spacing
+of exactly 1.000, which also proves two things worth having: the printed labels are
+merely rounded (15 ÷ 8 = 1.875 would have given 0.907 spacing), and the setting is
+a **resolution**, not a ground distance fitted to the widget — so the correct zoom
+does not depend on widget size. The complete model is one line:
+
+```
+m/px = 156543.034 · cos(lat) / 2^z / 0.942        4km=z12  8km=z11  15km=z10  30km=z9
+```
+
+Left to check, low risk: whether 0.942 is latitude-independent (one run in Valais
+or Ticino), and widget-size independence, which is inferred from the spacing rather
+than measured.
 
 
 
