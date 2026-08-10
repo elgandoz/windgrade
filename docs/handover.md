@@ -177,25 +177,45 @@ strictly more information than SeeYou's single colour, and it is what makes a
 calm-average-with-violent-gusts marker announce itself as a colour *step*. Copy
 their geometry, not their colour assignment.
 
-**One state we could not decode.** Some arrows are solid, others are outlined
-with a near-white interior, and it tracks neither average, gust, nor gust factor
-consistently — `25/32` is hollow while `24/28` is filled. Possibly a milder
-staleness tier, possibly station type. Unknown, and not needed: our white/grey
-band produces hollow-looking arrows for its own well-defined reason.
+**The half-drawn markers are a bug, not a pattern — and the bug is the lesson.**
+Some stations show a grey label with no arrow (`1/10`, `8/21`, `3/28`, `9/27`,
+`5/11`), and occasionally an arrow with no label. An earlier version of this entry
+guessed this was a deliberate staleness treatment. It is not: the owner reports it
+as a fault in their decluttering, probably Mapbox symbol collision, which can
+evict one half of a pair and leave the other.
 
-**A staleness treatment worth stealing, if that is what it is.** Some stations
-show a **grey label and no arrow at all** (`1/10`, `8/21`, `3/28`, `9/27`,
-`5/11`). Suppressing the arrow rather than drawing it in a confident colour is
-exactly the right instinct for a reading you no longer trust — a stale *direction*
-is as misleading as a stale speed. Inferred, not confirmed. Note `AGENTS.md`
-requires stale data to go visibly **red**, not grey, so if adopted this becomes
-"drop the arrow *and* go red", not "go grey".
+Take the warning instead of the pattern:
 
-**Explains what our new white/grey band will look like.** Several arrows appear
-"hollow" — pale interior, coloured outline. That is not a third state; it is
-simply a low average landing in a near-white band while the gust outline stays
-saturated. So the white/grey level added today will read as an outlined,
-unfilled arrow, and that is correct rather than a rendering bug.
+- **An arrow and its label are one indivisible marker.** Neither may be
+  declutttered, faded or dropped without the other. A number floating with no
+  arrow has lost its direction; an arrow with no number has lost the reading that
+  `AGENTS.md` makes mandatory at every size. Both are worse than omitting the
+  station entirely.
+- We will not inherit this particular bug, because markers are drawn by us onto
+  canvas rather than placed by a symbol engine. But we do not get decluttering
+  for free either, and 155 SwissMetNet stations inside a 40 km view *will*
+  overlap. Whatever we do about that, it evicts whole markers.
+- No conclusion about their staleness handling can be drawn from these
+  screenshots. `AGENTS.md`'s rule stands unchanged: stale readings go visibly
+  **red**.
+
+**Their arrows are always filled with colour — there is no hollow state.**
+Owner-confirmed, correcting an earlier reading of these screenshots. What looks
+like a pale interior at 30 px is a light tint of the hue with a darker shade of
+the same hue as the border. Never an unfilled shape.
+
+That makes our **white/grey band a genuine divergence from SeeYou**, not a copy
+of it: they never draw an uncoloured arrow, and ours will. The near-black outer
+stroke is therefore doing real work at the calm end, and cannot be treated as
+decoration.
+
+It also explains why the inner 1 px dark-grey outline in our spec is
+load-bearing rather than trim. Whenever the average and the gust land in the
+**same** band — the common case, since the gust table is just the average table
+shifted up — fill and rim are the same colour and the two-shape construction
+would collapse into one flat blob. The inner outline is what keeps the structure
+visible in exactly that case. SeeYou solves the same problem the same way, with a
+darker shade for the border.
 
 **Other things worth copying:**
 
