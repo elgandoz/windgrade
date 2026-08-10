@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Windgrade — nearby wind stations</title>
+<style>
+:root{
+  --ink:#0A1116; --panel:#151F27; --panel-hi:#1D2B36; --rule:#2A3B48;
+  --fg:#E8F0F5; --dim:#7B909F; --chart:#54A6DC; --bad:#D6483C; --warn:#E9A33C;
+  --mono:ui-monospace,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--ink);color:var(--fg);
+  font:400 14px/1.35 system-ui,-apple-system,Roboto,sans-serif;padding:8px 8px 32px}
+h1{font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 2px;color:var(--dim)}
+#hdr{font-family:var(--mono);font-size:11px;color:var(--dim);margin:0 0 8px;white-space:pre-wrap}
+#err{display:none;margin:6px 0;padding:8px;border-radius:3px;font-size:12px;
+  background:#2A1210;border:1px solid #5C2620;color:#F0B4AE}
+button{padding:9px 12px;margin:0 4px 6px 0;background:var(--panel-hi);
+  border:1px solid var(--rule);border-radius:3px;color:var(--fg);
+  font:600 12px system-ui;cursor:pointer}
+button:active{background:#28536E}
+
+/* chip: marker, then numbers, then facts. The number is never optional. */
+.chip{display:flex;align-items:center;gap:9px;padding:7px 8px;margin:0 0 5px;
+  background:var(--panel);border:1px solid var(--rule);border-radius:4px}
+.chip.stale{border-color:var(--bad);background:#20161A}
+.chip.warn{border-color:#5A4520}
+.mk{flex:0 0 auto;width:44px;height:44px}
+.num{flex:0 0 auto;min-width:84px;font-family:var(--mono);font-weight:700;
+  font-size:17px;letter-spacing:-.02em;text-align:right}
+.num small{display:block;font-size:9px;font-weight:400;color:var(--dim);letter-spacing:.06em}
+.meta{flex:1 1 auto;min-width:0}
+.nm{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:2px}
+.age{color:var(--dim)} .age.warn{color:var(--warn)} .age.stale{color:var(--bad);font-weight:700}
+.pk{color:var(--chart)}
+.st-orange{color:var(--warn)} .st-red{color:var(--bad)}
+footer{margin-top:14px;padding-top:8px;border-top:1px solid var(--rule);
+  font-size:10px;line-height:1.5;color:var(--dim)}
+footer b{color:var(--fg)}
+</style>
+</head>
+<body>
+
+<h1>Windgrade</h1>
+<div id="hdr">starting…</div>
+<div id="err"></div>
+<div>
+  <button id="bRef">Refresh</button>
+  <button id="bPeak">Summits only</button>
+  <button id="bHalo">Halo: on</button>
+</div>
+<div id="list"></div>
+
+<footer id="foot"></footer>
+
+<script src="wg/core.js"></script>
+<script src="wg/windsmobi.js"></script>
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════
+   app.html — the standalone page. Phase 2: data, no map.
+
+   Useful on its own, and the place the rating scale gets judged. Renders
+   the real marker geometry so the colours and the halo question can be
+   evaluated on a laptop, without XCTrack.
+
+   Elements are built once and only changed text nodes are rewritten; a
+   stationary pilot with unchanged readings causes no DOM writes.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var C = WG.cfg(location.search);
+var PROV = WG.providers.windsmobi;
+var VIEW_W = 448, VIEW_H = 978;      /* nominal widget for the fetch bbox */
+var halo = true;
+var stations = [], lastFetch = 0, lastErr = "", fetching = false;
+var rows = {};                        /* id -> {el, cache} */
+
+function el(id){ return document.getElementById(id); }
+function txt(node, s){ if (node.firstChild.nodeValue !== s) node.firstChild.nodeValue = s; }
+
+/* ── position: browser geolocation on a laptop, XCTrack on the phone ── */
+if (navigator.geolocation){
+  navigator.geolocation.watchPosition(function(p){
+    WG.setGeoFix({ lat:p.coords.latitude, lon:p.coords.longitude,
+                   alt:p.coords.altitude, src:"geo", valid:true });
+    tick();
+  }, function(e){ note("geolocation: " + e.message); },
+     {enableHighAccuracy:true, maximumAge:10000, timeout:20000});
+}
+
+function note(s){ lastErr = s; paintErr(); }
+function paintErr(){
+  var e = el("err");
+  if (!lastErr){ e.style.display = "none"; return; }
+  e.style.display = "block";
+  e.textContent = lastErr;
+}
+
+/* ── the marker, drawn to the spec in handover.md ─────────────────────
+   Two arrows sharing an origin and bearing, the gust arrow behind and
+   larger so its colour reads as a rim rather than a stroke. Broad swept
+   dart, trailing edge notched inward, roughly as wide as it is long.
+   Points DOWNWIND: bearing + 180, since w-dir is a from-bearing.
+   Calm or unknown direction gets a narrow symmetric leaf instead, because
+   at zero wind a direction would be invented. ────────────────────── */
+var DART = "M0,-15 L13,11 L0,4 L-13,11 Z";
+var LEAF = "M0,-15 L5,8 L0,3 L-5,8 Z";
+
+function marker(st){
+  var a = WG.colour(st.rAvg), g = WG.colour(st.rGust);
+  var calm = !(st.dir === st.dir) || (st.avg === 0 && st.gust === 0);
+  var d = calm ? LEAF : DART;
+  var rot = calm ? 0 : ((st.dir + 180) % 360);
+  var s = '<svg class="mk" viewBox="-22 -22 44 44" aria-hidden="true">';
+  s += '<g transform="rotate(' + rot.toFixed(1) + ')">';
+  /* halo outside everything: the only thing that keeps a black fill off a
+     dark map. Toggleable here so the choice can be made by looking. */
+  if (halo) s += '<path d="' + d + '" fill="none" stroke="' + WG.HALO +
+                 '" stroke-width="7" stroke-linejoin="round" opacity=".9"/>';
+  /* gust arrow: larger, near-black outer stroke */
+  s += '<path d="' + d + '" fill="' + g.fill + '" stroke="' + WG.STROKE_OUTER +
+       '" stroke-width="2" stroke-linejoin="round"/>';
+  /* average arrow: scaled down so the gust colour shows as a rim. The thin
+     inner stroke is what stops the two collapsing when both land in the
+     same band — the common case. */
+  s += '<g transform="scale(0.62)"><path d="' + d + '" fill="' + a.fill +
+       '" stroke="' + WG.STROKE_INNER + '" stroke-width="1.6" stroke-linejoin="round"/></g>';
+  s += '</g></svg>';
+  return s;
+}
+
+/* ── rows ─────────────────────────────────────────────────────────── */
+function buildRow(st){
+  var d = document.createElement("div");
+  d.className = "chip";
+  d.innerHTML =
+    marker(st) +
+    '<div class="num"><span></span><small></small></div>' +
+    '<div class="meta"><div class="nm"></div><div class="sub"></div></div>';
+  return { el:d, cache:{} };
+}
+
+function fmt1(v){ return (v !== v) ? "—" : (Math.round(v * 10) / 10); }
+
+function paintRow(r, st){
+  var c = r.cache;
+
+  var key = st.rAvg + "/" + st.rGust + "/" + (st.dir|0) + "/" + (halo?1:0) + "/" + st.avg + "/" + st.gust;
+  if (c.mk !== key){ r.el.replaceChild(mkNode(st), r.el.firstChild); c.mk = key; }
+
+  var num = fmt1(st.avg) + "/" + fmt1(st.gust);
+  var numEl = r.el.querySelector(".num span");
+  if (c.num !== num){ numEl.textContent = num; c.num = num; }
+  var unit = "km/h" + ((st.dir === st.dir) ? " · " + Math.round(st.dir) + "°" : "");
+  var unEl = r.el.querySelector(".num small");
+  if (c.unit !== unit){ unEl.textContent = unit; c.unit = unit; }
+
+  var nm = st.name + (st.peak ? " ▲" : "");
+  var nmEl = r.el.querySelector(".nm");
+  if (c.nm !== nm){
+    nmEl.textContent = "";
+    nmEl.appendChild(document.createTextNode(st.name + " "));
+    if (st.peak){
+      var p = document.createElement("span"); p.className = "pk";
+      p.textContent = "▲"; nmEl.appendChild(p);
+    }
+    c.nm = nm;
+  }
+
+  var sub = Math.round(st.alt) + " m · " + (Math.round(st.dist / 100) / 10) + " km " +
+            compass(st.brg) + " · " + st.provider;
+  var subEl = r.el.querySelector(".sub");
+  if (c.sub !== sub){
+    subEl.textContent = "";
+    subEl.appendChild(document.createTextNode(sub + " · "));
+    var ag = document.createElement("span");
+    ag.className = "age " + st.stale.cls;
+    ag.textContent = (st.stale.age === st.stale.age ? Math.round(st.stale.age) + " min old"
+                                                    : "no timestamp");
+    subEl.appendChild(ag);
+    if (st.status === "orange" || st.status === "red"){
+      var s2 = document.createElement("span");
+      s2.className = "st-" + st.status;
+      s2.textContent = "  station " + st.status;
+      subEl.appendChild(s2);
+    }
+    c.sub = sub + "|" + st.stale.cls + "|" + st.status;
+  }
+
+  var cls = "chip" + (st.stale.cls === "fresh" ? "" : " " + st.stale.cls);
+  if (r.el.className !== cls) r.el.className = cls;
+}
+
+function mkNode(st){
+  var wrap = document.createElement("div");
+  wrap.innerHTML = marker(st);
+  return wrap.firstChild;
+}
+
+function compass(b){
+  if (b !== b) return "";
+  var names = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return names[Math.round(b / 22.5) % 16];
+}
+
+/* ── render ───────────────────────────────────────────────────────── */
+function render(fix){
+  var list = el("list"), i, st, r, seen = {};
+  var ranked = WG.prepare(stations, fix, C, Date.now());
+
+  for (i = 0; i < ranked.length; i++){
+    st = ranked[i]; seen[st.id] = 1;
+    r = rows[st.id];
+    if (!r){ r = rows[st.id] = buildRow(st); }
+    paintRow(r, st);
+    if (list.childNodes[i] !== r.el) list.insertBefore(r.el, list.childNodes[i] || null);
+  }
+  /* drop rows that fell out of range */
+  for (var id in rows){
+    if (rows.hasOwnProperty(id) && !seen[id]){
+      if (rows[id].el.parentNode) rows[id].el.parentNode.removeChild(rows[id].el);
+      delete rows[id];
+    }
+  }
+
+  var nets = WG.attribution(ranked);
+  el("foot").innerHTML = "";
+  el("foot").appendChild(document.createTextNode(
+    "Sources: " + (nets.length ? nets.join(", ") : "—") + ", aggregated by winds.mobi. " +
+    "Measured values only — station altitude, terrain position, speed and gust. " +
+    "No interpolation between stations and no lee-side inference. " +
+    "The colour scale is a rough aid supplied by the owner, NOT an assessment of " +
+    "whether a flight is safe. Readings cannot work offline; anything marked stale " +
+    "is old and must be treated as unknown."));
+}
+
+/* ── fetch ────────────────────────────────────────────────────────── */
+function refresh(fix){
+  if (fetching || !fix) return;
+  fetching = true;
+  var bbox = WG.bboxAround(fix, C.zoom, VIEW_W, VIEW_H, C.pad);
+  PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list, meta){
+    fetching = false;
+    if (err){ note("fetch failed: " + err + " — showing last good data if any"); }
+    else {
+      lastErr = ""; paintErr();
+      stations = list; lastFetch = Date.now();
+      note2(meta);
+    }
+    tick();
+  });
+}
+var meta1 = "";
+function note2(m){ meta1 = (m.bytes/1024).toFixed(1) + " KB · " + m.ms + " ms · " + m.count + " raw"; }
+
+/* ── tick ─────────────────────────────────────────────────────────── */
+function tick(){
+  var p = WG.position(C), fix = p.fix;
+  if (!fix){
+    el("hdr").textContent = "no position — allow location, or open with ?lat=47.05&lng=8.64\n" +
+                            "XCTrack: " + p.note;
+    return;
+  }
+  if (!lastFetch || Date.now() - lastFetch > C.poll * 1000) refresh(fix);
+
+  el("hdr").textContent =
+    "src=" + fix.src + "  " + fix.lat.toFixed(5) + "," + fix.lon.toFixed(5) +
+    (fix.alt === fix.alt ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
+    "z" + C.zoom + " ≙ XCT " + (WG.XCT_SCALE[C.zoom] || "?") +
+    "  fetch " + Math.round(WG.bboxKm(fix, C) ) + " km box" +
+    (meta1 ? "  ·  " + meta1 : "") +
+    (lastFetch ? "  ·  " + Math.round((Date.now() - lastFetch) / 1000) + " s ago" : "") +
+    "  ·  " + stations.length + " stations";
+
+  render(fix);
+}
+
+/* small helper so the header can state the box size it asked for */
+WG.bboxKm = function (fix, c){
+  var b = WG.bboxAround(fix, c.zoom, VIEW_W, VIEW_H, c.pad);
+  return WG.dist(fix.lat, b.w, fix.lat, b.e) / 1000;
+};
+
+el("bRef").addEventListener("click", function(){ lastFetch = 0; tick(); });
+el("bPeak").addEventListener("click", function(){
+  C.peaks = C.peaks ? 0 : 1;
+  this.textContent = C.peaks ? "Summits only ✓" : "Summits only";
+  for (var id in rows) if (rows.hasOwnProperty(id)){
+    if (rows[id].el.parentNode) rows[id].el.parentNode.removeChild(rows[id].el);
+    delete rows[id];
+  }
+  tick();
+});
+el("bHalo").addEventListener("click", function(){
+  halo = !halo; this.textContent = "Halo: " + (halo ? "on" : "off");
+  for (var id in rows) if (rows.hasOwnProperty(id)) rows[id].cache.mk = null;
+  tick();
+});
+
+tick();
+setInterval(tick, 5000);
+</script>
+</body>
+</html>

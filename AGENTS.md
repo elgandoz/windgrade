@@ -116,6 +116,34 @@ Verified at three ladder steps against airspace edges; `docs/findings.md` has th
 numbers and `tools/registration.html` reproduces it. The printed km labels are
 rounded and must never be used to compute geometry.
 
+## Running it locally
+
+Pure static files, so any server works. There is nothing to build or watch.
+
+    node tools/test-core.js            # engine: 90 assertions, no network
+    node tools/test-core.js --live     # + one real winds.mobi call
+    python3 -m http.server 8080        # then http://localhost:8080/app.html
+
+Three things that will otherwise cost an hour:
+
+- **Do not open the pages via `file://`.** Browsers refuse geolocation there, so
+  `app.html` can never get a fix. `localhost` counts as a secure context, so it
+  works; any equivalent server is fine.
+- **A LAN address like `http://192.168.x.x:8080` is *not* a secure context**, so
+  geolocation is blocked there too. For phone or XCTrack testing, publish to
+  GitHub Pages (the real target) or open a tunnel:
+  `cloudflared tunnel --url http://localhost:8080`.
+- **winds.mobi sends `access-control-allow-origin: *`**, verified from a localhost
+  origin, so no proxy is needed in development or production.
+
+Unlike `hx-call` there is no service worker yet, so an edit appears on the first
+reload rather than the second. If one is ever added, that changes — and its cache
+must key on the path, not the full URL, or XCTrack's `?lat=…&lng=…` reloads miss
+it every time.
+
+Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC`
+works the same way, e.g. `?zoom=10&peaks=1&stale=45`.
+
 ## Conventions
 
 - Plain ES5-compatible JS in shipped pages. Old Android WebViews.
