@@ -123,7 +123,11 @@ and an update to AGENTS.md.
    - Does the mandatory white halo sit *outside* the near-black stroke? Needed
      now at both ends of the scale: black fill on dark terrain, white fill on
      light terrain.
-   - Where does the speed number sit once two arrows are stacked?
+   - ~~Where does the speed number sit?~~ **Answered** by the SeeYou reference in
+     `handover.md`: a compact `average/gust` text pair beside the arrow, on the
+     map as well as in any detail view.
+   - **Which way does the arrow point** — downwind, or the meteorological
+     from-direction? Unresolved, and getting it backwards inverts every marker.
 3. **First region.** Leaning Switzerland split into a few sub-50 MB packs,
    rather than one Alps-wide file.
 4. **Providers.** MeteoSwiss only to start, or approach Holfuy in parallel?

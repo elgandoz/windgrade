@@ -143,6 +143,60 @@ calibration is the point:
 A single shared table could not do this: gusts always exceed the average, so
 every marker would show a hotter rim and the signal would carry no information.
 
+#### Reference: SeeYou Navigator (owner screenshot, 2026-08-10)
+
+Naviter's app, showing MeteoSwiss data for Uetliberg. The image is a commercial
+UI and is **not committed** — this is the transferable reasoning from it.
+
+**Answers the number-placement question.** The value is drawn as a compact
+`average/gust` text pair *beside* the arrow, never inside it — `22/37` in the
+detail sheet, `0/2`, `2/11`, `6/12` on the map itself. So the number rides along
+at map scale too, which is exactly what `AGENTS.md` demands, and it carries
+*both* channels rather than only the average. Adopt this: `avg/gust`, one pair,
+outside the shape.
+
+**Confirms the fill/rim assignment already specified.** Reading the seven
+timeline samples (`32/36, 29/37, 26/33, 22/31, 21/31, 21/31, 22/37`), fill
+tracks the **average** and the outline tracks the **gust** — the same way round
+as our spec. Five of the seven fit cleanly; the two largest renderings are too
+JPEG-mushed to be sure of, so treat this as a strong reading rather than proof.
+
+**Explains what our new white/grey band will look like.** Several arrows appear
+"hollow" — pale interior, coloured outline. That is not a third state; it is
+simply a low average landing in a near-white band while the gust outline stays
+saturated. So the white/grey level added today will read as an outlined,
+unfilled arrow, and that is correct rather than a rendering bug.
+
+**Other things worth copying:**
+
+- Every marker carries a dark outline regardless of fill, which is what holds it
+  apart from terrain. Independent support for the near-black stroke.
+- The basemap is a pale, desaturated green-grey. The markers are the only
+  saturated thing on screen — exactly Phase 3's stated intent.
+- The **selected** station gets a white circle drawn behind its arrow. A cheap
+  selection affordance that costs no colour.
+- Station altitude sits in the header (`1016 m`), beside an explicit
+  `Updated: 10:30, 2026-08-10`, with `Source: MeteoSwiss` at the foot. All three
+  are things we already owe: the altitude as fact, the timestamp for staleness,
+  the attribution for OGD licensing.
+- A 15-minute history strip — arrow plus `avg/gust` per step — showing whether
+  wind is building or easing. Purely descriptive, so it breaks no rule, and this
+  screenshot is a good advert for it: the average eases 32→22 while gusts hold
+  31–37, which is precisely the mismatch we are trying to surface. Out of scope
+  for now; worth remembering.
+
+**Do not copy their thresholds.** `6/12` renders green there, which would be
+white/grey on the burnair scale adopted above. Their bands are their own. Take
+the construction, not the numbers.
+
+**Unresolved — which way the arrow points.** Direction is `235°`. The large
+map arrow appears to point north-east, i.e. toward 55°, which would mean the
+arrow shows where the wind is *going* rather than the meteorological direction it
+comes from. The small timeline arrows look inconsistent with that at this
+resolution, so it is not settled. Getting this backwards inverts every marker on
+the screen, so it needs a clearer reference or a deliberate decision before any
+marker code is written.
+
 #### The scale does not remove the need for the number
 
 `AGENTS.md` requires the speed number at every size because the scale is
