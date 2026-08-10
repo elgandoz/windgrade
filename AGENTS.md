@@ -130,7 +130,7 @@ rounded and must never be used to compute geometry.
 
 Pure static files, so any server works. There is nothing to build or watch.
 
-    node tools/test-core.js            # engine: 90 assertions, no network
+    node tools/test-core.js            # engine: 105 assertions, no network
     node tools/test-core.js --live     # + one real winds.mobi call
     python3 -m http.server 8080        # then http://localhost:8080/ (launcher)
 
@@ -192,6 +192,6 @@ Two caveats, both of which have already caused a wrong conclusion:
 - Build scripts may use whatever is convenient; they run on a laptop.
 - Findings from probes go in `docs/findings.md`, dated, raw JSON included.
 - **`node tools/test-core.js`** exercises the engine — config clamping, the
-  calibration, the rating bands, geo, bbox, staleness, ranking and the provider's
-  URL building and normalisation. Add `--live` for one real winds.mobi call. This
+  calibration, the XCTrack scale ladder, the rating bands, geo, bbox, staleness,
+  ranking and the provider's URL building and normalisation. Add `--live` for one real winds.mobi call. This
   is only possible because `wg/core.js` touches no DOM; keep it that way.

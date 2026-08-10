@@ -1,7 +1,7 @@
 # Next session
 
-Written 2026-08-10 at the end of the session that built the engine, the pages and
-the XCTrack overlay. Read this first, then `docs/findings.md` for measurements and
+Written 2026-08-10, updated 2026-08-11 when the tap probe came back negative and
+zoom sync was removed. Read this first, then `docs/findings.md` for measurements and
 `docs/handover.md` for why decisions were made the way they were.
 
 Everything in the repo is committed and pushed. Nothing is half-finished in the
@@ -15,7 +15,7 @@ working tree.
 
 | Piece | State |
 |---|---|
-| `wg/core.js` | engine, DOM-free. 115 assertions via `node tools/test-core.js` |
+| `wg/core.js` | engine, DOM-free. 105 assertions via `node tools/test-core.js` |
 | `wg/windsmobi.js` | provider. One bbox call, ~18 KB for 72 stations across 6 networks |
 | `wg/marker.js` | marker, canvas + SVG from one geometry source |
 | `app.html` | list page, installable PWA, settings sheet, light/dark/auto |
@@ -159,7 +159,7 @@ one. Local commits are unaffected either way; `git config user.name` is already
 
 **Local testing.**
 
-    node tools/test-core.js            # 115 assertions, no network
+    node tools/test-core.js            # 105 assertions, no network
     node tools/test-core.js --live     # + one real winds.mobi call
     python3 -m http.server 8080        # then http://localhost:8080/
 
