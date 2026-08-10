@@ -16,12 +16,12 @@ function eq(name, got, want, tol) {
 function head(s) { console.log("\n── " + s + " ──"); }
 
 head("config / SPEC clamping");
-var c = WG.cfg("?zoom=99&pad=-5&max=abc&lat=47.1&lng=8.5");
-eq("zoom clamped to max", c.zoom, 15);
+var c = WG.cfg("?step=99&pad=-5&max=abc&lat=47.1&lng=8.5");
+eq("step clamped to the ladder top", c.step, 34);
 eq("pad clamped to min", c.pad, 0);
 eq("unparseable max -> default", c.max, 40);
 eq("lat parsed", c.lat, 47.1);
-eq("default zoom", WG.cfg("").zoom, 11);
+eq("default step is 8km", WG.XCT_LADDER[WG.cfg("").step], "8km");
 eq("default stale", WG.cfg("").stale, 30);
 eq("default poll is the 10 min data cadence", WG.cfg("").poll, 600);
 
@@ -58,6 +58,29 @@ eq("15km is z10", WG.XCT_SCALE[10], "15km");
 eq("10km is NOT an integer zoom (it is step 24)", WG.XCT_LADDER[24], "10km");
 eq("ladder spans 23 steps", WG.XCT_STEP_MAX - WG.XCT_STEP_MIN + 1, 23);
 eq("fractional zoom renders: step 24 m/px", WG.mppXct(47.361, 10.5), 77.73, 0.02);
+
+head("zoom range: how far the overlay may follow");
+var zc = WG.cfg("");
+eq("default zspan is 3 steps", zc.zspan, 3);
+eq("base step -> z11", WG.zoomOf(zc), 11);
+eq("3 steps out is 20km", WG.XCT_LADDER[WG.coarsestStep(zc)], "20km");
+eq("3 steps in is 2500m", WG.XCT_LADDER[WG.finestStep(zc)], "2500m");
+eq("coarsest zoom is 1.5 levels below base", WG.zoomOf(zc) - WG.coarsestZoom(zc), 1.5);
+eq("range clamps at the ladder end, never past it",
+   WG.coarsestStep({ step:13, zspan:6 }), WG.XCT_STEP_MIN);
+eq("and at the fine end", WG.finestStep({ step:33, zspan:6 }), WG.XCT_STEP_MAX);
+eq("zspan 0 means no following", WG.coarsestStep({ step:25, zspan:0 }), 25);
+/* The fetch box must be sized for the coarsest reachable zoom, or stepping out
+   shows a blank ring. Measured: 54 KB vs 18 KB, one call either way. */
+var bBase = WG.bboxAround({ lat:47.0447, lon:8.643 }, WG.zoomOf(zc), 448, 978, zc.pad);
+var bWide = WG.bboxAround({ lat:47.0447, lon:8.643 }, WG.coarsestZoom(zc), 448, 978, zc.pad);
+eq("the prefetch box is wider than the base view", (bWide.e - bWide.w) > (bBase.e - bBase.w), true);
+
+head("legacy ?zoom= keeps working");
+eq("zoom=10 maps to the 15km step", WG.XCT_LADDER[WG.cfg("?zoom=10").step], "15km");
+eq("zoom=11 maps to 8km", WG.XCT_LADDER[WG.cfg("?zoom=11").step], "8km");
+eq("an explicit step wins over a legacy zoom",
+   WG.cfg("?zoom=10&step=27").step, 27);
 
 head("projection isotropy and round-trip");
 var P = WG.projector({ lat:47.361, lon:8.578 }, 11, 448, 978);

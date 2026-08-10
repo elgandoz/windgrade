@@ -65,9 +65,12 @@ var SPEC = [
   { k:"lng",   t:"num", d:null, ui:false,
     lab:"Longitude", help:"Overrides the position chain. XCTrack substitutes ${lng}." },
 
-  { k:"zoom",  t:"int", d:11, min:5, max:15,
-    lab:"Map zoom",
-    help:"Pair with XCTrack's map scale. 15km=10, 8km=11, 4km=12." },
+  { k:"step",  t:"ladder", d:25, min:12, max:34,
+    lab:"Map scale",
+    help:"Set XCTrack's XC map widget to the same value." },
+  { k:"zspan", t:"int", d:3, min:0, max:6,
+    lab:"Zoom range (steps)",
+    help:"How far out the overlay may follow. Sets how wide an area is fetched." },
   { k:"pad",   t:"int", d:20, min:0, max:60,
     lab:"Fetch margin (km)",
     help:"Area fetched beyond the view. A cache radius, not a display radius." },
@@ -114,10 +117,13 @@ function clamp(spec, raw) {
     for (i = 0; i < spec.opts.length; i++) if (spec.opts[i] === String(raw)) return String(raw);
     return spec.d;                                      /* unknown -> default */
   }
-  if (spec.t === "num" || spec.t === "int") {
+  /* "ladder" is an integer with a label map — clamped exactly like an int.
+     Without this it fell through to the raw passthrough below, so ?step=99
+     survived unclamped and a URL string stayed a string. */
+  if (spec.t === "num" || spec.t === "int" || spec.t === "ladder") {
     v = toNum(raw);
     if (v !== v) return spec.d;                       /* NaN -> default */
-    if (spec.t === "int") v = Math.round(v);
+    if (spec.t !== "num") v = Math.round(v);
     if (spec.min !== undefined && v < spec.min) v = spec.min;
     if (spec.max !== undefined && v > spec.max) v = spec.max;
     return v;
@@ -143,8 +149,24 @@ function cfg(search) {
   for (i = 0; i < SPEC.length; i++) {
     out[SPEC[i].k] = clamp(SPEC[i], q.hasOwnProperty(SPEC[i].k) ? q[SPEC[i].k] : null);
   }
+  /* Legacy: early URLs carried an OSM `zoom`. Map it onto the ladder so an
+     old link, or one a pilot already saved, keeps working. */
+  if (!q.hasOwnProperty("step") && q.hasOwnProperty("zoom")) {
+    var z = toNum(q.zoom);
+    if (z === z) out.step = clamp({ t:"int", d:25, min:XCT_STEP_MIN, max:XCT_STEP_MAX },
+                                  stepForZoom(z));
+  }
   return out;
 }
+
+/* The zoom the overlay renders at, and the coarsest it may follow to. The
+   fetch box is sized for the COARSEST, measured at 54 KB against 18 KB for the
+   base — cheap enough that zooming out is instant instead of waiting on a
+   refetch, and it keeps the call count at one per data cycle. */
+function zoomOf(c)        { return zoomForStep(c.step); }
+function coarsestStep(c)  { return Math.max(XCT_STEP_MIN, c.step - (c.zspan || 0)); }
+function coarsestZoom(c)  { return zoomForStep(coarsestStep(c)); }
+function finestStep(c)    { return Math.min(XCT_STEP_MAX, c.step + (c.zspan || 0)); }
 
 /* ── a live config object, for the launcher and any settings sheet ────
    `cfg(search)` is the pure parse used by the pages at load. This is the
@@ -535,6 +557,8 @@ return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
   XCT_LADDER: XCT_LADDER, XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
+  zoomOf: zoomOf, coarsestStep: coarsestStep, coarsestZoom: coarsestZoom,
+  finestStep: finestStep,
   AVG_BANDS: AVG_BANDS, GUST_BANDS: GUST_BANDS, PALETTE: PALETTE,
   STROKE_INNER: STROKE_INNER, STROKE_OUTER: STROKE_OUTER, HALO: HALO,
   ARROW: ARROW, LEAF: LEAF, BANDS: BANDS, VIEWBOX: VIEWBOX, REACH: REACH,

@@ -88,7 +88,7 @@ function draw(fix, ranked){
   if (fix){
     var scale = 0.55 + (C.size / 100) * 0.75;      /* 0.55 .. 1.30 */
     var fs = Math.round(9 + (C.size / 100) * 7);   /* 9 .. 16 px */
-    var P = WG.projector(fix, C.zoom, W, H, WG.CAL);
+    var P = WG.projector(fix, WG.zoomOf(C), W, H, WG.CAL);
     var box = WG.REACH * scale, placed = [], i, st, x, y, k, hit;
 
     for (i = 0; i < ranked.length; i++){
@@ -121,7 +121,10 @@ function draw(fix, ranked){
 function refresh(fix){
   if (fetching || !fix) return;
   fetching = true;
-  var bbox = WG.bboxAround(fix, C.zoom, W || 448, H || 978, C.pad);
+  /* Sized for the COARSEST zoom we may follow to, not the current one, so
+     stepping out reveals stations we already have instead of a blank ring.
+     Measured at 54 KB against 18 KB for the base — one call either way. */
+  var bbox = WG.bboxAround(fix, WG.coarsestZoom(C), W || 448, H || 978, C.pad);
   PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list){
     fetching = false;
     if (err) fetchErr = err;               /* keep the last good data on screen */
@@ -144,7 +147,7 @@ function paintBadge(fix, shown, nStale){
   if (!fix){
     s = "no position"; bad = true;
   } else {
-    s = "z" + C.zoom + " ≙ XCT " + (WG.XCT_SCALE[C.zoom] || "?") + " N↑";
+    s = (WG.XCT_LADDER[C.step] || "?") + " N↑";
     if (!lastFetch){
       s += fetchErr ? ("  no data: " + fetchErr) : "  loading…";
       bad = !!fetchErr;
@@ -176,8 +179,9 @@ function tick(){
   var ranked = WG.prepare(stations, fix, C, now), i, nStale = 0;
   for (i = 0; i < ranked.length; i++) if (ranked[i].stale.cls === "stale") nStale++;
 
-  var key = Math.round(WG.lonToPx(fix.lon, C.zoom) * WG.CAL) + "/" +
-            Math.round(WG.latToPx(fix.lat, C.zoom) * WG.CAL) + "/" +
+  var z = WG.zoomOf(C);
+  var key = Math.round(WG.lonToPx(fix.lon, z) * WG.CAL) + "/" +
+            Math.round(WG.latToPx(fix.lat, z) * WG.CAL) + "/" + C.step + "/" +
             W + "x" + H + "/" + lastFetch + "/" + Math.round(now / 60000);
   if (key !== drawKey){ drawKey = key; lastShown = draw(fix, ranked); }
 

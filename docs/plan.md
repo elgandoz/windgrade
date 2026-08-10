@@ -374,6 +374,46 @@ control, invisible and muscle-memory.
 The proposal: give our widget the same two zones. One tap then zooms both layers,
 and they stay in step.
 
+### Range: 3 steps each way, and it is a prefetch decision
+
+Owner's figure, and the reason is that **the overlay cannot pan** — stepping out
+is the only way to see surrounding space. Three ladder steps is 2^1.5 = 2.83x in
+scale, so from the 8 km base:
+
+```
+out 3 -> step 22, 20km     base -> step 25, 8km     in 3 -> step 28, 2500m
+```
+
+The consequence is not about zooming, it is about **what to fetch**. If the box is
+sized for the current zoom, stepping out reveals a ring with no stations in it.
+Two options, and the measurement settles it:
+
+| Fetch box for | Stations | Bytes |
+|---|---|---|
+| base (8 km view + 20 km pad) | 72 | 17.9 KB |
+| 3 steps out (20 km view + 20 km pad) | 217 | **53.8 KB** |
+
+54 KB per ~10 minute cycle, nowhere near the 500-station limit. So **always fetch
+for the coarsest reachable zoom** rather than refetching on every zoom change:
+stepping out is then instant with no blank ring, and the call count stays at one
+per data cycle, which is what winds.mobi's "do not overload" rule asks for.
+`max` and the collision declutter still decide how many of those 217 get drawn.
+
+Implemented already: `zspan` (default 3) with `WG.coarsestStep` / `coarsestZoom` /
+`finestStep`, clamped to the ladder ends so the range can never point off it.
+
+### The configurator now speaks XCTrack's language
+
+Owner: the steps are the same list as XCTrack's, and the configurator should use
+them. It does. `step` replaced the old OSM `zoom` parameter — an integer 12–34
+rendered as a select of XCTrack's own 23 labels, so a pilot picks `8km` in both
+places and never meets a zoom number. Old `?zoom=` URLs still resolve, mapped onto
+the nearest step.
+
+This also fixes a real gap: offering only integer OSM zooms exposed just 11 of the
+23 steps, so `5km` and `10km` — the two the owner named as useful for an area
+overview — could not be selected at all.
+
 ### What makes it plausible
 
 **We can follow XCTrack's ladder exactly, half-steps included.** Its scale is an

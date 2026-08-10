@@ -41,8 +41,21 @@ function buildRow(sp, onInput) {
      stored. An enum is a select. Everything else is a number field. */
   var isBool = (sp.t === "int" && sp.min === 0 && sp.max === 1);
   var isEnum = (sp.t === "enum");
+  var isLadder = (sp.t === "ladder");
   var input, o, op;
-  if (isEnum) {
+  if (isLadder) {
+    /* XCTrack's own 23 scale steps, in the order its slider lists them, so the
+       pilot picks the same words they see in the app and never meets an OSM
+       zoom number. Every second step is a half zoom level, which is exactly
+       why offering only the integers was wrong. */
+    input = document.createElement("select");
+    for (o = sp.max; o >= sp.min; o--) {
+      op = document.createElement("option");
+      op.value = o;
+      op.textContent = WG.XCT_LADDER[o];
+      input.appendChild(op);
+    }
+  } else if (isEnum) {
     input = document.createElement("select");
     for (o = 0; o < sp.opts.length; o++) {
       op = document.createElement("option");
@@ -66,7 +79,7 @@ function buildRow(sp, onInput) {
      whole point of the configurator is producing a widget that matches the
      map underneath it. */
   var pair = null;
-  if (sp.k === "zoom") {
+  if (sp.k === "step") {
     pair = document.createElement("b");
     pair.className = "pair";
     row.appendChild(pair);
@@ -75,7 +88,7 @@ function buildRow(sp, onInput) {
   function load() {
     var v = WG.getConfig()[sp.k];
     if (isBool) input.checked = !!v; else input.value = v;
-    if (pair) pair.textContent = "XCTrack: " + (WG.XCT_SCALE[v] || "?");
+    if (pair) pair.textContent = "≙ z" + WG.zoomForStep(v).toFixed(1);
   }
 
   input.addEventListener("change", function () {
