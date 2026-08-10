@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Windgrade — capability probe</title>
+<style>
+:root{
+  --ink:#0A1116; --panel:#151F27; --panel-hi:#1D2B36; --rule:#2A3B48;
+  --fg:#E8F0F5; --dim:#7B909F; --chart:#54A6DC;
+  --green:#4FB477; --amber:#E9A33C; --red:#D6483C;
+  --mono:ui-monospace,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--ink);color:var(--fg);
+  font:400 14px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:10px 10px 40px}
+h1{font-size:15px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 2px}
+.sub{color:var(--dim);font-size:11px;margin:0 0 12px;font-family:var(--mono)}
+h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
+  margin:16px 0 6px;border-bottom:1px solid var(--rule);padding-bottom:4px}
+.row{display:flex;gap:8px;padding:5px 0;align-items:baseline;border-bottom:1px solid #1B2830}
+.k{flex:1;min-width:0;font-size:12px}
+.v{font-family:var(--mono);font-size:12px;text-align:right;word-break:break-word;max-width:62%}
+.ok{color:var(--green)} .warn{color:var(--amber)} .bad{color:var(--red)} .dim{color:var(--dim)}
+button{
+  display:block;width:100%;margin:8px 0 0;padding:12px;background:var(--panel-hi);
+  border:1px solid var(--chart);border-radius:3px;color:var(--fg);
+  font:600 13px system-ui;cursor:pointer;
+}
+button:active{background:#28536E}
+button.sec{border-color:var(--rule);color:var(--dim);font-weight:400}
+a.tel{
+  display:block;margin:8px 0 0;padding:12px;background:var(--panel-hi);
+  border:1px solid var(--chart);border-radius:3px;color:var(--fg);
+  text-align:center;text-decoration:none;font-weight:600;font-size:13px;
+}
+pre{
+  background:var(--panel);border:1px solid var(--rule);border-radius:3px;
+  padding:8px;font:400 10px/1.35 var(--mono);white-space:pre-wrap;
+  word-break:break-all;max-height:38vh;overflow:auto;margin:8px 0 0;
+}
+.note{color:var(--dim);font-size:11px;line-height:1.45;margin:6px 0 0}
+.big{font-size:12px;color:var(--amber);line-height:1.45;margin:10px 0 0;
+  background:#241A0B;border:1px solid #3D2C10;border-radius:3px;padding:8px}
+</style>
+</head>
+<body>
+
+<h1>Windgrade probe</h1>
+<p class="sub" id="stamp"></p>
+
+<div class="big">
+  Run this <b>inside XCTrack's Web page widget</b>, not just in Chrome — the
+  WebView has its own storage and its own rules. Run it in Chrome too and
+  compare: the numbers will differ, and that difference is the finding.
+</div>
+
+<h2>Environment</h2>       <div id="env"></div>
+<h2>Position (XCTrack)</h2><div id="pos"></div>
+<h2>Storage</h2>           <div id="sto"></div>
+<h2>Rendering</h2>         <div id="gfx"></div>
+
+<h2>Interactive tests</h2>
+<a class="tel" href="tel:+41416209106">Test a tel: link</a>
+<p class="note">Should open the dialer with 041 620 91 06 — <b>do not press call</b>.
+If nothing happens, XCTrack's WebView swallows non-http schemes.</p>
+
+<button id="btnPersist">Request persistent storage</button>
+<p class="note">Asks the browser not to evict our data under pressure.</p>
+
+<button id="btnWrite">Write 10 MB to Cache Storage</button>
+<p class="note">Then <b>fully restart XCTrack</b> and reload this page. If the
+blob is still listed under Storage, offline map packs are viable.</p>
+
+<button id="btnRange">Test HTTP Range request (same origin)</button>
+<p class="note">PMTiles needs byte ranges. Must report <b>206</b>.
+Note: <code>python3 -m http.server</code> does <b>not</b> support ranges and will
+report 200 — a false negative. Only trust this test against the real host
+(GitHub Pages, Netlify, or a tunnel).</p>
+
+<button id="btnCors">Test data-source CORS</button>
+<p class="note">Checks whether wind APIs can be called with no proxy.</p>
+
+<button id="btnClear" class="sec">Delete test blob</button>
+
+<h2>Results</h2>
+<button id="btnCopy">Copy results as JSON</button>
+<pre id="out">running…</pre>
+
+<script>
+"use strict";
+
+/* ════════════════════════════════════════════════════════════════════
+   Phase 0 capability probe. Answers, in one page, every unknown the
+   architecture depends on. Paste the JSON output back into the chat or
+   into docs/findings.md.
+   ════════════════════════════════════════════════════════════════ */
+
+var R = {};                       // collected results
+var BLOB_KEY = "/windgrade-probe-blob";
+var CACHE = "windgrade-probe";
+
+/* CORS candidates. Add any provider you're considering. */
+var CORS_TARGETS = [
+  ["MeteoSwiss gust 10min",
+   "https://data.geo.admin.ch/ch.meteoschweiz.messwerte-wind-boeenspitze-kmh-10min/ch.meteoschweiz.messwerte-wind-boeenspitze-kmh-10min_en.json"],
+  ["MeteoSwiss STAC root",
+   "https://data.geo.admin.ch/api/stac/v1/collections/ch.meteoschweiz.ogd-smn"],
+  ["Holfuy live (no key)",
+   "https://api.holfuy.com/live/?s=1234&m=JSON&su=km/h"]
+];
+
+function el(id){ return document.getElementById(id); }
+
+function put(box, key, val, cls){
+  R[key] = val;
+  var d = document.createElement("div"); d.className = "row";
+  var k = document.createElement("span"); k.className = "k"; k.textContent = key;
+  var v = document.createElement("span"); v.className = "v " + (cls || "");
+  v.textContent = String(val);
+  d.appendChild(k); d.appendChild(v);
+  el(box).appendChild(d);
+  dump();
+}
+function verdict(b){ return b ? "ok" : "bad"; }
+function dump(){ el("out").textContent = JSON.stringify(R, null, 1); }
+function mb(n){ return (n / 1048576).toFixed(1) + " MB"; }
+
+/* ── environment ─────────────────────────────────────────────────── */
+el("stamp").textContent = new Date().toISOString();
+R.timestamp = new Date().toISOString();
+
+put("env", "url", location.href.slice(0, 90), "dim");
+put("env", "protocol", location.protocol, location.protocol === "https:" ? "ok" : "warn");
+put("env", "secureContext", !!window.isSecureContext, verdict(window.isSecureContext));
+put("env", "userAgent", navigator.userAgent.slice(0, 110), "dim");
+put("env", "screen", innerWidth + "x" + innerHeight + " @" + (devicePixelRatio || 1), "dim");
+put("env", "onLine", navigator.onLine, "dim");
+put("env", "deviceMemoryGB", navigator.deviceMemory || "n/a", "dim");
+put("env", "hardwareConcurrency", navigator.hardwareConcurrency || "n/a", "dim");
+
+/* ── XCTrack position ────────────────────────────────────────────── */
+var hasXct = false;
+try { hasXct = typeof XCTrack !== "undefined" && typeof XCTrack.getLocation === "function"; } catch(e){}
+put("pos", "XCTrack object", hasXct, verdict(hasXct));
+
+if (hasXct){
+  /* list every method the interface exposes — the docs may be behind */
+  var methods = [];
+  try { for (var k in XCTrack) if (typeof XCTrack[k] === "function") methods.push(k); } catch(e){}
+  put("pos", "XCTrack methods", methods.join(", ") || "none enumerable", "dim");
+
+  var raw = null;
+  try { raw = XCTrack.getLocation(); } catch(e){ raw = "threw: " + e.message; }
+  put("pos", "getLocation() raw", String(raw).slice(0, 200), "dim");
+
+  try {
+    var o = JSON.parse(raw);
+    put("pos", "fields", Object.keys(o).join(", "), "dim");
+    /* THE question: is altitude exposed, and under what name? */
+    var altKeys = Object.keys(o).filter(function(k){ return /alt|elev|height|baro|gps/i.test(k); });
+    put("pos", "altitude-ish fields", altKeys.length ? altKeys.join(", ") : "NONE FOUND",
+        altKeys.length ? "ok" : "bad");
+    altKeys.forEach(function(k){ put("pos", "  " + k, o[k], "dim"); });
+    put("pos", "isValid", o.isValid, o.isValid ? "ok" : "warn");
+  } catch(e){
+    put("pos", "parse", "failed: " + e.message, "bad");
+  }
+} else {
+  put("pos", "note", "not in XCTrack — rerun there", "warn");
+}
+
+/* ── storage ─────────────────────────────────────────────────────── */
+put("sto", "serviceWorker", "serviceWorker" in navigator, verdict("serviceWorker" in navigator));
+put("sto", "caches", "caches" in window, verdict("caches" in window));
+put("sto", "indexedDB", "indexedDB" in window, verdict("indexedDB" in window));
+put("sto", "storageManager", !!navigator.storage, verdict(!!navigator.storage));
+
+try { localStorage.setItem("_p","1"); localStorage.removeItem("_p");
+      put("sto", "localStorage", true, "ok"); }
+catch(e){ put("sto", "localStorage", "blocked", "bad"); }
+
+if (navigator.storage && navigator.storage.estimate){
+  navigator.storage.estimate().then(function(est){
+    put("sto", "quota", mb(est.quota || 0), (est.quota || 0) > 100e6 ? "ok" : "warn");
+    put("sto", "usage", mb(est.usage || 0), "dim");
+  }).catch(function(e){ put("sto", "estimate", "failed: " + e.message, "warn"); });
+}
+if (navigator.storage && navigator.storage.persisted){
+  navigator.storage.persisted().then(function(p){
+    put("sto", "persisted (already)", p, p ? "ok" : "warn");
+  }).catch(function(){});
+}
+
+/* does a previously written blob still exist? THE restart question */
+function checkBlob(){
+  if (!("caches" in window)) return;
+  caches.open(CACHE).then(function(c){ return c.match(BLOB_KEY); }).then(function(res){
+    if (!res){ put("sto", "test blob present", false, "warn"); return; }
+    return res.blob().then(function(b){
+      put("sto", "test blob present", true, "ok");
+      put("sto", "test blob size", mb(b.size), "ok");
+      put("sto", "test blob written", res.headers.get("x-written") || "?", "dim");
+    });
+  }).catch(function(e){ put("sto", "blob check", "failed: " + e.message, "bad"); });
+}
+checkBlob();
+
+/* ── rendering ───────────────────────────────────────────────────── */
+(function(){
+  var c = document.createElement("canvas");
+  put("gfx", "canvas2d", !!c.getContext("2d"), verdict(!!c.getContext("2d")));
+  var gl = null;
+  try { gl = c.getContext("webgl") || c.getContext("experimental-webgl"); } catch(e){}
+  put("gfx", "webgl", !!gl, gl ? "ok" : "warn");
+  if (gl){
+    try {
+      var dbg = gl.getExtension("WEBGL_debug_renderer_info");
+      if (dbg) put("gfx", "renderer", gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL), "dim");
+      put("gfx", "maxTextureSize", gl.getParameter(gl.MAX_TEXTURE_SIZE), "dim");
+    } catch(e){}
+  }
+  put("gfx", "OffscreenCanvas", typeof OffscreenCanvas !== "undefined", "dim");
+  put("gfx", "webp", document.createElement("canvas")
+        .toDataURL("image/webp").indexOf("image/webp") === 5, "dim");
+})();
+
+/* ── buttons ─────────────────────────────────────────────────────── */
+
+el("btnPersist").addEventListener("click", function(){
+  if (!navigator.storage || !navigator.storage.persist){
+    put("sto", "persist()", "unsupported", "bad"); return;
+  }
+  navigator.storage.persist().then(function(g){
+    put("sto", "persist() granted", g, g ? "ok" : "warn");
+  }).catch(function(e){ put("sto", "persist()", "failed: " + e.message, "bad"); });
+});
+
+el("btnWrite").addEventListener("click", function(){
+  var btn = this; btn.textContent = "writing…";
+  if (!("caches" in window)){ put("sto", "blob write", "no Cache API", "bad"); return; }
+  try {
+    var chunk = new Uint8Array(1048576);
+    for (var i = 0; i < chunk.length; i++) chunk[i] = i & 255;
+    var parts = []; for (var j = 0; j < 10; j++) parts.push(chunk);
+    var blob = new Blob(parts, {type:"application/octet-stream"});
+    var res = new Response(blob, {headers:{"x-written": new Date().toISOString()}});
+    caches.open(CACHE).then(function(c){ return c.put(BLOB_KEY, res); }).then(function(){
+      put("sto", "blob write", "10 MB written", "ok");
+      btn.textContent = "Written — now restart XCTrack and reload";
+    }).catch(function(e){
+      put("sto", "blob write", "failed: " + e.message, "bad");
+      btn.textContent = "Write failed";
+    });
+  } catch(e){
+    put("sto", "blob write", "threw: " + e.message, "bad");
+    btn.textContent = "Write failed";
+  }
+});
+
+el("btnClear").addEventListener("click", function(){
+  if (!("caches" in window)) return;
+  caches.delete(CACHE).then(function(){ put("sto", "blob deleted", true, "dim"); });
+});
+
+el("btnRange").addEventListener("click", function(){
+  var btn = this; btn.textContent = "testing…";
+  fetch(location.href, {headers:{Range:"bytes=0-99"}}).then(function(r){
+    put("sto", "range status", r.status, r.status === 206 ? "ok" : "bad");
+    put("sto", "content-range", r.headers.get("content-range") || "none",
+        r.status === 206 ? "ok" : "warn");
+    btn.textContent = "Test HTTP Range request (same origin)";
+  }).catch(function(e){
+    put("sto", "range", "failed: " + e.message, "bad");
+    btn.textContent = "Range test failed";
+  });
+});
+
+el("btnCors").addEventListener("click", function(){
+  var btn = this; btn.textContent = "testing…";
+  var done = 0;
+  CORS_TARGETS.forEach(function(t){
+    var t0 = Date.now();
+    fetch(t[1], {method:"GET"}).then(function(r){
+      return r.text().then(function(txt){
+        put("sto", "CORS " + t[0],
+            r.status + " · " + (Date.now() - t0) + "ms · " + mb(txt.length),
+            r.ok ? "ok" : "warn");
+      });
+    }).catch(function(e){
+      put("sto", "CORS " + t[0], "BLOCKED (" + e.message + ")", "bad");
+    }).then(function(){
+      if (++done === CORS_TARGETS.length) btn.textContent = "Test data-source CORS";
+    });
+  });
+});
+
+el("btnCopy").addEventListener("click", function(){
+  var btn = this, txt = JSON.stringify(R, null, 1);
+  var ok = function(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy results as JSON"; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).then(ok, function(){ window.prompt("Copy:", txt); });
+  else window.prompt("Copy:", txt);
+});
+
+dump();
+</script>
+</body>
+</html>
