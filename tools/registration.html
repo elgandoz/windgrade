@@ -134,11 +134,12 @@ function num(v){
 function readXCTrack(){
   var raw = null;
   try {
-    if (typeof XCTrack === "undefined" || typeof XCTrack.getLocation !== "function") return null;
+    if (typeof XCTrack === "undefined"){ rawLoc = "no XCTrack object (data access off?)"; return null; }
+    if (typeof XCTrack.getLocation !== "function"){ rawLoc = "no getLocation()"; return null; }
     raw = XCTrack.getLocation();
   } catch(e){ rawLoc = "threw: " + e.message; return null; }
-  rawLoc = String(raw).slice(0,120);
-  if (raw === null || raw === "null") return null;
+  rawLoc = String(raw).slice(0,110);
+  if (raw === null || raw === "null") return null;   /* documented no-fix return */
   var o;
   try { o = (typeof raw === "string") ? JSON.parse(raw) : raw; } catch(e){ return null; }
   if (!o || typeof o !== "object") return null;
@@ -148,8 +149,15 @@ function readXCTrack(){
 }
 
 function acquire(){
+  /* Take an XCTrack fix even when isValid is false. A stale position is
+     exactly what XCTrack's own map is centred on with no lock, so using it
+     is what makes the two layers agree indoors — and terrain does not move,
+     so remembering a position is safe (unlike remembering a reading). */
   var x = readXCTrack();
-  if (x){ fix = x; fixSrc = "xctrack"; remember(); return; }
+  if (x){
+    fix = x; fixSrc = (x.valid === false) ? "xctrack-stale" : "xctrack";
+    remember(); return;
+  }
   var la = num(qs("lat")), lo = num(qs("lng"));
   if (isNaN(lo)) lo = num(qs("lon"));
   if (!isNaN(la) && !isNaN(lo)){
@@ -344,6 +352,7 @@ function paintUI(){
         " km  diag " + (Math.sqrt(W*W+H*H)*res/1000).toFixed(2) + " km\n" +
         "view " + W + "×" + H + " css  dpr" +
         (window.devicePixelRatio||1) + "→" + dpr + "\n" +
+        "XCT: " + (rawLoc || "not read yet") + "\n" +
         "airspace " + asState + "  drawn=" + asDrawn + "  filter=" +
         (!showALT ? "off" : (fix.alt === undefined || fix.alt === null || !isFinite(fix.alt))
                             ? "off (no alt)" : "<" + Math.round(fix.alt+600) + "m");
