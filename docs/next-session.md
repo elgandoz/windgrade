@@ -4,8 +4,9 @@ Written 2026-08-10, updated 2026-08-11 when the tap probe came back negative and
 zoom sync was removed. Read this first, then `docs/findings.md` for measurements and
 `docs/handover.md` for why decisions were made the way they were.
 
-Everything in the repo is committed and pushed. Nothing is half-finished in the
-working tree.
+Everything in the repo is committed. Nothing is half-finished in the working tree.
+`docs/todo.md` holds deferred work and the two upstream asks, one of them drafted
+ready to post.
 
 ---
 
