@@ -115,19 +115,27 @@ Supersedes two earlier drafts: a five-level green/yellow/orange/red/black with n
 numbers, and a four-level version that dropped orange. Orange is back, and
 white/grey for calm is new.
 
-#### Boundaries are half-open — the bands as written have gaps
+#### Values are rounded to whole km/h, which settles the boundaries
 
-The bands are integers but the data is not: MeteoSwiss returns one decimal
-(`"value": 20.9`). Taken literally, "up to 6" and "7 – 14" leave 6.4 km/h with no
-colour. So each band's lower integer becomes a strict boundary:
+Owner, 2026-08-11: display whole numbers, half-up — `1.4` → `1`, `1.5` → `2`.
+
+That rounding is applied **once**, in `WG.roundKmh`, and used for both the
+displayed number and the band lookup. The two must not be able to disagree: a
+marker reading `7` sitting in the white band would look broken, and a pilot could
+not tell which of the number and the colour to believe. A test sweeps every value
+from 0 to 60 km/h at 0.1 resolution asserting they never diverge.
+
+It also retires an open question. The bands are integers while the providers
+return one decimal, so a literal reading left 6.4 km/h with no colour, and these
+strict boundaries were an *interpretation*:
 
 ```
 average:  < 7   < 15   < 25   < 31   < 37   else black
 gust:     < 15  < 25   < 33   < 39   < 45   else black
 ```
 
-That is an interpretation, not something the owner stated. It changes a displayed
-colour near every boundary, so it is worth confirming.
+Rounding first makes the owner's bands exactly correct as written — over integers,
+`< 7` *is* "up to 6". The interpretation is gone; nothing needs confirming.
 
 #### Why two tables makes the mismatch readable
 

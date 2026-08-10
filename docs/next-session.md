@@ -119,10 +119,6 @@ Run `tools/tap.html`:
 
 ## Decisions still with the owner
 
-- **Band boundaries.** Implemented as half-open (`< 7`, `< 15`, `< 25`, `< 31`,
-  `< 37`; gusts `< 15`, `< 25`, `< 33`, `< 39`, `< 45`) because the bands are
-  integers while the data has decimals — otherwise 6.4 km/h has no colour. Flagged
-  as an interpretation, never confirmed.
 - **The arrow shape.** Owner: "it can work" but wants to refine it. `tools/arrow.svg`
   is the editable master; reshape it and copy the `d` back into `ARROW` in
   `wg/core.js`. Two traps documented in that file: keep the vertical extents

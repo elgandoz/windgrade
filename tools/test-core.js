@@ -82,17 +82,47 @@ var east10 = 10000 / (111319.49 * Math.cos(47.361 * Math.PI / 180));
 eq("10 km east in px", (P.x(8.578 + east10) - 224) * P.res, 10000, 15);
 eq("10 km north in px", (489 - P.y(47.361 + 10000 / 111319.49)) * P.res, 10000, 25);
 
-head("rating bands — half-open, six levels, two tables");
-[[0,0],[6,0],[6.4,0],[6.9,0],[7,1],[14.9,1],[15,2],[24.9,2],
- [25,3],[30.9,3],[31,4],[36.9,4],[37,5],[99,5]].forEach(function (p) {
+head("rounding — half-up, one rule for display and colour");
+eq("1.4 -> 1", WG.roundKmh(1.4), 1);
+eq("1.5 -> 2", WG.roundKmh(1.5), 2);
+eq("6.4 -> 6", WG.roundKmh(6.4), 6);
+eq("6.5 -> 7", WG.roundKmh(6.5), 7);
+eq("missing stays missing", isNaN(WG.roundKmh(NaN)), true);
+
+head("rating bands — six levels, two tables, rated on the rounded value");
+[[0,0],[6,0],[6.4,0],[6.49,0],[6.5,1],[6.9,1],[7,1],[14.4,1],[14.5,2],[15,2],
+ [24.4,2],[24.5,3],[25,3],[30.4,3],[30.5,4],[31,4],[36.4,4],[36.5,5],[37,5],[99,5]]
+ .forEach(function (p) {
   eq("avg " + p[0] + " -> " + WG.LEVELS[p[1]], WG.rateAvg(p[0]), p[1]);
 });
-[[0,0],[14,0],[14.9,0],[15,1],[24.9,1],[25,2],[32.9,2],
- [33,3],[38.9,3],[39,4],[44.9,4],[45,5],[99,5]].forEach(function (p) {
+[[0,0],[14,0],[14.4,0],[14.5,1],[15,1],[24.4,1],[24.5,2],[25,2],[32.4,2],[32.5,3],
+ [33,3],[38.4,3],[38.5,4],[39,4],[44.4,4],[44.5,5],[45,5],[99,5]].forEach(function (p) {
   eq("gust " + p[0] + " -> " + WG.LEVELS[p[1]], WG.rateGust(p[0]), p[1]);
 });
 eq("missing reading -> unknown, not calm", WG.rateAvg(NaN), -1);
 eq("unknown has its own colour", WG.levelName(-1), "unknown");
+
+/* The point of a single rounding rule: a marker showing "7" must never be in the
+   white band, or the pilot cannot tell which of the number and the colour to
+   believe. Swept across every boundary at 0.1 resolution. */
+head("the displayed number and the band can never disagree");
+var mism = 0, v, shown, lvl, i2;
+for (v = 0; v <= 60.05; v += 0.1) {
+  shown = WG.roundKmh(v);
+  lvl = WG.rateAvg(v);
+  /* recompute the band from the number the pilot actually sees */
+  for (i2 = 0; i2 < WG.AVG_BANDS.length; i2++) if (shown < WG.AVG_BANDS[i2]) break;
+  if (i2 !== lvl) mism++;
+}
+eq("avg: no value displays in a band it does not belong to", mism, 0);
+mism = 0;
+for (v = 0; v <= 60.05; v += 0.1) {
+  shown = WG.roundKmh(v);
+  lvl = WG.rateGust(v);
+  for (i2 = 0; i2 < WG.GUST_BANDS.length; i2++) if (shown < WG.GUST_BANDS[i2]) break;
+  if (i2 !== lvl) mism++;
+}
+eq("gust: same", mism, 0);
 
 head("the mismatch signal is the point of two tables");
 eq("22/37 fill", WG.LEVELS[WG.rateAvg(22)], "yellow");
@@ -100,6 +130,17 @@ eq("22/37 rim is HOTTER — real gust factor", WG.LEVELS[WG.rateGust(37)], "oran
 eq("21/31 fill", WG.LEVELS[WG.rateAvg(21)], "yellow");
 eq("21/31 rim MATCHES — ordinary gusting", WG.LEVELS[WG.rateGust(31)], "yellow");
 eq("a shared table would make every rim hotter", WG.rateAvg(31) > WG.rateGust(31), true);
+
+head("calm glyph agrees with the displayed number");
+var MK = require("../wg/marker.js").marker || WG.marker;
+eq("0/0 is calm", MK.isCalm({ avg:0, gust:0, dir:200 }), true);
+eq("0.4/0.4 displays 0/0, so it is calm too",
+   MK.isCalm({ avg:0.4, gust:0.4, dir:200 }), true);
+eq("0.4/0.4 does display 0/0", MK.labelText({ avg:0.4, gust:0.4 }), "0/0");
+eq("0.5/0.4 rounds to 1/0, so it is NOT calm",
+   MK.isCalm({ avg:0.5, gust:0.4, dir:200 }), false);
+eq("no direction is always calm", MK.isCalm({ avg:9, gust:12, dir:NaN }), true);
+eq("a real reading is not calm", MK.isCalm({ avg:9, gust:12, dir:200 }), false);
 
 head("geo (equirectangular, ranking only)");
 eq("10 km east", WG.dist(47, 8, 47, 8 + 10000 / (111319.49 * Math.cos(47 * Math.PI / 180))), 10000, 12);

@@ -422,9 +422,25 @@ var AVG_BANDS  = [7, 15, 25, 31, 37];
 var GUST_BANDS = [15, 25, 33, 39, 45];
 var LEVELS = ["white", "green", "yellow", "orange", "red", "black"];
 
+/* ONE rounding rule, used for the displayed number AND for the band lookup, so
+   the two can never disagree. A marker reading "7" in the white band would look
+   broken, and a pilot could not tell which of the two to believe.
+
+   Half-up, as the owner specified: 1.4 -> 1, 1.5 -> 2.
+
+   This also retires an open question. The bands were given as integers while
+   the providers return one decimal, so a literal reading left 6.4 km/h with no
+   colour and the half-open boundaries below were an interpretation. Rounding
+   first makes the owner's bands exactly correct as written: `< 7` over integers
+   is precisely "up to 6". */
+function roundKmh(v) {
+  return (v === null || v === undefined || v !== v) ? NaN : Math.round(v);
+}
+
 function band(v, bands) {
-  if (v === null || v === undefined || v !== v) return -1;   /* unknown */
-  for (var i = 0; i < bands.length; i++) if (v < bands[i]) return i;
+  var r = roundKmh(v), i;
+  if (r !== r) return -1;                                     /* unknown */
+  for (i = 0; i < bands.length; i++) if (r < bands[i]) return i;
   return bands.length;                                        /* black */
 }
 function rateAvg(v)  { return band(v, AVG_BANDS); }
@@ -593,7 +609,7 @@ return {
 
   dist: dist, bearing: bearing,
 
-  rateAvg: rateAvg, rateGust: rateGust, band: band,
+  rateAvg: rateAvg, rateGust: rateGust, band: band, roundKmh: roundKmh,
   levelName: levelName, colour: colour,
 
   ageMin: ageMin, staleness: staleness,

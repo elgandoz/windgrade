@@ -31,10 +31,15 @@
 (function (WG) {
 "use strict";
 
-/* Calm, or no direction to show. Kept here so both renderers and any future
-   one agree on when the leaf appears. */
+/* Calm, or no direction to show. Kept here so both renderers and any future one
+   agree on when the leaf appears.
+
+   Tested against the ROUNDED values, for the same reason the bands are: a marker
+   displaying "0/0" while drawing a directional dart claims a direction it is no
+   longer showing a speed for. Whatever the pilot reads, the glyph must agree. */
 function isCalm(st) {
-  return !(st.dir === st.dir) || (st.avg === 0 && st.gust === 0);
+  return !(st.dir === st.dir) ||
+         (WG.roundKmh(st.avg) === 0 && WG.roundKmh(st.gust) === 0);
 }
 function ptsFor(st)  { return isCalm(st) ? WG.LEAF_PTS : WG.ARROW_PTS; }
 function rotFor(st)  { return isCalm(st) ? 0 : ((st.dir + 180) % 360); }
@@ -82,7 +87,9 @@ function drawCanvas(g, st, x, y, scale, opts) {
 function labelText(st) {
   return fmt(st.avg) + "/" + fmt(st.gust);
 }
-function fmt(v) { return (v !== v) ? "—" : (Math.round(v * 10) / 10); }
+/* Whole km/h. Goes through the same rounding as the band lookup in core.js, so
+   the number and the colour always tell the same story. */
+function fmt(v) { var r = WG.roundKmh(v); return (r !== r) ? "—" : r; }
 
 function labelCanvas(g, st, x, y, scale, fs) {
   var t = labelText(st);
