@@ -332,14 +332,37 @@ var HALO         = "#FFFFFF";   /* outside the outer stroke */
    wide with a 5 rim leaves 2.3 there and 5.4 towards the rear, which reads as
    a fill with a border rather than the reverse. Narrow the dart further only
    if the rim narrows with it. ─────────────────────────────────────────── */
-var ARROW = "M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z"; /* 18 x 23.5, notch 30% */
-var LEAF  = "M0,-11.75 L4,11.75 L0,5.75 L-4,11.75 Z"; /* calm: 8 wide, no direction */
+/* Point arrays are the source, so canvas and SVG cannot drift. */
+var ARROW_PTS = [[0, -11.75], [9, 11.75], [0, 4.75], [-9, 11.75]];
+var LEAF_PTS  = [[0, -11.75], [4, 11.75], [0, 5.75], [-4, 11.75]];
+
+function toPath(pts) {
+  var s = "M" + pts[0][0] + "," + pts[0][1], i;
+  for (i = 1; i < pts.length; i++) s += " L" + pts[i][0] + "," + pts[i][1];
+  return s + " Z";
+}
+var ARROW = toPath(ARROW_PTS);   /* 18 x 23.5, notch 30% */
+var LEAF  = toPath(LEAF_PTS);    /* calm: 8 wide, implies no direction */
 
 /* Concentric stroke widths, widest first. Each band's visible thickness is
    half the difference to the next one in: halo 1.25, near-black 1.75, gust
    2.5 outward from the outline. */
 var BANDS = { halo: 11, outer: 8.5, gust: 5, inner: 1 };
-var VIEWBOX = "-18 -18 36 36";              /* fits the widest stroke */
+
+/* The viewBox has to clear the ROTATED extent, not the upright one. The
+   furthest vertex is a rear corner at hypot(9, 11.75) = 14.80, and the halo
+   adds 11/2 = 5.5 on top, so anything under 20.3 clips the corners as the
+   arrow turns — which is exactly what happened at 18. */
+function reach() {
+  var m = 0, i, r;
+  for (i = 0; i < ARROW_PTS.length; i++) {
+    r = Math.sqrt(ARROW_PTS[i][0] * ARROW_PTS[i][0] + ARROW_PTS[i][1] * ARROW_PTS[i][1]);
+    if (r > m) m = r;
+  }
+  return m + BANDS.halo / 2;
+}
+var REACH = Math.ceil(reach());             /* 21 */
+var VIEWBOX = (-REACH) + " " + (-REACH) + " " + (REACH * 2) + " " + (REACH * 2);
 
 function levelName(i) { return (i < 0) ? "unknown" : LEVELS[i]; }
 function colour(i)    { return PALETTE[levelName(i)]; }
@@ -403,7 +426,8 @@ return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
   AVG_BANDS: AVG_BANDS, GUST_BANDS: GUST_BANDS, PALETTE: PALETTE,
   STROKE_INNER: STROKE_INNER, STROKE_OUTER: STROKE_OUTER, HALO: HALO,
-  ARROW: ARROW, LEAF: LEAF, BANDS: BANDS, VIEWBOX: VIEWBOX,
+  ARROW: ARROW, LEAF: LEAF, BANDS: BANDS, VIEWBOX: VIEWBOX, REACH: REACH,
+  ARROW_PTS: ARROW_PTS, LEAF_PTS: LEAF_PTS, toPath: toPath,
 
   cfg: cfg, parseQuery: parseQuery, clamp: clamp, toNum: toNum,
   store: store,
