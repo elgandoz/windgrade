@@ -139,6 +139,14 @@ calibration is the point:
 - **Rim hotter than the fill** → the gust factor is above normal. This is the
   calm-average-hiding-violent-gusts case, and it now announces itself as a
   colour *step* rather than requiring the pilot to compare two numbers.
+- **Rim *cooler* than the fill** → unusually steady air, a gust factor *below*
+  normal. Not anticipated when the scale was designed, but it falls out of the
+  offset and it is real information, so leave it alone rather than clamping it.
+
+All three appeared in the first live fetch (Lucerne, 2026-08-10): `14.8/31.7`
+gave green fill with a yellow rim, `21/31` gave yellow/yellow, and `17/22` gave a
+yellow fill with a green rim. Useful confirmation that the offset does the work it
+was supposed to.
 
 A single shared table could not do this: gusts always exceed the average, so
 every marker would show a hotter rim and the signal would carry no information.
@@ -368,6 +376,51 @@ XCTrack's WebView — separate partition, effectively a separate browser. So the
 "download the region" action must happen inside the WebView itself. This was
 missed in an earlier draft and would have invalidated the whole offline design.
 It is the reason `probe.html` exists.
+
+## The overlay calibration, and why it took four attempts
+
+Settled 2026-08-10. The number is in `AGENTS.md`; this is why the obvious routes
+failed, so nobody repeats them.
+
+**What we were trying to do.** Draw arrows on a transparent WebView widget stacked
+over XCTrack's own map widget, both covering the same rectangle. That needs our
+pixel geometry to agree with XCTrack's, which needs its map resolution.
+
+**Four wrong answers, in order:**
+
+1. **chmd's table from the issue queue, taken at face value.** Its labels
+   (6 km, 12 km…) do not exist in the owner's build at all. Lesson: XCTrack's
+   scale labels are build-specific.
+2. **A relabel table derived by position.** The owner's 23 slider values are
+   exactly chmd's `mapWidget_scale.value` span of 12–34, every second step
+   doubles, and the alternating subset lines up one-for-one with chmd's — giving
+   8 km ↔ z11. This got the **pairing** right and the **scale** wrong, because it
+   assumed the steps land on integer OSM zooms.
+3. **Guessing discrete multipliers** (×2, ×3, ×√2). All wrong, and worse, a list
+   of guesses cannot report *how far off* it was. Replaced with a continuous ±2%
+   adjust and a `zEff` readout — at which point the answer fell out in one run.
+4. **Assuming the labels described real ground distances.** They are rounded.
+   15 ÷ 8 = 1.875, yet the measured zoom spacing between those two settings was
+   exactly 1.000.
+
+**The answer:** XCTrack's ladder *is* exact powers of two in resolution, but it
+sits a constant 1.062× coarser than the OSM levels it resembles — hence ÷0.942.
+No principled derivation was found; it is empirical, verified at three steps
+against airspace edges. It is suspiciously close to 2√2⁄3 = 0.9428. That is
+almost certainly numerology and must not be built on.
+
+**The structurally important part**, from the spacing being exactly 1.000: a
+fit-to-widget model with labels 15/8/4 would have produced 0.907 spacing. It did
+not, so the setting is a **resolution** and the correct zoom is independent of
+widget size. Had it been fit-to-widget, every widget geometry would have needed
+its own calibration and Phase 3b would have been far more fragile.
+
+**Two process lessons worth keeping.** First, the diagnostic hid its own evidence:
+the readout printed the raw `getLocation()` return only when there was no fix at
+all, so once browser geolocation won it concealed whether the bridge was off or
+merely unlocked. Print the raw input of a measurement unconditionally. Second, an
+instrument that can only say "wrong" wastes a test cycle; one that says "wrong by
+6%" ends the investigation. Prefer continuous adjustment over a list of guesses.
 
 ## What `hx-call` already established about XCTrack
 

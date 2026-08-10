@@ -121,3 +121,7 @@ rounded and must never be used to compute geometry.
 - Plain ES5-compatible JS in shipped pages. Old Android WebViews.
 - Build scripts may use whatever is convenient; they run on a laptop.
 - Findings from probes go in `docs/findings.md`, dated, raw JSON included.
+- **`node tools/test-core.js`** exercises the engine — config clamping, the
+  calibration, the rating bands, geo, bbox, staleness, ranking and the provider's
+  URL building and normalisation. Add `--live` for one real winds.mobi call. This
+  is only possible because `wg/core.js` touches no DOM; keep it that way.
