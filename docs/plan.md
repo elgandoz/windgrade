@@ -462,6 +462,54 @@ Polled like `getLocation()`, that solves the whole problem with no taps, no dead
 reckoning and no manual step — and it is a smaller change than a write API, which
 nobody needs. Reading beats writing here: the widget only ever wants to *follow*.
 
+## Phase 3e — tap a marker for its trend (2026-08-11)
+
+Owner asked whether station history was available; it is, it is CORS-open and it
+costs ~0.5–1 KB per station for a few hours. Numbers in `findings.md`.
+
+Tapping a marker opens a panel with the station's name, altitude, distance,
+provider, current `avg/gust`, direction and age, then a **trend strip**: the same
+marker geometry at small size, one per sample, oldest left to newest right. Tap
+anywhere to dismiss; it also closes itself after `popup` seconds (default 30, `0`
+keeps it until dismissed), because a panel left open over a moving map hides the
+thing it sits on.
+
+Modelled on SeeYou's station popup, which the owner supplied as the reference. The
+trend is what makes it worth the tap — it is purely descriptive, so it breaks no
+rule, and it answers the question a single reading cannot: building or easing.
+
+### Tap precedence, and why it needs stating
+
+Three things now want the same pixels, so the order is fixed and deliberate:
+
+```
+1. a marker under the finger   -> open its popup
+2. a popup already open        -> dismiss it
+3. otherwise                   -> the zoom zone's action, if any
+```
+
+A marker tap must never be eaten by a zoom half that happens to cover the same
+pixels, and a dismissing tap must never also zoom. Markers are hit-tested against
+the positions actually drawn, nearest first so overlaps resolve predictably.
+
+### Zoom controls, now two independent options
+
+Owner wanted the `ztap` zoom moved to a dedicated button while keeping the
+invisible halves available. They are separate parameters and compose:
+
+| | |
+|---|---|
+| `ztap=1` | the invisible 50% halves — top finer, bottom coarser |
+| `zbtn=1` | a small `+` / `−` pair, bottom right |
+
+Both default off. That default is still the important part: with tapping enabled
+the widget swallows every touch over its area, so any control here is one taken
+away from XCTrack.
+
+**All of this needs "Allow tapping" ON**, which means the pilot's own zoom buttons
+must live outside the widget rectangle. That is the same constraint the manual
+zoom already had, and it is the price of any interactivity at all.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

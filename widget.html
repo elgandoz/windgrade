@@ -26,12 +26,41 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
    zone here is a zone taken away from XCTrack. */
 .zone{position:absolute;left:0;width:100%;height:50%}
 #zin{top:0} #zout{top:50%}
+
+/* Dedicated zoom buttons. Small and cornered, so they cost little area — the
+   invisible halves can stay on alongside them. */
+#zbtns{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;gap:4px;
+  padding:4px;z-index:6}
+#zbtns button{width:46px;height:46px;background:rgba(10,17,22,.82);color:#E8F0F5;
+  border:1px solid #2A3B48;border-radius:4px;font:700 22px ui-monospace,monospace}
+
+/* Detail popup. Carries its own background — the body must stay unpainted. */
+#pop{position:absolute;left:0;right:0;bottom:0;z-index:7;max-height:74%;overflow:auto;
+  background:rgba(10,17,22,.96);border-top:1px solid #2A3B48;
+  color:#E8F0F5;font:400 12px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:9px 10px 11px}
+#pop h3{margin:0 0 1px;font-size:15px;font-weight:700}
+#pop .sub{color:#7B909F;font:400 11px/1.35 ui-monospace,"Roboto Mono",monospace;margin:0 0 8px}
+#pop .now{display:flex;gap:14px;align-items:baseline;margin:0 0 9px}
+#pop .now b{font:700 26px ui-monospace,monospace;letter-spacing:-.02em}
+#pop .now i{font-style:normal;color:#7B909F;font-size:11px}
+#pop .trend{display:flex;gap:3px;overflow-x:auto;padding-bottom:2px}
+#pop .t{flex:none;width:44px;text-align:center}
+#pop .t svg{display:block;width:34px;height:34px;margin:0 auto}
+#pop .t em{display:block;font:700 11px ui-monospace,monospace;font-style:normal}
+#pop .t span{display:block;color:#7B909F;font:400 9px ui-monospace,monospace}
+#pop .src{color:#7B909F;font-size:10px;margin-top:8px;line-height:1.45}
+/* Must out-specify "#pop .now i", which sets the muted colour. The age is the
+   field that says whether the reading can be trusted; it has to carry its state. */
+#pop .now i.stale, #pop .stale{color:#D6483C;font-weight:700}
+#pop .now i.warn, #pop .warn{color:#E9A33C}
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 <div id="zin" class="zone" hidden></div>
 <div id="zout" class="zone" hidden></div>
+<div id="zbtns" hidden><button id="bIn" type="button">+</button><button id="bOut" type="button">−</button></div>
+<div id="pop" hidden></div>
 <div id="badge"></div>
 
 <script src="wg/core.js"></script>
@@ -74,6 +103,10 @@ var W = 0, H = 0, dpr = 1;
    after that the widget CANNOT know whether the map followed, which is why the
    badge marks it and the scale bar exists. */
 var curStep = C.step;
+/* Screen positions of the markers actually drawn, so a tap can be matched to a
+   station. Rebuilt on every draw. */
+var hits = [];
+var popStation = null, popTimer = null, popHist = null, popErr = "";
 var stations = [], lastFetch = 0, fetchErr = "", fetching = false;
 var drawKey = "", lastShown = 0;
 
@@ -101,6 +134,7 @@ window.addEventListener("resize", resize);
    see the SeeYou decluttering bug in handover.md. ──────────────────── */
 function draw(fix, ranked){
   bctx.clearRect(0, 0, W, H);
+  hits = [];
   var shown = 0;
   if (fix){
     var scale = 0.55 + (C.size / 100) * 0.75;      /* 0.55 .. 1.30 */
@@ -140,6 +174,7 @@ function draw(fix, ranked){
       }
       if (hit) continue;
       placed.push([x, y]);
+      hits.push({ st: st, x: x, y: y, r: box });
       WG.marker.canvas(bctx, st, x, y, scale);
       WG.marker.label(bctx, st, x, y, scale, fs);
     }
@@ -254,7 +289,6 @@ function tick(){
 
   var now = Date.now();
   var ranked = WG.prepare(stations, fix, C, now), i, nStale = 0;
-  for (i = 0; i < ranked.length; i++) if (ranked[i].stale.cls === "stale") nStale++;
 
   var z = WG.zoomForStep(curStep);
   var key = Math.round(WG.lonToPx(fix.lon, z) * WG.CAL) + "/" +
@@ -262,7 +296,119 @@ function tick(){
             W + "x" + H + "/" + curStep + "/" + lastFetch + "/" + Math.round(now / 60000);
   if (key !== drawKey){ drawKey = key; lastShown = draw(fix, ranked); }
 
+  /* Count stale over the markers ACTUALLY DRAWN, not over everything ranked.
+     Comparing a count from one population against a total from another made the
+     badge claim ALL STALE whenever the stale count in the ranked list happened
+     to equal the number drawn — which trains a pilot to ignore the warning, the
+     worst possible outcome for it. hits[] is refreshed on every draw, and the
+     station objects it points at are re-staled by prepare() every tick, so this
+     stays current even when nothing is redrawn. */
+  for (i = 0; i < hits.length; i++) if (hits[i].st.stale.cls === "stale") nStale++;
+
   paintBadge(fix, lastShown, nStale);
+}
+
+/* ── detail popup ─────────────────────────────────────────────────────
+   Tap a marker for its recent trend. Purely descriptive — the same measured
+   values, over time — so it breaks no rule, and it answers the question a
+   single reading cannot: is this building or easing?
+
+   History is fetched ON DEMAND, one small call (~0.5-1 KB for a few hours).
+   Prefetching it for every marker would be one call per station for data
+   nobody asked to see, which is what winds.mobi's "do not overload" forbids.
+   ─────────────────────────────────────────────────────────────────── */
+function closePop(){
+  if (popTimer){ clearTimeout(popTimer); popTimer = null; }
+  popStation = null; popHist = null; popErr = "";
+  var p = document.getElementById("pop");
+  p.hidden = true;
+  p.innerHTML = "";
+}
+
+function openPop(st){
+  popStation = st; popHist = null; popErr = "";
+  paintPop();
+  if (popTimer) clearTimeout(popTimer);
+  /* 0 means keep it until dismissed. Otherwise it closes itself, because a
+     popup left open over a moving map hides the thing it sits on. */
+  if (C.popup > 0) popTimer = setTimeout(closePop, C.popup * 1000);
+
+  PROV.fetchHistoric(st.id, { duration: C.hours * 3600 }, function (err, list){
+    if (!popStation || popStation.id !== st.id) return;   /* dismissed meanwhile */
+    if (err) popErr = err; else popHist = list;
+    paintPop();
+  });
+}
+
+function esc(s){
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function hhmm(ts){
+  var d = new Date(ts);
+  return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+}
+
+function paintPop(){
+  var p = document.getElementById("pop"), st = popStation, i, s, h = "";
+  if (!st){ p.hidden = true; return; }
+  p.hidden = false;
+
+  h += '<h3>' + esc(st.name) + (st.peak ? ' <span style="color:#54A6DC">▲</span>' : '') + '</h3>';
+  h += '<div class="sub">' +
+       (isFinite(st.alt) ? Math.round(st.alt) + ' m · ' : '') +
+       (Math.round(st.dist / 100) / 10) + ' km · ' + esc(st.provider) + '</div>';
+
+  h += '<div class="now">';
+  h += '<b>' + WG.marker.labelText(st) + '</b><i>km/h avg/gust</i>';
+  if (st.dir === st.dir) h += '<b style="font-size:19px">' + Math.round(st.dir) + '°</b>';
+  h += '<i class="' + (st.stale.cls === "fresh" ? "" : st.stale.cls) + '">' +
+       (st.stale.age === st.stale.age ? Math.round(st.stale.age) + ' min old' : 'no timestamp') +
+       '</i></div>';
+
+  /* The trend. Oldest left, newest right, same marker geometry at small size so
+     a change of colour reads the same way it does on the map. */
+  if (popErr) h += '<div class="sub">trend unavailable: ' + esc(popErr) + '</div>';
+  else if (!popHist) h += '<div class="sub">loading trend…</div>';
+  else if (!popHist.length) h += '<div class="sub">no history for this station</div>';
+  else {
+    h += '<div class="trend">';
+    for (i = 0; i < popHist.length; i++){
+      s = popHist[i];
+      h += '<div class="t">' +
+           WG.marker.svg({ dir:s.dir, avg:s.avg, gust:s.gust,
+                           rAvg:WG.rateAvg(s.avg), rGust:WG.rateGust(s.gust) }, 34) +
+           '<em>' + WG.marker.labelText(s) + '</em>' +
+           '<span>' + hhmm(s.ts) + '</span></div>';
+    }
+    h += '</div>';
+  }
+
+  h += '<div class="src">Measured values from ' + esc(st.provider) +
+       ' via winds.mobi. Not a forecast and not a safety verdict. ' +
+       'Tap anywhere to close' + (C.popup > 0 ? ', or wait ' + C.popup + ' s.' : '.') +
+       '</div>';
+  p.innerHTML = h;
+
+  /* Oldest-left reads naturally, but it puts the NEWEST sample off the right
+     edge on a narrow screen — the one reading a pilot most wants. Scroll to the
+     end so it is visible, still scrollable back for the earlier ones. */
+  var tr = p.querySelector(".trend");
+  if (tr) tr.scrollLeft = tr.scrollWidth;
+}
+
+/* Taps inside the popup must not fall through and re-close it or zoom. */
+document.getElementById("pop").addEventListener("click", function(ev){
+  ev.stopPropagation();
+});
+
+function hitTest(x, y){
+  /* Nearest marker first, so overlapping ones resolve predictably. */
+  var best = null, bd = 1e9, i, d;
+  for (i = 0; i < hits.length; i++){
+    d = Math.abs(x - hits[i].x) + Math.abs(y - hits[i].y);
+    if (d < hits[i].r * 1.6 && d < bd){ bd = d; best = hits[i]; }
+  }
+  return best;
 }
 
 /* ── optional tap zones ───────────────────────────────────────────────
@@ -281,16 +427,43 @@ function stepBy(d){
   drawKey = ""; lastFetch = 0;              /* the box moved with the zoom */
   tick();
 }
+/* Precedence, and it matters: a marker tap must never be eaten by a zoom zone
+   that happens to cover the same pixels. Marker, then dismiss, then zoom. */
+function zoneTap(ev, d){
+  var r = cv.getBoundingClientRect();
+  var x = ev.clientX - r.left, y = ev.clientY - r.top;
+
+  var hit = C.popup !== null && hitTest(x, y);
+  if (hit){ openPop(hit.st); return; }
+  if (popStation){ closePop(); return; }        /* tap outside dismisses */
+  if (d) stepBy(d);
+}
+
 if (C.ztap){
   var zi = document.getElementById("zin"), zo = document.getElementById("zout");
   zi.hidden = zo.hidden = false;
-  zi.addEventListener("click", function(){ stepBy(+1); });   /* finer */
-  zo.addEventListener("click", function(){ stepBy(-1); });   /* coarser */
-  document.getElementById("badge").addEventListener("click", function(ev){
-    ev.stopPropagation();
-    curStep = C.step; drawKey = ""; lastFetch = 0; tick();
+  zi.addEventListener("click", function(ev){ zoneTap(ev, +1); });   /* finer */
+  zo.addEventListener("click", function(ev){ zoneTap(ev, -1); });   /* coarser */
+} else {
+  /* No zones, but marker taps still need somewhere to land. The canvas itself
+     is only a hit target when there is something to tap. */
+  cv.addEventListener("click", function(ev){ zoneTap(ev, 0); });
+}
+
+if (C.zbtn){
+  document.getElementById("zbtns").hidden = false;
+  document.getElementById("bIn").addEventListener("click", function(ev){
+    ev.stopPropagation(); stepBy(+1);
+  });
+  document.getElementById("bOut").addEventListener("click", function(ev){
+    ev.stopPropagation(); stepBy(-1);
   });
 }
+
+document.getElementById("badge").addEventListener("click", function(ev){
+  ev.stopPropagation();
+  if (curStep !== C.step){ curStep = C.step; drawKey = ""; lastFetch = 0; tick(); }
+});
 
 resize();
 tick();

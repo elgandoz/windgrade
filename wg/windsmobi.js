@@ -115,6 +115,38 @@ function normalise(raw) {
   return out;
 }
 
+/* ── history, for the detail popup ────────────────────────────────────
+   GET /stations/{id}/historic/?duration=<seconds>. Returns a plain array,
+   NEWEST FIRST — the pages want oldest-first for a left-to-right trend, so
+   normalise() reverses it rather than leaving every caller to remember.
+
+   Measured: ~550 bytes for 2 h of MeteoSwiss (10 min cadence), ~970 for
+   Holfuy (6-8 min). Fetched on demand when a popup opens, never prefetched
+   for every station — that would be one call per marker and would breach
+   "do not overload" for data nobody asked to see. */
+function historicUrl(id, opts) {
+  var q = [], i, hk = ["_id", "w-dir", "w-avg", "w-max"];
+  q.push("duration=" + Math.round((opts && opts.duration) || 7200));
+  for (i = 0; i < hk.length; i++) q.push("keys=" + encodeURIComponent(hk[i]));
+  return BASE + encodeURIComponent(id) + "/historic/?" + q.join("&");
+}
+
+function normaliseHistoric(raw) {
+  var out = [], i, m;
+  for (i = 0; i < raw.length; i++) {
+    m = raw[i];
+    if (!m || !m._id) continue;
+    out.push({
+      ts:   +m._id * 1000,
+      dir:  (m["w-dir"] === undefined || m["w-dir"] === null) ? NaN : +m["w-dir"],
+      avg:  (m["w-avg"] === undefined || m["w-avg"] === null) ? NaN : +m["w-avg"],
+      gust: (m["w-max"] === undefined || m["w-max"] === null) ? NaN : +m["w-max"]
+    });
+  }
+  out.sort(function (a, b) { return a.ts - b.ts; });    /* oldest first */
+  return out;
+}
+
 WG.providers.windsmobi = {
   id: "windsmobi",
   label: "winds.mobi",
@@ -124,6 +156,20 @@ WG.providers.windsmobi = {
 
   buildUrl: url,
   normalise: normalise,
+  historicUrl: historicUrl,
+  normaliseHistoric: normaliseHistoric,
+
+  /* fetchHistoric(stationId, opts, cb) -> cb(err, samples) oldest-first */
+  fetchHistoric: function (id, opts, cb) {
+    var u = historicUrl(id, opts || {});
+    get(u, function (err, body) {
+      if (err) return cb(err);
+      var j;
+      try { j = JSON.parse(body); } catch (e) { return cb("unparseable JSON"); }
+      if (!j || !j.length) return cb(null, []);
+      cb(null, normaliseHistoric(j));
+    });
+  },
 
   /* fetchBBox(bbox, opts, cb) -> cb(err, stations, meta) */
   fetchBBox: function (bbox, opts, cb) {

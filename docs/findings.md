@@ -4,6 +4,38 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — station history exists, is CORS-open, and is tiny
+
+**Verdict: the detail popup is buildable.** winds.mobi exposes per-station history
+and it costs almost nothing, so a tap-for-trend feature needs no new provider and
+no new permission.
+
+```
+GET https://winds.mobi/api/2/stations/{id}/historic/?duration=7200&keys=_id&keys=w-dir&keys=w-avg&keys=w-max
+  -> 200, access-control-allow-origin: *
+```
+
+| Station | Samples over 2 h | Bytes | Cadence |
+|---|---|---|---|
+| `meteoswiss-DIS` | 10 | **548** | 600 s, some 1200 s gaps |
+| `holfuy-1636` | 17 | **966** | 360–480 s |
+
+Returns a plain array, **newest first** — `normaliseHistoric()` reverses it so
+every caller gets oldest-first for a left-to-right trend, rather than each having
+to remember.
+
+**Fetched on demand, never prefetched.** One call per popup is a deliberate user
+action; prefetching history for every marker would be one call per station for
+data nobody asked to see, which is exactly what winds.mobi's "do not overload"
+rule forbids.
+
+The trend is purely descriptive — the same measured values, over time — so it
+breaks no rule, and it answers the one question a single reading cannot: is this
+building or easing? A live example from the first run at Sattel showed
+`21/33` at 23:20 falling to `5/11` by 23:40, which no snapshot would reveal.
+
+---
+
 ### 2026-08-11 — overlay verified on device, and the scale bars agree
 
 **Verdict:** `widget.html` renders correctly in XCTrack. The last unverified piece

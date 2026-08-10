@@ -207,6 +207,21 @@ eq("provider network named for attribution", st.provider, "meteoswiss.ch");
 eq("peak flag preserved", st.peak, false);
 eq("status preserved as a separate axis from age", st.status, "green");
 
+head("provider: history");
+var hu = P2.historicUrl("meteoswiss-DIS", { duration: 10800 });
+eq("station id is in the path", hu.indexOf("/meteoswiss-DIS/historic/") !== -1, true);
+eq("duration passed", hu.indexOf("duration=10800") !== -1, true);
+eq("only the keys we plot", (hu.match(/keys=/g) || []).length, 4);
+var hs = P2.normaliseHistoric([
+  { _id: 1786402200, "w-dir": 285, "w-avg": 1.8, "w-max": 4.0 },
+  { _id: 1786395000, "w-dir": 36,  "w-avg": 6.5, "w-max": 15.5 }
+]);
+eq("api returns newest first; we hand back oldest first", hs[0].ts < hs[1].ts, true);
+eq("unix seconds -> ms", hs[0].ts, 1786395000000);
+eq("values carried", hs[1].avg, 1.8);
+eq("a sample with no timestamp is dropped",
+   P2.normaliseHistoric([{ "w-avg": 5 }]).length, 0);
+
 console.log("\n" + (fail ? "FAILED " + fail + " of " : "passed all ") + (pass + fail) + " assertions");
 
 if (process.argv.indexOf("--live") !== -1) {
