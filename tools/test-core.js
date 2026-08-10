@@ -57,6 +57,14 @@ eq("8km is z11 in this build", WG.XCT_SCALE[11], "8km");
 eq("15km is z10", WG.XCT_SCALE[10], "15km");
 eq("10km is NOT an integer zoom (it is step 24)", WG.XCT_LADDER[24], "10km");
 eq("ladder spans 23 steps", WG.XCT_STEP_MAX - WG.XCT_STEP_MIN + 1, 23);
+eq("label metres: 8km", WG.XCT_METRES[25], 8000);
+eq("label metres: 2500m", WG.XCT_METRES[28], 2500);
+eq("label metres: 600km", WG.XCT_METRES[12], 600000);
+eq("every step has a parsed distance",
+   (function(){ var v, n = 0; for (v = 12; v <= 34; v++) if (WG.XCT_METRES[v] > 0) n++; return n; })(), 23);
+/* The bar is only a valid check if its pixel length equals the label distance
+   divided by the resolution we are actually drawing at. */
+eq("8km bar at z11 is ~146 css px", 8000 / WG.mppXct(47.361, 11), 145.6, 0.5);
 eq("fractional zoom renders: step 24 m/px", WG.mppXct(47.361, 10.5), 77.73, 0.02);
 
 

@@ -41,6 +41,19 @@ var XCT_LADDER = {
   30:"1200m", 31:"1km",   32:"600m",  33:"500m",  34:"300m"
 };
 var XCT_STEP_MIN = 12, XCT_STEP_MAX = 34;
+
+/* Ground distance each label names, in metres. The scale bar draws exactly
+   this, so it can be compared against XCTrack's own bar length rather than
+   against its text — which is the only check that catches a calibration that
+   is off while both labels happen to agree. */
+var XCT_METRES = (function () {
+  var o = {}, v, t;
+  for (v = XCT_STEP_MIN; v <= XCT_STEP_MAX; v++) {
+    t = XCT_LADDER[v];
+    o[v] = (t.indexOf("km") !== -1) ? parseFloat(t) * 1000 : parseFloat(t);
+  }
+  return o;
+})();
 function zoomForStep(v) { return (v - 3) / 2; }
 function stepForZoom(z) { return Math.round(z * 2 + 3); }
 
@@ -92,7 +105,14 @@ var SPEC = [
     lab:"Theme", help:"Auto follows your phone." },
   { k:"badge", t:"int", d:1, min:0, max:1, only:"widget",
     lab:"Show calibration badge",
-    help:"States the assumed zoom so a mis-paired map is visible." }
+    help:"States the assumed scale so a mis-paired map is visible." },
+  { k:"bar",   t:"int", d:1, min:0, max:1, only:"widget",
+    lab:"Show scale bar",
+    help:"Draws our scale bar above XCTrack's own. Equal lengths = correctly paired." },
+  { k:"ztap",  t:"int", d:0, min:0, max:1, only:"widget",
+    lab:"Tap zones to change scale",
+    help:"Advanced. Needs XCTrack's zoom buttons moved OUTSIDE the widget, and " +
+         "the map re-zoomed by hand to match. Off for normal use." }
 ];
 
 /* ── config parsing ───────────────────────────────────────────────── */
@@ -550,7 +570,8 @@ function attribution(list) {
 
 return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
-  XCT_LADDER: XCT_LADDER, XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
+  XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES,
+  XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
   zoomOf: zoomOf,
   AVG_BANDS: AVG_BANDS, GUST_BANDS: GUST_BANDS, PALETTE: PALETTE,

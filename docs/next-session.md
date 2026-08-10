@@ -46,6 +46,12 @@ nothing to tap, so the setup now says leave tapping **OFF**.
 **One thing still to look at on device:** only "tapping off + widget in the
 background" preserves the zoom buttons — does the XC map then draw over the arrows?
 
+**Built afterwards** (Phase 3d in `plan.md`): a scale bar drawn above XCTrack's own,
+on by default, so the pairing is checked by comparing bar *lengths* rather than
+labels; and `ztap=1`, an opt-in manual zoom for pilots willing to move their zoom
+buttons outside the widget and re-zoom the map by hand. Neither is verified on
+device yet.
+
 <details><summary>How the probe was run, kept for re-testing a future XCTrack</summary>
 
 Run `tools/tap.html`:

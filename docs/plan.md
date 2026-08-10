@@ -400,6 +400,68 @@ zoom buttons. Does XCTrack's XC map then draw over the arrows? That is chmd's st
 — web page below, transparent XC map above — which works visually but runs airspace
 lines and the track across the markers. Needs one look on device.
 
+## Phase 3d — scale bar, and an opt-in manual zoom (2026-08-11)
+
+The owner's workaround after zoom sync was ruled out, plus the piece of it that
+turned out to be worth having on its own.
+
+### The scale bar — shipped, on by default
+
+XCTrack prints a scale bar bottom-left: a label over a bracketed line. We now draw
+**our own bar, at the same ground distance its label names, just above it.**
+
+Comparing *lengths* is a strictly better check than comparing *labels*, and that is
+the whole reason it exists. Matching labels with mismatched lengths means the
+calibration is wrong for this device or this latitude — which no amount of reading
+the settings would reveal, and which the badge alone cannot catch. It also gives
+the outstanding latitude check a permanent, passive form: fly to Ticino and the
+bars either still agree or they do not.
+
+At z11 an 8 km bar is 145.6 CSS px; the owner's screenshot measured XCTrack's at
+roughly 150, consistent within eyeball error and with the calibration already
+verified against airspace edges.
+
+### Manual zoom, `ztap=1` — off by default, and it must stay off by default
+
+Owner's proposal: move XCTrack's zoom buttons **outside** the widget rectangle, tap
+the widget to change *its* scale, then re-zoom the map by hand to match, using the
+two bars to confirm.
+
+Clunky, and the owner said so. It works because the conflict found on 2026-08-11 is
+only about *overlap*: the widget swallows taps over its own area, so buttons placed
+elsewhere are unaffected.
+
+Why the default matters more than the feature: **any tap zone here is a zone taken
+away from XCTrack.** With `ztap=0` the widget creates no hit targets at all, and the
+pilot keeps every control they had. So this is opt-in, and the normal setup stays
+one scale, set once, correct by construction.
+
+**The widget cannot verify the map followed.** So while the scale differs from the
+configured one, the badge says `SET MAP` in amber — amber, not red, because red
+means the data is stale and conflating the two would blunt both. Tapping the badge
+resets to the configured scale. The widget never claims a sync it cannot see.
+
+### Can the JS API drive the map? No.
+
+`getLocation()` is the entire interface — confirmed by the documentation and by the
+probe, which enumerated exactly one method. There is no `setMapScale`, and nothing
+else that touches the map.
+
+**Worth asking the developers, and the existing issues ask for the wrong shape.**
+[#1235](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1235) asks for
+the zoom as a **URL placeholder**, `${osm_zoom}`. That would force a full page
+reload on every zoom change, which for a canvas overlay throws away the canvas, the
+station cache and any in-flight fetch — precisely why our setup requires refresh
+rate 0. The better ask is a **read** on the JS interface:
+
+```
+XCTrack.getMapScale()   ->  mapWidget_scale.value, or its OSM equivalent
+```
+
+Polled like `getLocation()`, that solves the whole problem with no taps, no dead
+reckoning and no manual step — and it is a smaller change than a write API, which
+nobody needs. Reading beats writing here: the widget only ever wants to *follow*.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,
