@@ -226,14 +226,27 @@ and uses plain Web Mercator maths. What remains unavailable:
 | Map centre | Live, via polled `getLocation()` |
 | Zoom | Not exposed, but **fixed per widget** and pairable via the table |
 | Rotation | **Fixed per widget** — north-up pins and holds |
-| Widget rect vs map rect alignment | **No.** The remaining unknown |
+| Widget rect vs map rect alignment | **Handled by the layout** — see below |
 
-**The risk that remains is alignment.** Zoom and rotation are both pinned by
-configuration, so what is left is whether the widget rectangle sits exactly over
-the map rectangle, and whether the pilot set the pair up correctly in the first
-place. If either is off, the arrows land on the wrong terrain *while still looking
-authoritative* — a valley station read as a summit station. That is the confident
-wrong answer `AGENTS.md` forbids, and it is worse than no map.
+**The layout, owner's decision 2026-08-10.** Two widgets stacked over the exact
+same area: XCTrack's native map underneath with the dedicated settings, our
+WebView widget **on top** with matching settings. So alignment stops being
+something the code has to discover — the pilot builds it into the layout, and our
+canvas rectangle *is* the map rectangle. Our layer being on top is also the right
+way round: chmd stacks the web page below a transparent XC map, which would run
+airspace lines and the track across our arrows.
+
+Scale handling: **follow the table from the issue queue blindly and test whether
+it works.** No derivation, no cleverness. The airspace-overlay check below is what
+says yes or no.
+
+**The risk that remains is setup, not geometry.** Zoom and rotation are pinned per
+widget, and the rectangles match by construction, so what is left is a pilot who
+pairs mismatched settings — our widget at z11 over a map set to 12 km. If that
+happens the arrows land on the wrong terrain *while still looking authoritative*,
+a valley station read as a summit station, which is the confident wrong answer
+`AGENTS.md` forbids. Hence the permanent on-screen badge below: it exists so a
+mis-pairing is readable against the scale XCTrack already displays.
 
 Mitigations, in order of how much they actually buy:
 
