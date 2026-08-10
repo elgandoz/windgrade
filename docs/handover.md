@@ -93,21 +93,64 @@ licensed, global, no key). Same download and cache path, no new architecture.
 
 ### The rating scale
 
-Owner's design. **Draft scale, four levels** (2026-08-10):
+**Six levels, thresholds supplied 2026-08-10.** Modelled on **burnair**'s scale,
+deliberately — pilots already read it, and familiarity is worth more than
+originality here. Same argument as matching windspion's URL conventions.
 
-| Colour | Meaning |
-|---|---|
-| green | safe |
-| yellow | warning |
-| red | dangerous |
-| black | extremely dangerous |
+Colour is driven by **wind speed only**. All units km/h.
 
-**Colour is driven by wind speed only.** Fill from the average, gust colour from
-the gust, both read off the same four-level table.
+| Colour | Average | Gust |
+|---|---|---|
+| white / grey | up to 6 | up to 14 |
+| green | 7 – 14 | 15 – 24 |
+| yellow | 15 – 24 | 25 – 32 |
+| orange | 25 – 30 | 33 – 38 |
+| red | 31 – 36 | 39 – 44 |
+| black | 37 and up | 45 and up |
 
-Note this dropped **orange** ("hard") from the earlier five-level draft, which
-ran green / yellow / orange / red / black. Four buckets, not five. The km/h
-boundaries are still not supplied — see `plan.md` open decision 2.
+Fill colour reads the **Average** column; the rim reads the **Gust** column.
+**Two different tables, not one applied twice.**
+
+Supersedes two earlier drafts: a five-level green/yellow/orange/red/black with no
+numbers, and a four-level version that dropped orange. Orange is back, and
+white/grey for calm is new.
+
+#### Boundaries are half-open — the bands as written have gaps
+
+The bands are integers but the data is not: MeteoSwiss returns one decimal
+(`"value": 20.9`). Taken literally, "up to 6" and "7 – 14" leave 6.4 km/h with no
+colour. So each band's lower integer becomes a strict boundary:
+
+```
+average:  < 7   < 15   < 25   < 31   < 37   else black
+gust:     < 15  < 25   < 33   < 39   < 45   else black
+```
+
+That is an interpretation, not something the owner stated. It changes a displayed
+colour near every boundary, so it is worth confirming.
+
+#### Why two tables makes the mismatch readable
+
+The gust bands are the average bands shifted up by a consistent 8–10 km/h. That
+calibration is the point:
+
+- **Rim the same colour as the fill** → the gust is running about 8–10 km/h over
+  the average, which is ordinary. Nothing to see.
+- **Rim hotter than the fill** → the gust factor is above normal. This is the
+  calm-average-hiding-violent-gusts case, and it now announces itself as a
+  colour *step* rather than requiring the pilot to compare two numbers.
+
+A single shared table could not do this: gusts always exceed the average, so
+every marker would show a hotter rim and the signal would carry no information.
+
+#### The scale does not remove the need for the number
+
+`AGENTS.md` requires the speed number at every size because the scale is
+invisible to a significant fraction of male pilots. Six levels do not fix that.
+White and black are separable by lightness, but green / yellow / orange / red
+remain a hue-only cluster in the middle — and yellow is *lighter* than green, so
+there is not even a clean luminance ramp to fall back on. The number stays
+mandatory.
 
 ### The marker: two stacked arrows
 
@@ -133,17 +176,25 @@ Two consequences worth preserving:
 - The two outlines exist to separate the marker from any basemap, dark or light.
   They are not decoration.
 
-**Unresolved — a black gust conflicts with the white-halo rule.** This document
-previously required a white halo on every marker, unconditionally, because "a
-black arrow with a black border on a grey basemap over a dark map is a hole in
-the screen." A 2 px almost-black outer stroke reintroduces exactly that failure
-when the gust rating is black. The two rules can coexist as
+**Unresolved — the halo, now needed at both ends of the scale.** This document
+requires a white halo on every marker, unconditionally, because "a black arrow
+with a black border on a grey basemap over a dark map is a hole in the screen."
+The 2 px almost-black outer stroke reintroduces exactly that when the gust rates
+black. And the six-level scale adds the mirror-image problem: a **white/grey**
+arrow disappears into a light basemap.
+
+Both fail in the same stack, so both are fixed by it:
 
 ```
 white halo -> near-black 2 px -> gust fill -> dark grey 1 px -> average fill
 ```
 
-but the owner has not confirmed that stack, so it is not settled.
+The near-black stroke is what keeps a white fill visible on light terrain; the
+white halo is what keeps a black fill visible on dark terrain. Neither is
+decoration, and the order matters — the halo has to sit *outside* the near-black
+stroke or it does nothing for the black case.
+
+The owner has not confirmed this stack, so it is not settled.
 
 **Also unresolved — where the speed number goes.** `AGENTS.md` requires the
 number stay visible at every size, since the green→black scale is invisible to a
@@ -184,6 +235,8 @@ It is the reason `probe.html` exists.
   Its weakness is exactly this project's premise: it assumes you know where the
   places are.
 - **burnair** — full map app, subscription, aggregates many station networks.
+  **The six-level rating scale is modelled on theirs**, deliberately; see "The
+  rating scale" above.
   Heavy, and switching apps mid-flight is the cost. Their aggregation is their
   moat; "lighter than burnair" is easy, "as useful as burnair" is not.
 - **bern.pdcs.ch / pgairspace.ch** — live ATIS-derived airspace status. Not

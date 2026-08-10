@@ -80,11 +80,12 @@ Ships something useful on its own, and is where the rating scale gets tuned.
   `{id, name, lat, lon, alt, dir, avg, gust, ts}`. MeteoSwiss first.
 - Fetch layer with staleness: cache last good reading, show its age, go red
   past a threshold.
-- Rating table, thresholds owner-supplied. **Four levels** — green safe, yellow
-  warning, red dangerous, black extremely dangerous. Colour comes from wind
-  speed only: fill from the average, rim from the gust. The mismatch between the
-  two is itself the signal — calm average with violent gusts is the most useful
-  thing on the screen. Marker geometry is specified in `handover.md`.
+- Rating table: **six levels** (white/grey, green, yellow, orange, red, black) on
+  a burnair-style scale, thresholds supplied and recorded in `handover.md` along
+  with the marker geometry. Colour comes from wind speed only. **Average and gust
+  use two different threshold tables**, the gust bands sitting 8–10 km/h higher —
+  which is what turns a hotter rim into real information instead of a constant.
+  No placeholders needed any more.
 - Render as chips, ranked by horizontal distance, each showing the station's own
   altitude as a fact. Δ-altitude weighting is **out** — see "Altitude" above.
   Placing the station on terrain is what makes a valley reading legible as a
@@ -113,12 +114,16 @@ and an update to AGENTS.md.
 ## Decisions still open
 
 1. **Repo name.** `windgrade` is a placeholder.
-2. **Rating thresholds.** The scale is now four levels — green / yellow / red /
-   black; **orange is dropped**. Owner still to supply the km/h boundaries.
-   Until then Phase 2 uses obvious placeholders, clearly marked.
-   Two sub-questions raised by the marker spec and still unanswered:
-   whether a black gust keeps the mandatory white halo *outside* its near-black
-   stroke, and where the speed number sits once two arrows are stacked.
+2. ~~**Rating thresholds.**~~ **Closed 2026-08-10.** Six levels, burnair-style,
+   with separate km/h tables for average and gust — see `handover.md`. Three
+   smaller questions it left behind:
+   - Are the band boundaries half-open as interpreted (`< 7`, `< 15`, …)? The
+     bands as given are integers, the data has decimals, so 6.4 km/h otherwise
+     has no colour.
+   - Does the mandatory white halo sit *outside* the near-black stroke? Needed
+     now at both ends of the scale: black fill on dark terrain, white fill on
+     light terrain.
+   - Where does the speed number sit once two arrows are stacked?
 3. **First region.** Leaning Switzerland split into a few sub-50 MB packs,
    rather than one Alps-wide file.
 4. **Providers.** MeteoSwiss only to start, or approach Holfuy in parallel?

@@ -37,9 +37,11 @@ station on terrain is the whole point.
   readings — only for terrain. Old wind shown confidently is the main way this
   could hurt someone. Go visibly red past a staleness threshold; never silently
   render an old value.
-- **The speed number stays visible at every size.** The green→black rating
-  scale is invisible to a significant fraction of male pilots. The number is
-  the fallback, not an optional decoration.
+- **The speed number stays visible at every size.** The rating scale's middle —
+  green / yellow / orange / red — is a hue-only cluster, invisible to a
+  significant fraction of male pilots, and yellow is lighter than green so there
+  is no luminance ramp to fall back on either. The number is the fallback, not an
+  optional decoration.
 - **Never claim a safety verdict.** The rating scale is a rough aid supplied by
   the owner, not a computed assessment of whether a flight is safe.
 
