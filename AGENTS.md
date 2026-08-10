@@ -175,9 +175,16 @@ A headless browser is available for visual checks, which beats shipping UI blind
       --virtual-time-budget=9000 --window-size=460,900 --screenshot=/tmp/s.png \
       "http://localhost:8080/app.html?lat=47.05&lng=8.64"
 
-Caveat: it does not capture a canvas drawn asynchronously — the widget's markers
-come out blank even though `getImageData` proves they are there. SVG captures
-fine, so `app.html` and `tools/arrow.html` are the pages to check this way.
+Two caveats, both of which have already caused a wrong conclusion:
+
+- **It does not capture a canvas drawn asynchronously.** The widget's markers come
+  out blank even though `getImageData` proves they are there. SVG captures fine, so
+  `app.html` and `tools/arrow.html` are the pages to check this way.
+- **The capture can be narrower than the page's own viewport**, so content at the
+  right edge is cropped rather than overflowing. A bottom-right control read as
+  "not rendering" and chip text read as "overflowing" were both just this.
+  Screenshot 100–150 px wider than the layout you are checking before believing
+  anything about the right-hand edge.
 
 ## Conventions
 

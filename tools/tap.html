@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Windgrade — tap pass-through probe</title>
+<style>
+/* Unpainted body, like the real widget: XCTrack renders white or absent as
+   transparent, which is the only way this can sit over a map. */
+html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+  font-family:ui-monospace,"Roboto Mono",monospace}
+
+/* The two zones mirror the owner's XCTrack layout: top half zooms in, bottom
+   half zooms out, both sent to the background there. Kept nearly invisible so
+   the map underneath stays readable while testing. */
+.zone{position:absolute;left:0;width:100%;height:50%;
+  border:1px dashed rgba(84,166,220,.55)}
+#zin{top:0}
+#zout{top:50%}
+.zone .lab{position:absolute;left:6px;top:6px;padding:2px 6px;border-radius:3px;
+  background:rgba(10,17,22,.72);color:#E8F0F5;font-size:12px;font-weight:700}
+#zout .lab{top:auto;bottom:6px}
+.zone.hit{background:rgba(84,166,220,.28)}
+/* pointer-events:none mode — the zones stop being hit targets at all, which is
+   the case where a tap may reach XCTrack instead of us. */
+body.pe-none .zone{pointer-events:none;border-style:dotted}
+
+/* Controls live in one small corner so ~95% of the area stays clean test
+   surface. Taps here are NOT counted as zone taps. */
+#tog{position:absolute;right:0;bottom:0;width:52px;height:52px;
+  background:rgba(10,17,22,.85);color:#54A6DC;border:1px solid #2A3B48;
+  font:700 20px ui-monospace;z-index:9}
+#panel{position:absolute;left:0;right:0;top:0;bottom:0;z-index:8;
+  background:rgba(10,17,22,.95);color:#E8F0F5;font-size:11px;line-height:1.35;
+  padding:6px 6px 56px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+#panel b{color:#54A6DC}
+#panel .row{display:flex;gap:5px;margin:0 0 6px;flex-wrap:wrap}
+#panel button{padding:8px 9px;background:#1D2B36;border:1px solid #2A3B48;
+  border-radius:3px;color:#E8F0F5;font:700 11px ui-monospace}
+#panel button.on{border-color:#54A6DC;color:#54A6DC}
+#log{margin-top:6px;color:#9DB2C0}
+</style>
+</head>
+<body>
+
+<div class="zone" id="zin"><span class="lab">IN — tap here</span></div>
+<div class="zone" id="zout"><span class="lab">OUT — tap here</span></div>
+
+<button id="tog" type="button">≡</button>
+
+<div id="panel" hidden>
+  <div class="row">
+    <button id="mode" type="button">mode</button>
+    <button id="clear" type="button">clear</button>
+    <button id="copy" type="button">copy</button>
+    <button id="close" type="button">close</button>
+  </div>
+  <div id="sum"></div>
+  <div id="log"></div>
+</div>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════
+   tools/tap.html — does a tap on a web widget ALSO reach a background
+   XCTrack widget?
+
+   Everything about Phase 3c (zoom sync) hangs on this one answer, and it is
+   not documented anywhere. An Android WebView normally consumes touches it
+   handles, so pass-through is genuinely uncertain.
+
+   HOW TO RUN
+     1. Build a page with an XC map widget and your two background zoom
+        buttons, exactly as you normally do.
+     2. Put this page on top, covering the same area, as a Web page widget.
+        Turn ON "Allow tapping on the web page when locked".
+     3. Tap the TOP half. Then read off BOTH answers:
+          did the page count it?   -> the zone flashes, and the counter rises
+          did the map zoom?        -> XCTrack's own scale label changes
+     4. Repeat in the BOTTOM half, then cycle `mode` and repeat.
+     5. Repeat the whole thing with "Allow tapping" OFF.
+
+   THE FOUR OUTCOMES
+     both        -> Phase 3c is buildable: one tap steps both layers.
+     page only   -> the map will not follow. Silent drift. Do not build.
+     map only    -> the widget cannot know. Silent drift. Do not build.
+     neither     -> tapping is off; nothing to build.
+
+   MODES
+     listen   normal hit targets, no preventDefault. The realistic case.
+     prevent  calls preventDefault on touchstart — should definitely block
+              pass-through, so it is the control that proves the test works.
+     pe-none  zones set to pointer-events:none, so web content never becomes
+              a hit target. If the map zooms only here, that is the finding:
+              the WebView was swallowing the event, and a zone that declines
+              it can let XCTrack through.
+
+   The log persists in localStorage, because a tap might make XCTrack reload
+   the widget and that would otherwise erase the evidence — a reload is itself
+   logged, so it cannot be mistaken for a lost tap.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var MODES = ["listen", "prevent", "pe-none"];
+var KEY = "wg.tap";
+var MAXLOG = 140;
+
+var state = { mode:0, n:{}, log:[] };
+
+function load(){
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) state = JSON.parse(raw);
+    if (!state.n) state.n = {};
+    if (!state.log) state.log = [];
+    if (typeof state.mode !== "number") state.mode = 0;
+  } catch(e){}
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+function el(id){ return document.getElementById(id); }
+
+load();
+
+/* ── XCTrack context, so a run can be correlated with the settings ──── */
+var xct = "no XCTrack object";
+try {
+  if (typeof XCTrack !== "undefined" && typeof XCTrack.getLocation === "function"){
+    var raw = XCTrack.getLocation();
+    xct = "getLocation -> " + String(raw).slice(0, 40);
+  }
+} catch(e){ xct = "threw: " + e.message; }
+
+function stamp(){
+  var d = new Date();
+  return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) +
+         ":" + ("0" + d.getSeconds()).slice(-2) + "." +
+         ("00" + d.getMilliseconds()).slice(-3);
+}
+
+function add(kind, zone, x, y){
+  var k = zone + "/" + kind;
+  state.n[k] = (state.n[k] || 0) + 1;
+  state.log.unshift(stamp() + "  " + MODES[state.mode] + "  " + zone + "  " + kind +
+                    (x === undefined ? "" : "  @" + Math.round(x) + "," + Math.round(y)));
+  if (state.log.length > MAXLOG) state.log.length = MAXLOG;
+  save();
+  paint();
+}
+
+/* A tap the page saw must be obvious without opening the log, or the pilot
+   cannot watch the map and the counter at the same time. */
+function flash(z){
+  z.className = "zone hit";
+  setTimeout(function(){ z.className = "zone"; }, 160);
+}
+
+function bind(z, name){
+  /* Every type, because which ones fire is itself the finding: a WebView can
+     deliver touch* without click, or click without touch*. */
+  ["touchstart", "touchend", "pointerdown", "mousedown", "click"].forEach(function(t){
+    z.addEventListener(t, function(ev){
+      var p = (ev.touches && ev.touches[0]) || (ev.changedTouches && ev.changedTouches[0]) || ev;
+      add(t, name, p.clientX, p.clientY);
+      if (t === "touchstart"){
+        flash(z);
+        /* Only in `prevent` mode, so the realistic case stays realistic. */
+        if (MODES[state.mode] === "prevent" && ev.cancelable) ev.preventDefault();
+      }
+    }, false);
+  });
+}
+bind(el("zin"), "IN");
+bind(el("zout"), "OUT");
+
+/* ── panel ────────────────────────────────────────────────────────── */
+function counts(){
+  var out = [], k, keys = [];
+  for (k in state.n) if (state.n.hasOwnProperty(k)) keys.push(k);
+  keys.sort();
+  for (k = 0; k < keys.length; k++) out.push(keys[k] + " = " + state.n[keys[k]]);
+  return out.length ? out.join("\n") : "(nothing counted yet)";
+}
+function paint(){
+  if (el("panel").hidden) return;
+  el("sum").textContent =
+    "mode: " + MODES[state.mode] + "      (cycle with `mode`)\n" +
+    "XCTrack: " + xct + "\n" +
+    "viewport: " + window.innerWidth + "x" + window.innerHeight +
+    "  dpr" + (window.devicePixelRatio || 1) + "\n\n" +
+    "COUNTS — compare against how many times the map actually zoomed\n" +
+    counts() + "\n";
+  el("log").textContent = state.log.join("\n");
+}
+function applyMode(){
+  document.body.className = (MODES[state.mode] === "pe-none") ? "pe-none" : "";
+  el("mode").firstChild.nodeValue = "mode: " + MODES[state.mode];
+}
+
+el("tog").addEventListener("click", function(ev){
+  ev.stopPropagation();
+  el("panel").hidden = !el("panel").hidden;
+  paint();
+});
+el("close").addEventListener("click", function(){ el("panel").hidden = true; });
+el("mode").addEventListener("click", function(){
+  state.mode = (state.mode + 1) % MODES.length;
+  save(); applyMode(); paint();
+});
+el("clear").addEventListener("click", function(){
+  state.n = {}; state.log = []; save(); paint();
+});
+el("copy").addEventListener("click", function(){
+  var btn = this;
+  var txt = "windgrade tap probe\nmode " + MODES[state.mode] + "\nXCTrack " + xct +
+            "\nviewport " + window.innerWidth + "x" + window.innerHeight + "\n\n" +
+            counts() + "\n\n" + state.log.join("\n");
+  var done = function(){
+    btn.firstChild.nodeValue = "copied";
+    setTimeout(function(){ btn.firstChild.nodeValue = "copy"; }, 1500);
+  };
+  /* clipboard works in XCTrack's WebView; window.prompt does not — hx-call
+     measured both. So there is no prompt fallback here on purpose. */
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).then(done, function(){});
+});
+
+/* A reload would otherwise look like taps going missing. Log it so the two
+   cannot be confused. */
+add("PAGE-LOAD", "--");
+window.addEventListener("pagehide", function(){ add("PAGE-HIDE", "--"); });
+document.addEventListener("visibilitychange", function(){
+  add("VIS-" + document.visibilityState, "--");
+});
+
+applyMode();
+paint();
+</script>
+</body>
+</html>

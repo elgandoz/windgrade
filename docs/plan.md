@@ -485,6 +485,28 @@ arrows are wrong and nothing in the API can detect it.
 - **Only the background button:** put our layer *underneath* a transparent XC map
   instead, as chmd does. Taps then reach the map, and the widget is back to
   needing the zoom API it cannot have. Also prefer no feature.
+### If the probe fails: what to remove
+
+Owner's point, and the right instinct — this feature is speculative, so it must be
+cheap to abandon. It already is, deliberately:
+
+- **`zspan` defaults to 0**, so nothing costs anything today. Widening the fetch
+  is 54 KB against 18 KB, and paying that for an unproven feature would be
+  exactly the wrong trade. `coarsestStep` collapses to the base step at 0, so the
+  current behaviour is the cheap one and the wide path is dormant, not dead code
+  waiting to be discovered.
+- **The list never uses it.** `app.html` fetches at the base zoom, because a page
+  with no viewport has nothing to zoom.
+
+To remove the feature entirely: drop the `zspan` row from `SPEC`, and
+`coarsestStep` / `coarsestZoom` / `finestStep` from `core.js`, then make
+`widget.html` fetch at `WG.zoomOf(C)`. That is the whole surface.
+
+**Keep the rest regardless.** `zoomForStep`, `stepForZoom` and `XCT_LADDER` are not
+part of this feature — they are how the configurator offers XCTrack's own scale
+labels, and they are what made `5km` and `10km` selectable at all. The closed-form
+ladder derivation stands on its own measurement.
+
 - **Either way:** the fixed-scale design already works, and issues
   [#1097](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1097) /
   [#1235](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1235) remain

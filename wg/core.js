@@ -68,9 +68,10 @@ var SPEC = [
   { k:"step",  t:"ladder", d:25, min:12, max:34,
     lab:"Map scale",
     help:"Set XCTrack's XC map widget to the same value." },
-  { k:"zspan", t:"int", d:3, min:0, max:6,
+  { k:"zspan", t:"int", d:0, min:0, max:6, only:"widget",
     lab:"Zoom range (steps)",
-    help:"How far out the overlay may follow. Sets how wide an area is fetched." },
+    help:"How far out the overlay may follow a zoom. Widens the fetch, so it " +
+         "stays 0 until tap pass-through is proven — see Phase 3c." },
   { k:"pad",   t:"int", d:20, min:0, max:60,
     lab:"Fetch margin (km)",
     help:"Area fetched beyond the view. A cache radius, not a display radius." },
