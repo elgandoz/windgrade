@@ -295,9 +295,32 @@ rotation, the concern largely dissolves. The only residue worth a glance during
 the test: **can a zoom gesture override the per-widget scale on whichever map does
 receive it?** If ours never receives zoom input, it cannot.
 
-**Acceptance test, borrowed from chmd:** overlay against a layer that exists in
-both renderings and toggle it. Airspace boundaries are hard-edged and shared, so
-they prove registration to the pixel. Do this before trusting any arrow position.
+**Acceptance test — `tools/registration.html`, built 2026-08-10.** Live at
+`/windgrade/tools/registration.html`. No data, no arrows; it exists only to answer
+whether the overlay can be registered at all. Three independent checks, ordered by
+how much they isolate:
+
+1. **Centre cross vs XCTrack's aircraft symbol** — centring alone, and it needs no
+   external coordinates, so nothing of ours can contaminate it.
+2. **Range rings (5/10/20/40 km) vs XCTrack's scale bar** — scale, to eyeball
+   precision. Catches a gross error, not a 10% one.
+3. **Airspace outlines vs XCTrack's airspace layer** — the whole transform at once,
+   to the pixel. This is chmd's method, so our result is directly comparable to the
+   measurement that produced the table. Polygons come from SHV
+   (`airspace.shv-fsvl.ch/api/v2/geojson/airspaces`, CORS `*`, 328 rings), the
+   endpoint `hx-call` already documented.
+
+On-screen buttons change integer zoom and a fine ×multiplier, so the answer is a
+*measurement* rather than pass/fail: if alignment needs ×3, XCTrack's scale is in
+device pixels rather than CSS pixels; if a different integer zoom lines up, the
+table is wrong for this build. Either outcome is a result worth recording.
+
+Caveat when reading check 3: XCTrack draws airspace from its own OpenAIR files,
+which may be a different vintage than SHV's API. A consistent *offset* across many
+polygons is a registration error; one polygon disagreeing is probably data.
+
+Projection maths verified numerically before shipping: 52.086 m/px at z11/47°N, a
+10 km ground offset round-trips to 10.000 km, and x/y isotropy is within 0.08%.
 
 **Sequencing worth considering.** Phase 3b is dramatically cheaper than Phase 3 —
 no build step, no packs, no storage, no byte-range risk — and it reuses the zoom
