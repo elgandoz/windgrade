@@ -155,11 +155,41 @@ at map scale too, which is exactly what `AGENTS.md` demands, and it carries
 *both* channels rather than only the average. Adopt this: `avg/gust`, one pair,
 outside the shape.
 
-**Confirms the fill/rim assignment already specified.** Reading the seven
-timeline samples (`32/36, 29/37, 26/33, 22/31, 21/31, 21/31, 22/37`), fill
-tracks the **average** and the outline tracks the **gust** — the same way round
-as our spec. Five of the seven fit cleanly; the two largest renderings are too
-JPEG-mushed to be sure of, so treat this as a strong reading rather than proof.
+**Correction — SeeYou colours the arrow by the GUST, not the average.** An
+earlier version of this entry read the first low-resolution screenshot as fill
+tracking the average and outline tracking the gust, i.e. our scheme. Three
+clearer screenshots overturn that. Every case where the two channels disagree
+follows the gust:
+
+| Label | avg would give | gust would give | observed |
+|---|---|---|---|
+| `1/25` | white | yellow | **yellow** |
+| `5/26` | white | yellow | **yellow** |
+| `5/18` | white | green | **green** |
+| `14/33` | green | orange | **orange** |
+| `26/41` | orange | red | **red** |
+
+So their arrow carries **one** channel in colour — the gust — and the average
+appears only as the first number in the label.
+
+**Keep our own scheme.** Fill from the average plus rim from the gust carries
+strictly more information than SeeYou's single colour, and it is what makes a
+calm-average-with-violent-gusts marker announce itself as a colour *step*. Copy
+their geometry, not their colour assignment.
+
+**One state we could not decode.** Some arrows are solid, others are outlined
+with a near-white interior, and it tracks neither average, gust, nor gust factor
+consistently — `25/32` is hollow while `24/28` is filled. Possibly a milder
+staleness tier, possibly station type. Unknown, and not needed: our white/grey
+band produces hollow-looking arrows for its own well-defined reason.
+
+**A staleness treatment worth stealing, if that is what it is.** Some stations
+show a **grey label and no arrow at all** (`1/10`, `8/21`, `3/28`, `9/27`,
+`5/11`). Suppressing the arrow rather than drawing it in a confident colour is
+exactly the right instinct for a reading you no longer trust — a stale *direction*
+is as misleading as a stale speed. Inferred, not confirmed. Note `AGENTS.md`
+requires stale data to go visibly **red**, not grey, so if adopted this becomes
+"drop the arrow *and* go red", not "go grey".
 
 **Explains what our new white/grey band will look like.** Several arrows appear
 "hollow" — pale interior, coloured outline. That is not a third state; it is
@@ -189,13 +219,8 @@ unfilled arrow, and that is correct rather than a rendering bug.
 white/grey on the burnair scale adopted above. Their bands are their own. Take
 the construction, not the numbers.
 
-**Unresolved — which way the arrow points.** Direction is `235°`. The large
-map arrow appears to point north-east, i.e. toward 55°, which would mean the
-arrow shows where the wind is *going* rather than the meteorological direction it
-comes from. The small timeline arrows look inconsistent with that at this
-resolution, so it is not settled. Getting this backwards inverts every marker on
-the screen, so it needs a clearer reference or a deliberate decision before any
-marker code is written.
+**Arrow direction — settled: downwind.** See "Direction" under the marker spec
+above.
 
 #### The scale does not remove the need for the number
 
@@ -221,6 +246,49 @@ The gust is therefore **not a stroke on a single shape** — it is the exposed
 margin of a larger shape behind. That keeps both readings as full-saturation
 blocks of colour rather than a block plus a thin line, which is what makes the
 gust legible at small sizes and through gloves.
+
+#### Direction: the arrow points DOWNWIND
+
+Settled by the owner, 2026-08-10. The arrow points where the air is *going*, not
+the meteorological direction it comes from. So a `235°` reading draws an arrow
+pointing toward 55°, north-east.
+
+`wind_direction` from MeteoSwiss is the meteorological from-bearing, so rendering
+is `bearing + 180`. Getting this backwards inverts every marker on the screen
+while still looking entirely plausible, so it is worth a test.
+
+#### Shape and proportions, copied from SeeYou Navigator
+
+Owner: "I really like the UI and visuals of this app. Copy from them for the
+arrow." Three more screenshots supplied, of the Mont Blanc and Gran Paradiso
+areas. Measured off them:
+
+- **A broad swept dart**, not a needle and not a wind barb. Apex forward, and the
+  trailing edge **notched inward** so the two rear corners sweep back into
+  points. Notch depth is roughly a quarter to a third of the arrow's length.
+- **Roughly as wide as it is long** — about 1:1, at most 1.2:1. Stubby on
+  purpose. This is what survives being 30 px on a phone in sunlight.
+- **The border is thick**, on the order of 15–20% of the arrow's width, and
+  always darker than the interior. Not a hairline. This matters: it is what makes
+  the two-shape construction above readable at map scale rather than
+  theoretical — SeeYou is effectively already drawing our gust rim, so the design
+  is validated, and their proportions are the ones to steal.
+- **Constant screen size at every zoom.** The arrows do not scale with the map.
+- **Calm gets its own glyph.** `0/0` draws as a narrow, symmetric, visually
+  non-directional leaf rather than a dart. At zero wind a direction is
+  meaningless and drawing a confident arrow would invent one. Worth copying
+  outright — it is the same "never imply what you don't know" discipline as the
+  no-inference rule.
+
+#### Label, also copied
+
+- The `average/gust` pair sits **just below the arrow**, as bold near-black text
+  with a **white casing/halo around the glyphs** so it stays readable over any
+  map feature — airspace lines, roads, water.
+- **The label never rotates.** It stays horizontal while the arrow spins. Obvious
+  in hindsight, easy to get wrong by rotating a group.
+- **Missing data prints as an em dash**, not a zero: one station reads `0/—`.
+  A zero would be a measurement; the dash is honest about absence.
 
 Two consequences worth preserving:
 

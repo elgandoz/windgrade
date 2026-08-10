@@ -133,8 +133,10 @@ and an update to AGENTS.md.
    - ~~Where does the speed number sit?~~ **Answered** by the SeeYou reference in
      `handover.md`: a compact `average/gust` text pair beside the arrow, on the
      map as well as in any detail view.
-   - **Which way does the arrow point** — downwind, or the meteorological
-     from-direction? Unresolved, and getting it backwards inverts every marker.
+   - ~~Which way does the arrow point?~~ **Answered: downwind.** MeteoSwiss
+     `wind_direction` is the from-bearing, so render at `bearing + 180`.
+     Arrow geometry, label treatment and the calm glyph are all specified in
+     `handover.md`, copied from SeeYou Navigator.
 3. **First region.** Leaning Switzerland split into a few sub-50 MB packs,
    rather than one Alps-wide file.
 4. **Providers.** MeteoSwiss only to start, or approach Holfuy in parallel?
