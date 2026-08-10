@@ -42,6 +42,23 @@ eq("zEff z11 = 10.914", zEff(11), 10.914, 0.002);
 eq("zEff spacing z10->z11 is exactly 1", zEff(11) - zEff(10), 1, 1e-9);
 eq("zEff spacing z11->z12 is exactly 1", zEff(12) - zEff(11), 1, 1e-9);
 
+head("XCTrack scale ladder");
+eq("z from step 25 (8km)", WG.zoomForStep(25), 11);
+eq("z from step 23 (15km)", WG.zoomForStep(23), 10);
+eq("z from step 27 (4km)", WG.zoomForStep(27), 12);
+eq("step 24 is a HALF zoom level", WG.zoomForStep(24), 10.5);
+eq("one step is sqrt2 in scale",
+   WG.mppXct(47.361, WG.zoomForStep(24)) / WG.mppXct(47.361, WG.zoomForStep(25)),
+   Math.SQRT2, 1e-9);
+eq("step<->zoom round trips", WG.stepForZoom(WG.zoomForStep(25)), 25);
+eq("labels derive from the ladder, so they cannot disagree",
+   WG.XCT_SCALE[11], WG.XCT_LADDER[WG.stepForZoom(11)]);
+eq("8km is z11 in this build", WG.XCT_SCALE[11], "8km");
+eq("15km is z10", WG.XCT_SCALE[10], "15km");
+eq("10km is NOT an integer zoom (it is step 24)", WG.XCT_LADDER[24], "10km");
+eq("ladder spans 23 steps", WG.XCT_STEP_MAX - WG.XCT_STEP_MIN + 1, 23);
+eq("fractional zoom renders: step 24 m/px", WG.mppXct(47.361, 10.5), 77.73, 0.02);
+
 head("projection isotropy and round-trip");
 var P = WG.projector({ lat:47.361, lon:8.578 }, 11, 448, 978);
 eq("centre x", P.x(8.578), 224, 1e-6);

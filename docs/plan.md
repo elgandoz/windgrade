@@ -358,6 +358,99 @@ something useful in the air than Phase 2 → 3. Shipping 3b first, and treating 
 own basemap as the durable answer that follows, is probably the better order.
 Owner's call.
 
+## Phase 3c — zoom sync (owner's idea, 2026-08-10)
+
+**The problem it solves.** The overlay's zoom is fixed by configuration and the
+map's is fixed by its widget setting. That works, but a pilot who wants to zoom
+has to change two things in two places, and if they change only one the arrows
+sit on the wrong terrain.
+
+**The owner's existing habit, which is the mechanism.** On every map page they
+place two zoom buttons covering the top and bottom halves of the map area, then
+send both to the **background** — a background widget's tap area stays live even
+with the map in the foreground. So the whole map is already a two-zone zoom
+control, invisible and muscle-memory.
+
+The proposal: give our widget the same two zones. One tap then zooms both layers,
+and they stay in step.
+
+### What makes it plausible
+
+**We can follow XCTrack's ladder exactly, half-steps included.** Its scale is an
+integer `mapWidget_scale.value` from 12 to 34, and one step is √2 in scale — half
+an OSM zoom level. Derived from chmd's table and confirmed against all three
+measured points to within 0.04 m/px:
+
+```
+z = (value - 3) / 2          m/px = 156543.034 · cos(lat) / 2^z / 0.942
+```
+
+Our projector already takes a **fractional** zoom, so a half-step is not a special
+case: step 24 renders at z 10.5 and 77.73 m/px. `WG.zoomForStep` /
+`WG.stepForZoom` and `WG.XCT_LADDER` are in `core.js` with tests. That also
+explains, in closed form, why 5 km and 10 km never lined up: they are steps 26 and
+24, half a level off the integers.
+
+So the widget can hold a ladder *step*, move it ±1 per tap, and render correctly
+at every position. The maths is not the risk.
+
+### The one unknown that decides the whole feature
+
+**Does a tap on the web widget also reach a background zoom button?**
+
+Four possible outcomes, and each implies a different design:
+
+| Outcome | What it means |
+|---|---|
+| Both receive the tap | The feature works. One tap, both layers step together. |
+| Only the WebView | The map does not zoom. The widget would silently drift — worse than no feature. |
+| Only the background button | The map zooms, the widget cannot know. Same silent drift. |
+| Neither | Tapping is off; nothing to build. |
+
+Everything hangs on this, and it is not documented anywhere. An Android WebView
+normally consumes touches it handles, so pass-through is genuinely uncertain —
+`pointer-events: none` stops *web content* from handling a touch but does not
+necessarily stop the WebView from swallowing the `MotionEvent`.
+
+**Test it before building anything.** A page that logs every touch with
+coordinates and a timestamp on screen (there is no console in XCTrack), stacked
+over a map with the two background zoom buttons. Tap the top half and read off
+which layer reacted. Repeat with *Allow tapping on the web page when locked* both
+on and off, and with a `pointer-events: none` zone, since those may differ.
+
+### Even if pass-through works, this is dead reckoning
+
+The widget would be *inferring* the map's zoom from taps it believes both layers
+received. That holds until a tap is lost, or the zoom changes by any other route —
+auto-zoom, a button on another page, the pilot editing the scale setting. Then the
+arrows are wrong and nothing in the API can detect it.
+
+`AGENTS.md` forbids exactly that, so the feature only ships with:
+
+- **A visible step, always.** The badge already names the assumed scale; with sync
+  it must name the *tracked* one, so a pilot can read it against the scale XCTrack
+  itself shows. Two labels disagreeing is the whole safety mechanism.
+- **A cheap resync.** One gesture returns the widget to its configured zoom — a
+  long press, or a third zone. Recovering must be easier than noticing.
+- **Degradation to today's behaviour**, not to guesswork: with sync off, or after
+  a resync, the widget is back to a fixed scale that is correct by construction.
+- **Never a silent step.** If a tap changes the widget's zoom, the badge changes
+  visibly at the same instant.
+
+### Fallbacks, by outcome
+
+- **Only the WebView gets the tap:** the widget's zones can still drive *its* zoom,
+  but the map will not follow — so this is only worth shipping if XCTrack's zoom
+  can be driven some other way, which today it cannot. Prefer no feature.
+- **Only the background button:** put our layer *underneath* a transparent XC map
+  instead, as chmd does. Taps then reach the map, and the widget is back to
+  needing the zoom API it cannot have. Also prefer no feature.
+- **Either way:** the fixed-scale design already works, and issues
+  [#1097](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1097) /
+  [#1235](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1235) remain
+  the clean fix. This feature is an attempt to route around a two-year-old gap,
+  and it is worth exactly as much as the pass-through test says it is.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

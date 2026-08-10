@@ -22,9 +22,34 @@ var WG = (function () {
    one zoom level apart. ────────────────────────────────────────────── */
 var CAL = 0.942;
 
-/* label shown to the pilot so a mis-paired widget is visible, not silent */
-var XCT_SCALE = { 5:"500km", 6:"250km", 7:"120km", 8:"60km", 9:"30km",
-                  10:"15km", 11:"8km", 12:"4km", 13:"2km", 14:"1km", 15:"500m" };
+/* ── XCTrack's scale ladder ────────────────────────────────────────────
+   Its map scale is an integer, mapWidget_scale.value, running 12 to 34, and
+   ONE STEP IS sqrt(2) IN SCALE — half an OSM zoom level. The closed form
+       z = (value - 3) / 2
+   reproduces all three measured points to within 0.04 m/px (see
+   docs/findings.md), so every second step is an integer OSM zoom and the
+   ones between are halves. Our projector takes a fractional zoom, so we can
+   follow the ladder exactly rather than only its integer positions.
+
+   THE LABELS ARE THIS BUILD'S. chmd's XCTrack printed a different set for the
+   same steps, so treat the label map as cosmetic and version-specific; the
+   step numbers and the formula are the durable part. ───────────────── */
+var XCT_LADDER = {
+  12:"600km", 13:"500km", 14:"300km", 15:"250km", 16:"150km", 17:"120km",
+  18:"80km",  19:"60km",  20:"40km",  21:"30km",  22:"20km",  23:"15km",
+  24:"10km",  25:"8km",   26:"5km",   27:"4km",   28:"2500m", 29:"2km",
+  30:"1200m", 31:"1km",   32:"600m",  33:"500m",  34:"300m"
+};
+var XCT_STEP_MIN = 12, XCT_STEP_MAX = 34;
+function zoomForStep(v) { return (v - 3) / 2; }
+function stepForZoom(z) { return Math.round(z * 2 + 3); }
+
+/* Integer-zoom labels, derived so the two cannot disagree. */
+var XCT_SCALE = (function () {
+  var o = {}, z;
+  for (z = 5; z <= 15; z++) o[z] = XCT_LADDER[stepForZoom(z)];
+  return o;
+})();
 
 var R_EARTH   = 6378137;
 var EQ_CIRC   = 2 * Math.PI * R_EARTH;      /* 40075016.7 m */
@@ -508,6 +533,8 @@ function attribution(list) {
 
 return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
+  XCT_LADDER: XCT_LADDER, XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
+  zoomForStep: zoomForStep, stepForZoom: stepForZoom,
   AVG_BANDS: AVG_BANDS, GUST_BANDS: GUST_BANDS, PALETTE: PALETTE,
   STROKE_INNER: STROKE_INNER, STROKE_OUTER: STROKE_OUTER, HALO: HALO,
   ARROW: ARROW, LEAF: LEAF, BANDS: BANDS, VIEWBOX: VIEWBOX, REACH: REACH,

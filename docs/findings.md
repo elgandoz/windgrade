@@ -231,6 +231,37 @@ XCTrack stores the XC map scale as an integer, `mapWidget_scale.value`, in the
 
 `osm_zoom = floor(mapWidget_scale.value / 2) - 1`
 
+**Better closed form, derived 2026-08-10.** chmd's floor formula only handles the
+odd steps, which hides the structure. The exact relation across the whole ladder
+is
+
+```
+z = (mapWidget_scale.value - 3) / 2
+```
+
+which reproduces every one of chmd's odd rows *and* gives the even steps as **half**
+zoom levels. Checked against all three of our measured points to within 0.04 m/px:
+step 23 → z10 → 109.93 (measured 109.89), step 25 → z11 → 54.96 (54.95), step 27 →
+z12 → 27.48 (27.47).
+
+**One ladder step is √2 in scale.** That is why 5 km and 10 km never aligned: they
+are steps 26 and 24, exactly half a zoom level off the integers. And because our
+projector takes a fractional zoom, half-steps are not a special case — step 24
+renders at z 10.5, 77.73 m/px. `WG.zoomForStep`, `WG.stepForZoom` and
+`WG.XCT_LADDER` implement this, with tests.
+
+Owner's build, steps 12–34 ascending in resolution:
+
+```
+12 600km  13 500km  14 300km  15 250km  16 150km  17 120km  18 80km  19 60km
+20 40km   21 30km   22 20km   23 15km   24 10km   25 8km    26 5km   27 4km
+28 2500m  29 2km    30 1200m  31 1km    32 600m   33 500m   34 300m
+```
+
+The **labels are build-specific** — chmd's XCTrack printed different ones for the
+same steps — so the label map is cosmetic and the step numbers plus the formula are
+the durable part.
+
 **The labels are build-specific — chmd's do not exist in the owner's XCTrack.**
 Reported 2026-08-10: the zoom slider offers 23 values, none of which are 6 km or
 12 km:
