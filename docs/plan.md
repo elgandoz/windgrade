@@ -84,7 +84,13 @@ current fix.
 Ships something useful on its own, and is where the rating scale gets tuned.
 
 - Provider modules normalising to
-  `{id, name, lat, lon, alt, dir, avg, gust, ts}`. MeteoSwiss first.
+  `{id, name, lat, lon, alt, dir, avg, gust, ts}`. **winds.mobi first**, with
+  MeteoSwiss-direct kept as the fallback module — see "The provider decision"
+  in `handover.md`. The normalised shape grows two fields that winds.mobi
+  supplies as facts: `peak` (is the station on a summit) and `status` (the
+  provider's own health flag, distinct from our staleness clock).
+  Near-identity mapping, no projection maths: coordinates are already WGS84 and
+  speeds are already km/h.
 - Fetch layer with staleness: cache last good reading, show its age, go red
   past a threshold.
 - Rating table: **six levels** (white/grey, green, yellow, orange, red, black) on
@@ -111,6 +117,53 @@ Ships something useful on its own, and is where the rating scale gets tuned.
   written in Chrome is not visible to XCTrack's WebView. Check quota and call
   `persist()` before downloading.
 
+## Phase 3b — the overlay widget (alternative, owner's idea 2026-08-10)
+
+A second, much cheaper widget: **draw only the arrows on a transparent page and
+let it sit over XCTrack's own map.** No basemap of ours at all.
+
+What it deletes, if it works: `pmtiles extract`, `gdaldem hillshade`, the build
+step, the ~50 MB pack ceiling, the region split, Cache Storage, the download
+button, and the unresolved `.pmtiles` byte-range risk. Essentially all of Phase 3.
+It also *improves* on our own basemap — XCTrack's map already shows terrain, and
+the pilot already knows how to read it.
+
+**What registration requires, and what XCTrack actually gives us:**
+
+| Needed | Available? |
+|---|---|
+| Map centre | Approximately — `${lat}`/`${lng}` and `getLocation()` give the *pilot*, and XCTrack usually centres on the pilot |
+| Zoom | **No.** Must be hardcoded. See issues #1097 / #1235 in `findings.md` |
+| Rotation (north-up vs track-up) | **No.** `heading` is exposed, but not whether the map is using it |
+| Widget rect vs map rect alignment | **No** |
+
+**The risk that decides this, stated plainly.** If zoom, rotation or centre
+desynchronise, the arrows land on the wrong terrain *while still looking
+authoritative*. A pilot reads a valley station as a summit station. That is a
+confident wrong answer, which `AGENTS.md` forbids above everything else, and it
+is strictly worse than showing no map. Nothing in the API lets us *detect* the
+desync, which is what makes it dangerous rather than merely imprecise.
+
+**Therefore, conditions for shipping it:**
+
+- It is a **second** widget, offered alongside the real one, never a replacement.
+- It requires the pilot to set XCTrack to a fixed zoom and **north-up**, and it
+  **states its assumptions permanently on screen** (e.g. a `z11 · N↑` badge) so a
+  mismatch with the pilot's own map settings is visible rather than silent.
+- Arrow *positions* are the only thing at risk. The `avg/gust` numbers, the
+  colours and the station names stay correct regardless, so the widget degrades
+  into a still-useful list rather than into a lie.
+- Keep it visually thin. It overlays the pilot's primary instrument, and
+  obscuring airspace or the track to show wind is a bad trade.
+
+**Worth doing now, costs nothing:** upvote and comment on
+[#1097](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1097) and
+[#1235](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1235). Between
+them they have four upvotes. If XCTrack ever publishes an OSM zoom level, this
+approach becomes exact and probably *should* become the primary one — so the
+cheapest possible action on the critical path is a comment describing this use
+case.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,
@@ -133,13 +186,22 @@ and an update to AGENTS.md.
    - ~~Where does the speed number sit?~~ **Answered** by the SeeYou reference in
      `handover.md`: a compact `average/gust` text pair beside the arrow, on the
      map as well as in any detail view.
-   - ~~Which way does the arrow point?~~ **Answered: downwind.** MeteoSwiss
-     `wind_direction` is the from-bearing, so render at `bearing + 180`.
+   - ~~Which way does the arrow point?~~ **Answered: downwind.** Both winds.mobi
+     `w-dir` and MeteoSwiss `wind_direction` are from-bearings, so render at
+     `bearing + 180`.
      Arrow geometry, label treatment and the calm glyph are all specified in
      `handover.md`, copied from SeeYou Navigator.
 3. **First region.** Leaning Switzerland split into a few sub-50 MB packs,
    rather than one Alps-wide file.
-4. **Providers.** MeteoSwiss only to start, or approach Holfuy in parallel?
-   Holfuy is the network paraglider pilots actually use and is international,
-   but its API is not open by default and needs permission.
-5. **Units.** Assumed km/h throughout.
+4. ~~**Providers.**~~ **Closed 2026-08-10 — winds.mobi.** It aggregates 13
+   networks including Holfuy, MeteoSwiss and 141 high-alpine SLF stations, in one
+   CORS-open call with no key, already in WGS84 and km/h. The Holfuy permission
+   gate disappears: we no longer talk to Holfuy at all. MeteoSwiss-direct stays
+   as a second provider module for resilience, not as the primary.
+   One follow-up, and it is an email not a code change: winds.mobi's terms
+   require identifying calls with a `User-Agent` header, which browsers forbid
+   `fetch()` from setting. Ask Yann (`info@winds.mobi`) whether the automatic
+   `Origin` header suffices. Do not just ignore the rule.
+5. ~~**Units.**~~ **Closed 2026-08-10 — km/h, confirmed not assumed.**
+   winds.mobi's OpenAPI schema documents `w-avg` and `w-max` as `[km/h]`, and the
+   rating thresholds are km/h. No conversion anywhere in the pipeline.

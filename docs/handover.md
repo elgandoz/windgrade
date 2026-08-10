@@ -402,6 +402,68 @@ Titlis, Napf. The data for the summit question already exists and is free;
 tools surface the wrong stations from it. Fixing the ranking largely fixes the
 complaint without needing Holfuy.
 
+### The provider decision — winds.mobi displaces going direct (2026-08-10)
+
+Everything below about MeteoSwiss and Holfuy remains true, but it is no longer
+the plan. Chasing "what does Windspion actually use" produced the answer:
+Windspion is a front end for **winds.mobi**, which aggregates 13 networks —
+Holfuy, MeteoSwiss, SLF, Pioupiou/OpenWindMap, Windline, and more — behind one
+CORS-open, key-free API. Raw numbers in `findings.md`.
+
+Why it wins on the merits, not just on convenience:
+
+- **The Holfuy gate disappears.** Open decision 4 was "MeteoSwiss only, or email
+  Holfuy for access?" Neither: 85 Holfuy stations arrive through winds.mobi
+  without us ever talking to Holfuy. The gate was a licensing conversation, and
+  it is now somebody else's completed conversation.
+- **141 SLF stations.** The handover argued above that the summit-station
+  complaint was overstated because SwissMetNet includes Säntis, Pilatus, Gütsch.
+  That argument is now moot — SLF's avalanche network is high-alpine by
+  construction, and `alt` in the sample runs to 3581 m. The data for the
+  crossing-a-summit question is far better than assumed.
+- **`peak: true/false`, straight from the provider.** This is the single most
+  valuable field found. The project exists because "a name tells you nothing —
+  you can't tell whether a reading came from a valley floor, a summit, or a
+  gorge." winds.mobi answers half of that as a **fact**, documented as "Is the
+  station on a peak". It is not an inference, so the no-inference rule permits it
+  outright. It also gives ranking something honest to weight now that Δ-altitude
+  is withdrawn.
+- **`status`** (green / orange / red) is the provider's own health flag. Distinct
+  from our staleness clock and complementary to it: `status` says the instrument
+  is misbehaving, our clock says the number is old. Both are facts; show both.
+- **Server-side proximity.** `near-lat` / `near-lon` / `limit` means fetching
+  ~50 nearby stations instead of a 190 KB all-Switzerland file that was mostly
+  per-station HTML we never render. Straight win on a flight battery.
+- **The friction we had budgeted for evaporates.** Coordinates are WGS84, not
+  LV95, so the swisstopo transform is unnecessary. Speeds are km/h, so no unit
+  conversion. Average and gust arrive in one record, so the two-endpoint fetch
+  is unnecessary.
+- **`/stations/{id}/historic/`** exists, which makes the SeeYou-style trend strip
+  nearly free if it is ever wanted.
+
+The cost, stated honestly:
+
+- **A third-party dependency on a volunteer service.** MeteoSwiss OGD is a
+  first-party government source with an explicit open licence; winds.mobi is one
+  person's free project. If it goes down or changes, we go down. This is why the
+  MeteoSwiss-direct module stays written rather than deleted — the provider
+  abstraction earns its keep here, and the LV95 and two-endpoint work is
+  documented above for whoever needs the fallback.
+- **Their terms include one rule we cannot obey.** "Always identify your calls
+  … by setting a user-agent HTTP header." `User-Agent` is a forbidden header name
+  in the Fetch spec, so a browser silently drops it. We are not permitted to
+  shrug at that: the terms end "any IP or service that doesn't respect these
+  rules will be blacklisted without any notice." The `Origin` header is sent
+  automatically and does identify the deployment, so the ask is whether that
+  suffices. Email Yann, `info@winds.mobi`. This is the new gate, and it is a
+  much lighter one than Holfuy's was.
+- **Attribution is owed to providers, not to the aggregator alone.** Each record
+  carries `pv-name` and `url`, so per-station attribution is available and should
+  be used. "Source: MeteoSwiss" was already required; now the source varies per
+  marker.
+
+**Historical, kept for the fallback module:**
+
 **Holfuy** — the network paraglider pilots actually use, and international.
 `api.holfuy.com/live/?s=all&pw=<key>&m=JSON&su=km/h&loc` returns every
 accessible station with coordinates in one call. But the APIs are **not open by

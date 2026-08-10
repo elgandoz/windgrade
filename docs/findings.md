@@ -4,6 +4,136 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-10 — provider research: winds.mobi, and the XCTrack widget API
+
+**Verdict:** changes Phase 2's data source and closes open decision 4. Also
+answers the `getLocation()` question from the desk, so no second probe run is
+needed for it.
+
+#### winds.mobi — one CORS-open API for 13 station networks
+
+Found by following what Windspion actually uses: it is a front end for
+**winds.mobi**, not a direct provider integration.
+
+```
+GET https://winds.mobi/api/2/stations/?near-lat=46.8&near-lon=8.2&limit=400
+  -> 200, access-control-allow-origin: *, application/json
+```
+
+OpenAPI spec at `https://winds.mobi/api/2.3/openapi.json` (v2.3; `/api/2/` also
+resolves). Endpoints: `/stations/`, `/stations/{id}/`,
+`/stations/{id}/historic/`.
+
+400 stations around central Switzerland, by provider:
+
+```
+141  slf.ch                 12  fluggruppe-aletsch.ch    2  gxaircom.net
+ 99  meteoswiss.ch          10  aviationweather.gov      2  pdcs.ch
+ 85  holfuy.com              5  windball.ch              1  thunerwetter.ch
+ 35  openwindmap.org         4  windline.ch              1  ffvl.fr
+                             3  pgsonda.cz
+```
+
+A verbatim record:
+
+```json
+{
+ "_id": "pioupiou-1510",
+ "alt": 1666,
+ "loc": {"type": "Point", "coordinates": [8.194709, 46.787928]},
+ "name": "Lungern",
+ "peak": true,
+ "pv-name": "openwindmap.org",
+ "short": "Hüttstett",
+ "status": "green",
+ "tz": "Europe/Zurich",
+ "last": {"_id": 1786370955, "w-dir": 292, "w-avg": 11.0, "w-max": 16.0}
+}
+```
+
+Field semantics, quoted from the OpenAPI schema:
+
+| Field | Spec |
+|---|---|
+| `w-avg` | Wind speed **[km/h]** |
+| `w-max` | Wind speed max **[km/h]** |
+| `w-dir` | Wind direction [°] (0–359) |
+| `alt` | Altitude [m] |
+| `peak` | **"Is the station on a peak"** |
+| `status` | green: station ok · orange: data might be inaccurate · red: station isn't … |
+| `last._id` | Measure date [unix timestamp] |
+| `url` | Provider station URLs per language |
+| `pv-code` / `pv-id` / `pv-name` | Provider identity |
+
+Measured: `alt` spans 198–3581 m. `peak` is true for 255 of 400. `status` was
+green for 395, orange 4, red 1. Timestamps ranged from live to **18 days old**,
+so stale stations *are* returned and must be filtered by us.
+
+**Terms of Use**, quoted from the spec, because one of them is a problem:
+
+1. "Always identify your calls to winds.mobi API by setting a **user-agent HTTP
+   header**"
+2. "**Do not monetize** your service using winds.mobi data in any way"
+3. "**Do not overload** this server by minimizing your number of calls. Get data
+   for multiple stations at once."
+
+"Any IP or service that doesn't respect these rules will be blacklisted without
+any notice." Contact is Yann, `info@winds.mobi`.
+
+**Rule 1 cannot be satisfied from a browser.** `User-Agent` is a forbidden header
+name in the Fetch spec, so `fetch()` silently drops any attempt to set it. Rules
+2 and 3 we meet trivially. This needs an email to Yann rather than a workaround —
+the automatic `Origin: https://elgandoz.github.io` header does identify the
+deployment, and proposing that is the obvious ask.
+
+#### XCTrack's documented JS interface — altitude answered from the desk
+
+`https://xctrack.org/JavaScriptInterface.html` documents `getLocation()` as
+returning a JSON *string* with:
+
+```
+lon, lat, time, altGps, isValid, stdBaroAlt (null if no baro sensor),
+pressure (null if no baro sensor), speedGps, speedComputed,
+bearingGps, heading, airspeed
+```
+
+So the answer to the Phase 0 altitude question is **`altGps`** and
+**`stdBaroAlt`** — no second probe run required. It also confirms the probe's
+`"null"` result was the documented no-fix return value, and that `getLocation` is
+the only method, matching what the probe enumerated.
+
+Requires **"Allow web page to access XCTrack data"** in the widget settings.
+
+Two traps worth writing down:
+
+- **`stdBaroAlt` is standard pressure altitude**, referenced to 1013.25 hPa, not
+  height above sea level. Comparing it to a station's `alt` is wrong by the QNH
+  deviation, easily 100 m+. `altGps` is ellipsoidal. Moot while relative altitude
+  stays withdrawn, but it is the obvious future mistake. (winds.mobi returns
+  `pres.qnh`, so a real barometric altitude is computable if ever wanted.)
+- **`heading` and `bearingGps` are both exposed**, which is what a track-up
+  rotation or a radar orientation would need.
+
+#### Widget URL placeholders, and the zoom gap
+
+XCTrack substitutes **`${lat}`** and **`${lng}`** into a Web page widget's URL.
+Zoom is *not* exposed — it must be hardcoded. Two open requests:
+
+| Issue | Title | Opened | State |
+|---|---|---|---|
+| [#1097](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1097) | Forwart zooming to WebView widget | 2024-04-27 | open, 1 upvote, 0 comments |
+| [#1235](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1235) | Pass a zoom level to the web widget | 2025-07-04 | open, 3 upvotes, 3 comments |
+
+Neither has a milestone or a developer commitment; #1097 has not been touched
+since the day it was filed. **Do not plan on this API arriving.**
+
+The pattern nevertheless works today with a hardcoded zoom. #1235's author
+writes: "I embed spotair in a widget, and I overlay on top of this widget a
+transparent XC map in order to visualize my track over spotair", using
+`https://www.spotair.mobi/widget/map?lat=${lat}&lng=${lng}&zoom=11&layers=wind,radarmf`.
+XCMaps wants the same thing from the other side — "add XCMaps with transparent
+Base Map as web widget over the XCTrack map" — and is blocked on the same gap.
+
 ### 2026-08-10 — XCTrack on Android 17 (Build/CP41.260717.006)
 
 **Verdict: the Phase 0 gate is CLEARED — Phase 1 can start.** Every question in
