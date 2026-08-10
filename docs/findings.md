@@ -134,6 +134,64 @@ transparent XC map in order to visualize my track over spotair", using
 XCMaps wants the same thing from the other side — "add XCMaps with transparent
 Base Map as web widget over the XCTrack map" — and is blocked on the same gap.
 
+#### XCTrack's map scale ↔ OSM zoom, and it aligns *exactly*
+
+The comments on #1235 are more useful than the request itself. `chmd`, 2025-07-08
+and 2026-06-12, obtained via
+`/-/issues/1235/discussions.json` (the REST notes endpoint 401s; the web
+discussions JSON is public).
+
+XCTrack stores the XC map scale as an integer, `mapWidget_scale.value`, in the
+`.xcfg` layout export. It runs 12 (labelled 600 km) to 34 (300 m).
+
+| `mapWidget_scale.value` | XCTrack scale label | OSM zoom |
+|---|---|---|
+| 13 | 400 km | 5 |
+| 15 | 200 km | 6 |
+| 17 | 100 km | 7 |
+| 19 | 50 km | 8 |
+| 21 | 25 km | 9 |
+| 23 | 12 km | 10 |
+| **25** | **6 km** | **11** |
+| 27 | 3 km | 12 |
+| 29 | 1500 m | 13 |
+| 31 | 800 m | 14 |
+| 33 | 400 m | 15 |
+
+`osm_zoom = floor(mapWidget_scale.value / 2) - 1`
+
+**Only the odd values map.** The reason the alignment is exact rather than
+coincidental: XCTrack's integer steps the scale by about √2, so two steps double
+it, while OSM zoom doubles per level. Every second XCTrack step therefore lands
+on an OSM level. The even values are intermediate scales with no OSM equivalent,
+which is why the feature request asks XCTrack for an option to skip them.
+
+**And it is verified, not asserted.** chmd's method, which is also *our*
+acceptance test:
+
+> 1. Take the url `https://www.spotair.mobi/?lat=${lat}&lng=${lng}&layers=asairspace&zoom=11`
+> 2. Overlay a transparent XC map
+> 3. Choose zoom level 6km
+> 4. Enable/Disable airspaces on the XC map
+> 5. Verify that they match perfectly with the airspaces shown by spotair
+
+Airspace boundaries are a shared, hard-edged reference visible in both layers, so
+toggling one against the other proves registration to the pixel. Repeating it at
+several scales is what produced the table.
+
+Two further details from the same comments:
+
+- **"There is exactly one XC map getting changed when zoom in/zoom out inputs are
+  sent (the map at the bottom of the stack)."** So zoom applies to the
+  bottom-most map widget.
+- **The XC map widget can itself be transparent and stacked above a web widget.**
+  chmd puts the web page *below* and a transparent XC map *on top*. Both orders
+  are possible, and the choice matters for us: our arrows on top stay legible,
+  our arrows underneath get crossed by airspace lines and the track.
+
+Other sites already built for this pattern, useful as prior art:
+`spotair.mobi`, `thermik.pumpt.net`, `meteo-parapente.com`, `puretrack.io`.
+
 ### 2026-08-10 — XCTrack on Android 17 (Build/CP41.260717.006)
 
 **Verdict: the Phase 0 gate is CLEARED — Phase 1 can start.** Every question in

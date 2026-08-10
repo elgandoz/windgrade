@@ -128,41 +128,62 @@ button, and the unresolved `.pmtiles` byte-range risk. Essentially all of Phase 
 It also *improves* on our own basemap — XCTrack's map already shows terrain, and
 the pilot already knows how to read it.
 
-**What registration requires, and what XCTrack actually gives us:**
+**Registration is solvable today, at fixed scales.** Owner's position, and it is
+the right one: **do not wait on the XCTrack API change** — the devs are slow, and
+#1097 has sat untouched since April 2024. We do not need it.
+
+The comments on #1235 establish that XCTrack's XC map aligns **exactly** with OSM
+zoom levels at its odd scale settings, verified by overlaying airspace layers.
+The full table and the reason the alignment is exact are in `findings.md`. The
+one we care about:
+
+```
+XCTrack scale "6 km"  ==  mapWidget_scale.value 25  ==  OSM zoom 11
+```
+
+Which is the zoom Phase 3 already chose for its own basemap, for the same reason:
+about 100 m/px, 40 km across a small widget.
+
+So the widget hardcodes a zoom, documents which XCTrack scale to pair it with,
+and uses plain Web Mercator maths. What remains unavailable:
 
 | Needed | Available? |
 |---|---|
-| Map centre | Approximately — `${lat}`/`${lng}` and `getLocation()` give the *pilot*, and XCTrack usually centres on the pilot |
-| Zoom | **No.** Must be hardcoded. See issues #1097 / #1235 in `findings.md` |
-| Rotation (north-up vs track-up) | **No.** `heading` is exposed, but not whether the map is using it |
+| Map centre | Approximately — `${lat}`/`${lng}` and `getLocation()` give the *pilot*, and XCTrack centres on the pilot |
+| Zoom | Not exposed, but **deterministically pairable** via the table |
+| Rotation (north-up vs track-up) | **No.** `heading` is exposed, but not whether the map is using it — so the pilot must select north-up |
 | Widget rect vs map rect alignment | **No** |
 
-**The risk that decides this, stated plainly.** If zoom, rotation or centre
-desynchronise, the arrows land on the wrong terrain *while still looking
-authoritative*. A pilot reads a valley station as a summit station. That is a
-confident wrong answer, which `AGENTS.md` forbids above everything else, and it
-is strictly worse than showing no map. Nothing in the API lets us *detect* the
-desync, which is what makes it dangerous rather than merely imprecise.
+**The risk that remains, and why it is now manageable.** If the pilot changes
+zoom mid-flight, or leaves the map track-up, the arrows land on the wrong terrain
+*while still looking authoritative* — a valley station read as a summit station.
+That is the confident wrong answer `AGENTS.md` forbids, and it is worse than no
+map.
 
-**Therefore, conditions for shipping it:**
+What makes it survivable is that **XCTrack displays its own map scale on screen.**
+So the desync is checkable by the pilot rather than invisible:
 
+- The widget **states its assumption permanently** — a `6 km · z11 · N↑` badge —
+  to be read against the scale XCTrack is already showing. A mismatch becomes a
+  visible disagreement between two labels, not silent drift.
+- Arrow *positions* are the only thing at risk. The `avg/gust` numbers, colours,
+  names and altitudes stay correct regardless, so a desynced widget degrades into
+  a still-useful list rather than into a lie.
 - It is a **second** widget, offered alongside the real one, never a replacement.
-- It requires the pilot to set XCTrack to a fixed zoom and **north-up**, and it
-  **states its assumptions permanently on screen** (e.g. a `z11 · N↑` badge) so a
-  mismatch with the pilot's own map settings is visible rather than silent.
-- Arrow *positions* are the only thing at risk. The `avg/gust` numbers, the
-  colours and the station names stay correct regardless, so the widget degrades
-  into a still-useful list rather than into a lie.
-- Keep it visually thin. It overlays the pilot's primary instrument, and
-  obscuring airspace or the track to show wind is a bad trade.
+- Keep it visually thin, and prefer our layer **on top** — chmd stacks the web
+  page below a transparent XC map, which would put airspace lines and the track
+  across our arrows.
 
-**Worth doing now, costs nothing:** upvote and comment on
-[#1097](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1097) and
-[#1235](https://gitlab.com/xcontest-public/xctrack-public/-/issues/1235). Between
-them they have four upvotes. If XCTrack ever publishes an OSM zoom level, this
-approach becomes exact and probably *should* become the primary one — so the
-cheapest possible action on the critical path is a comment describing this use
-case.
+**Acceptance test, borrowed from chmd:** overlay against a layer that exists in
+both renderings and toggle it. Airspace boundaries are hard-edged and shared, so
+they prove registration to the pixel. Do this before trusting any arrow position.
+
+**Sequencing worth considering.** Phase 3b is dramatically cheaper than Phase 3 —
+no build step, no packs, no storage, no byte-range risk — and it reuses the zoom
+level Phase 3 had already picked. Phase 2 → 3b is a much shorter path to
+something useful in the air than Phase 2 → 3. Shipping 3b first, and treating our
+own basemap as the durable answer that follows, is probably the better order.
+Owner's call.
 
 ## Phase 4 — polish
 
