@@ -34,7 +34,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 <div id="btns">
   <button id="bZo">z-</button><button id="bZi">z+</button><br>
   <button id="bMul">x1</button><br>
-  <button id="bAs">AS</button><button id="bGr">GR</button>
+  <button id="bAs">AS</button><button id="bAlt">ALT</button><button id="bGr">GR</button>
 </div>
 
 <script>
@@ -77,7 +77,8 @@ var POLL_MS = 500;        /* match XCTrack's 2 Hz map redraw */
 var RINGS_KM = [5, 10, 20, 40];
 
 var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
-var zoom = 11, muli = 0, showAS = true, showGR = true;
+var zoom = 11, muli = 0, showAS = true, showGR = true, showALT = true;
+var asDrawn = 0;
 var W = 0, H = 0, dpr = 1;
 var fix = null, fixSrc = "none", rawLoc = "";
 var as = null, asState = "loading…";
@@ -155,7 +156,28 @@ if (navigator.geolocation){
   }, function(){}, {enableHighAccuracy:true, maximumAge:5000, timeout:20000});
 }
 
-/* ── airspace: same source XCTrack draws, so edges are comparable ─── */
+/* ── airspace ─────────────────────────────────────────────────────────
+   XCTrack filters its airspace display to the ACTIVE ones whose floor is
+   below (my altitude + 600 m), and applies no filter at all without GPS.
+   We mirror that, or the overlay would draw dozens of polygons XCTrack is
+   deliberately hiding and the comparison would be unreadable.
+
+   SHV gives a structured floor: Lower.Metric.Alt.{Type, Altitude}, where
+   Type is "m AGL", "m QNH" or "m STD". QNH and STD are close enough to MSL
+   for a calibration filter. AGL is terrain-relative and we ship no DEM, so
+   treat it as 0 — 179 of 359 features are "0 m AGL" anyway, i.e. from the
+   ground up, which is always below the pilot.
+
+   InactiveByAgreement is excluded as "not active". HX and DABS activation
+   we cannot know from here, so those may still differ from XCTrack. ────── */
+function lowerMetres(p){
+  try {
+    var a = p.Lower.Metric.Alt;
+    if (/AGL/.test(a.Type)) return 0;
+    return +a.Altitude;
+  } catch(e){ return 0; }
+}
+
 function loadAirspace(){
   if (!window.fetch){ asState = "no fetch"; return; }
   fetch(AIRSPACE_URL).then(function(r){
@@ -176,8 +198,10 @@ function loadAirspace(){
           if (c[0] < mnx) mnx = c[0]; if (c[0] > mxx) mxx = c[0];
           if (c[1] < mny) mny = c[1]; if (c[1] > mxy) mxy = c[1];
         }
+        var pr = f[i].properties || {};
         out.push({ pts:r2, mnx:mnx, mny:mny, mxx:mxx, mxy:mxy,
-                   hx: !!(f[i].properties && f[i].properties.HX) });
+                   hx: !!pr.HX, lo: lowerMetres(pr),
+                   inact: !!pr.InactiveByAgreement });
       }
     }
     as = out; asState = out.length + " rings";
@@ -213,9 +237,16 @@ function draw(){
     var padx = vw/Math.cos(fix.lat*Math.PI/180) + 0.05, pady = vh + 0.05;
     var w0 = fix.lon-padx, w1 = fix.lon+padx, s0 = fix.lat-pady, s1 = fix.lat+pady;
     ctx.lineWidth = 1;
+    /* mirror XCTrack: active only, floor below alt+600. No altitude -> no
+       filter, which is also what XCTrack does with GPS blocked. */
+    var ceil = (showALT && fix.alt !== undefined && fix.alt !== null && isFinite(fix.alt))
+             ? fix.alt + 600 : null;
+    asDrawn = 0;
     for (var i = 0; i < as.length; i++){
       var r = as[i];
       if (r.mxx < w0 || r.mnx > w1 || r.mxy < s0 || r.mny > s1) continue;
+      if (ceil !== null && (r.inact || r.lo > ceil)) continue;
+      asDrawn++;
       ctx.strokeStyle = r.hx ? "rgba(233,163,60,.95)" : "rgba(84,166,220,.85)";
       ctx.beginPath();
       for (var j = 0; j < r.pts.length; j++){
@@ -293,7 +324,9 @@ function paintUI(){
         res.toFixed(2) + " m/px  view " + W + "×" + H + " css  dpr" +
         (window.devicePixelRatio||1) + "→" + dpr + "  " +
         (W*res/1000).toFixed(1) + "×" + (H*res/1000).toFixed(1) + " km\n" +
-        "airspace " + asState;
+        "airspace " + asState + "  drawn=" + asDrawn + "  filter=" +
+        (!showALT ? "off" : (fix.alt === undefined || fix.alt === null || !isFinite(fix.alt))
+                            ? "off (no alt)" : "<" + Math.round(fix.alt+600) + "m");
   }
   if (d !== lastDiag){ elDiag.innerHTML = ""; elDiag.appendChild(document.createTextNode(d)); lastDiag = d; }
 }
@@ -306,7 +339,8 @@ function tick(){
   if (fix){
     var mul = MULTS[muli];
     key = Math.round(lon2px(fix.lon,zoom)*mul) + "/" + Math.round(lat2px(fix.lat,zoom)*mul) +
-          "/" + zoom + "/" + muli + "/" + (showAS?1:0) + (showGR?1:0) + "/" + W + "x" + H;
+          "/" + zoom + "/" + muli + "/" + (showAS?1:0) + (showGR?1:0) + (showALT?1:0) +
+          "/" + Math.round((fix.alt||0)/50) + "/" + W + "x" + H;
   }
   if (key !== lastKey){ lastKey = key; draw(); }
   else paintUI();
@@ -322,11 +356,13 @@ bind("bZi", function(){ if (zoom < 15) zoom++; });
 bind("bZo", function(){ if (zoom > 5)  zoom--; });
 bind("bMul", function(){ muli = (muli+1) % MULTS.length; });
 bind("bAs", function(){ showAS = !showAS; });
+bind("bAlt", function(){ showALT = !showALT; });
 bind("bGr", function(){ showGR = !showGR; });
 function syncBtns(){
   document.getElementById("bMul").firstChild.nodeValue = "x" + MULTS[muli];
-  document.getElementById("bAs").className = showAS ? "on" : "";
-  document.getElementById("bGr").className = showGR ? "on" : "";
+  document.getElementById("bAs").className  = showAS  ? "on" : "";
+  document.getElementById("bAlt").className = showALT ? "on" : "";
+  document.getElementById("bGr").className  = showGR  ? "on" : "";
 }
 
 resize(); syncBtns(); tick();
