@@ -47,10 +47,18 @@ the backgrounds it has to survive — dark terrain, light terrain, and mid-grey.
 <h2>fill (average) × rim (gust)</h2>
 <div id="grid"></div>
 
+<h2>Canvas renderer — must match the SVG above</h2>
+<p class="n">Same module, same point arrays, same band widths. Drawn with
+<code>WG.marker.canvas</code> plus <code>WG.marker.label</code>, which is what the
+overlay widget uses. Any visible difference between this row and the grid means the
+two renderers have drifted.</p>
+<canvas id="cvs" width="1000" height="120" style="width:100%;max-width:500px;background:#EFE9E2;border-radius:3px"></canvas>
+
 <h2>Against backgrounds</h2>
 <div id="surf"></div>
 
 <script src="../wg/core.js"></script>
+<script src="../wg/marker.js"></script>
 <script>
 "use strict";
 var halo = true, outer = true, rot = 0, big = false, leaf = false;
@@ -93,6 +101,20 @@ function draw(){
   }
   document.getElementById("surf").innerHTML = s;
   document.getElementById("pth").textContent = leaf ? WG.LEAF : WG.ARROW;
+
+  /* canvas twin, at 2x for a crisp comparison */
+  var cvs = document.getElementById("cvs"), g = cvs.getContext("2d");
+  g.setTransform(2, 0, 0, 2, 0, 0);
+  g.clearRect(0, 0, 500, 60);
+  g.fillStyle = "#EFE9E2"; g.fillRect(0, 0, 500, 60);
+  for (i = 0; i < 6; i++){
+    var st = { rAvg:i, rGust:(i + 1) % 6, dir:(rot ? 45 : 0) - 180,
+               avg:AVGV[i], gust:GUSTV[(i + 1) % 6], stale:{cls:"fresh"} };
+    if (leaf){ st.dir = NaN; }
+    var cx = 42 + i * 76;
+    WG.marker.canvas(g, st, cx, 26, big ? 1.3 : 0.95);
+    WG.marker.label(g, st, cx, 26, big ? 1.3 : 0.95, 12);
+  }
 }
 
 function tog(id, fn){

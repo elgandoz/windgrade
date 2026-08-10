@@ -57,6 +57,7 @@ footer b{color:var(--fg)}
 <footer id="foot"></footer>
 
 <script src="wg/core.js"></script>
+<script src="wg/marker.js"></script>
 <script src="wg/windsmobi.js"></script>
 <script>
 "use strict";
@@ -99,35 +100,10 @@ function paintErr(){
   e.textContent = lastErr;
 }
 
-/* ── the marker, drawn to the spec in handover.md ─────────────────────
-   Two arrows sharing an origin and bearing, the gust arrow behind and
-   larger so its colour reads as a rim rather than a stroke. Broad swept
-   dart, trailing edge notched inward, roughly as wide as it is long.
-   Points DOWNWIND: bearing + 180, since w-dir is a from-bearing.
-   Calm or unknown direction gets a narrow symmetric leaf instead, because
-   at zero wind a direction would be invented. ────────────────────── */
-function band(d, fill, stroke, w){
-  return '<path d="' + d + '" fill="' + fill + '" stroke="' + stroke +
-         '" stroke-width="' + w + '" stroke-linejoin="round" stroke-linecap="round"/>';
-}
-
-function marker(st){
-  var a = WG.colour(st.rAvg), g = WG.colour(st.rGust), B = WG.BANDS;
-  var calm = !(st.dir === st.dir) || (st.avg === 0 && st.gust === 0);
-  var d = calm ? WG.LEAF : WG.ARROW;
-  var rot = calm ? 0 : ((st.dir + 180) % 360);   /* w-dir is a FROM bearing */
-
-  var s = '<svg class="mk" viewBox="' + WG.VIEWBOX + '" aria-hidden="true">';
-  s += '<g transform="rotate(' + rot.toFixed(1) + ')">';
-  /* Concentric outsets, widest first. Each band shows as a ring of half
-     the width difference to the next. */
-  if (halo) s += band(d, "none", WG.HALO, B.halo);          /* outermost */
-  s += band(d, "none", WG.STROKE_OUTER, B.outer);           /* near black */
-  s += band(d, "none", g.fill, B.gust);                     /* GUST rim */
-  s += band(d, a.fill, WG.STROKE_INNER, B.inner);           /* AVERAGE fill */
-  s += '</g></svg>';
-  return s;
-}
+/* The marker comes from wg/marker.js, shared with the overlay widget so the
+   two renderings cannot drift. `halo` is toggleable here because whether the
+   white halo belongs outside the near-black stroke is a look-at-it decision. */
+function marker(st){ return WG.marker.svg(st, null, { halo: halo, cls: "mk" }); }
 
 /* ── rows ─────────────────────────────────────────────────────────── */
 function buildRow(st){
@@ -140,15 +116,13 @@ function buildRow(st){
   return { el:d, cache:{} };
 }
 
-function fmt1(v){ return (v !== v) ? "—" : (Math.round(v * 10) / 10); }
-
 function paintRow(r, st){
   var c = r.cache;
 
   var key = st.rAvg + "/" + st.rGust + "/" + (st.dir|0) + "/" + (halo?1:0) + "/" + st.avg + "/" + st.gust;
   if (c.mk !== key){ r.el.replaceChild(mkNode(st), r.el.firstChild); c.mk = key; }
 
-  var num = fmt1(st.avg) + "/" + fmt1(st.gust);
+  var num = WG.marker.labelText(st);
   var numEl = r.el.querySelector(".num span");
   if (c.num !== num){ numEl.textContent = num; c.num = num; }
   var unit = "km/h" + ((st.dir === st.dir) ? " · " + Math.round(st.dir) + "°" : "");

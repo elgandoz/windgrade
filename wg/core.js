@@ -114,6 +114,45 @@ function cfg(search) {
   return out;
 }
 
+/* ── a live config object, for the launcher and any settings sheet ────
+   `cfg(search)` is the pure parse used by the pages at load. This is the
+   mutable one the configurator edits, seeded from the URL and clamped on
+   every write so a field cannot hold an out-of-range value. ────────── */
+var config = null;
+
+function defaults() {
+  var o = {}, i;
+  for (i = 0; i < SPEC.length; i++) o[SPEC[i].k] = SPEC[i].d;
+  return o;
+}
+function initConfig(search) { config = cfg(search); return config; }
+function setConfig(patch) {
+  if (!config) initConfig("");
+  var k, i, sp;
+  for (k in patch) {
+    if (!patch.hasOwnProperty(k)) continue;
+    for (i = 0; i < SPEC.length; i++) {
+      sp = SPEC[i];
+      if (sp.k === k) { config[k] = clamp(sp, patch[k]); break; }
+    }
+  }
+  return config;
+}
+function resetConfig() { config = defaults(); return config; }
+
+/* Only non-default values reach the URL, so a shared link stays short and
+   a later change of default reaches everyone who did not override it. */
+function buildUrl(page) {
+  if (!config) initConfig("");
+  var q = [], i, sp, v;
+  for (i = 0; i < SPEC.length; i++) {
+    sp = SPEC[i]; v = config[sp.k];
+    if (v === null || v === undefined || v === sp.d) continue;
+    q.push(encodeURIComponent(sp.k) + "=" + encodeURIComponent(v));
+  }
+  return page + (q.length ? "?" + q.join("&") : "");
+}
+
 /* ── guarded localStorage ─────────────────────────────────────────────
    Load-bearing: with ${lat}/${lng} substitution XCTrack reloads the whole
    page periodically, and this is what carries state across. ────────── */
@@ -431,6 +470,9 @@ return {
 
   cfg: cfg, parseQuery: parseQuery, clamp: clamp, toNum: toNum,
   store: store,
+  defaults: defaults, initConfig: initConfig, setConfig: setConfig,
+  resetConfig: resetConfig, buildUrl: buildUrl,
+  getConfig: function () { if (!config) initConfig(""); return config; },
 
   position: position, readXCTrack: readXCTrack, setGeoFix: setGeoFix,
   remember: remember,

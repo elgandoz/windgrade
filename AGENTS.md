@@ -122,7 +122,7 @@ Pure static files, so any server works. There is nothing to build or watch.
 
     node tools/test-core.js            # engine: 90 assertions, no network
     node tools/test-core.js --live     # + one real winds.mobi call
-    python3 -m http.server 8080        # then http://localhost:8080/app.html
+    python3 -m http.server 8080        # then http://localhost:8080/ (launcher)
 
 Three things that will otherwise cost an hour:
 
@@ -142,7 +142,24 @@ must key on the path, not the full URL, or XCTrack's `?lat=…&lng=…` reloads 
 it every time.
 
 Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC`
-works the same way, e.g. `?zoom=10&peaks=1&stale=45`.
+works the same way, e.g. `?zoom=10&peaks=1&stale=45` — or just use the
+configurator on `index.html`, which builds the URL and a QR code for it.
+
+Pages: `index.html` launcher/configurator, `app.html` list, `widget.html` overlay.
+Engine: `wg/core.js` (no DOM), `wg/marker.js` (both renderers), `wg/windsmobi.js`
+(provider), `wg/fields.js` (SPEC-driven controls), `wg/qr.js` (launcher only).
+Tools: `tools/registration.html`, `tools/arrow.html`, `tools/arrow.svg`,
+`tools/test-core.js`, `probe.html`.
+
+A headless browser is available for visual checks, which beats shipping UI blind:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+      --virtual-time-budget=9000 --window-size=460,900 --screenshot=/tmp/s.png \
+      "http://localhost:8080/app.html?lat=47.05&lng=8.64"
+
+Caveat: it does not capture a canvas drawn asynchronously — the widget's markers
+come out blank even though `getImageData` proves they are there. SVG captures
+fine, so `app.html` and `tools/arrow.html` are the pages to check this way.
 
 ## Conventions
 

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A1116">
+<title>Windgrade — nearby wind stations on terrain</title>
+<style>
+:root{
+  --ink:#0A1116; --panel:#151F27; --panel-hi:#1D2B36; --rule:#2A3B48;
+  --fg:#E8F0F5; --dim:#7B909F; --chart:#54A6DC;
+  --amber:#E9A33C; --amber-bg:#241A0B; --amber-line:#3D2C10;
+  --mono:ui-monospace,"Roboto Mono",monospace;
+  --sans:system-ui,-apple-system,Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--ink);color:var(--fg);font:400 16px/1.45 var(--sans);
+  padding:0 0 40px}
+.wrap{max-width:640px;margin:0 auto;padding:20px 14px}
+h1{margin:0 0 4px;font-size:1.5em;letter-spacing:-.01em}
+.sub{margin:0 0 20px;color:var(--dim);font-size:.92em;line-height:1.5}
+.sub b{color:var(--fg)}
+h2{margin:26px 0 8px;font-size:.82em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+
+.pick{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.pick a{display:block;padding:14px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:4px;text-decoration:none;color:var(--fg)}
+.pick b{display:block;margin-bottom:3px}
+.pick span{display:block;font-size:.8em;color:var(--dim);line-height:1.4}
+
+.field{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.field label{flex:1;min-width:0;font-size:.92em}
+.field label small{display:block;color:var(--dim);font-size:.8em;line-height:1.4}
+.field input[type=number]{width:92px;padding:9px;background:var(--panel);color:var(--fg);
+  border:1px solid var(--rule);border-radius:3px;font:600 1em var(--mono);text-align:right}
+.field input[type=checkbox]{width:22px;height:22px;accent-color:var(--chart)}
+.field .pair{flex:none;font:600 .78em var(--mono);color:var(--chart);min-width:104px;text-align:right}
+
+button{font:600 .9em var(--sans);cursor:pointer}
+#reset{width:100%;padding:10px;margin-top:12px;background:var(--panel-hi);
+  border:1px solid var(--rule);border-radius:3px;color:var(--fg)}
+#url{width:100%;padding:11px;margin-top:12px;background:var(--panel);color:var(--fg);
+  border:1px solid var(--rule);border-radius:3px;font:400 .82em var(--mono);
+  word-break:break-all;resize:none}
+#copy{width:100%;padding:12px;margin-top:8px;background:var(--chart);border:0;
+  border-radius:3px;color:#fff;font:700 .95em var(--sans)}
+/* Dark-on-white in every theme: plenty of scanners refuse an inverted symbol,
+   and this exists to be read by a phone camera. */
+.qr{margin-top:10px;padding:14px;display:flex;flex-direction:column;align-items:center;
+  gap:9px;background:var(--panel);border:1px solid var(--rule);border-radius:3px}
+.qr canvas{display:block;border-radius:2px;image-rendering:pixelated}
+.qr small{color:var(--dim);font-size:.78em;line-height:1.4;text-align:center}
+
+ol{margin:0;padding-left:1.25em;font-size:.9em;line-height:1.65;color:var(--dim)}
+ol b{color:var(--fg)}
+.note{margin:12px 0 0;padding:10px 12px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:3px;color:var(--dim);font-size:.84em;line-height:1.5}
+.note b{color:var(--fg)}
+.warn{margin:20px 0 0;padding:10px 12px;background:var(--amber-bg);
+  border:1px solid var(--amber-line);border-radius:3px;color:var(--amber);
+  font-size:.82em;line-height:1.45}
+.warn b{color:#F6D9A8}
+.tools{display:flex;flex-wrap:wrap;gap:8px}
+.tools a{display:block;padding:9px 11px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:3px;text-decoration:none;color:var(--fg);font-size:.82em}
+.tools a small{display:block;color:var(--dim);font-size:.9em;margin-top:2px}
+footer{margin-top:26px;color:var(--dim);font-size:.76em;line-height:1.6}
+a{color:var(--chart)}
+#reset:active,.pick a:active,.tools a:active{background:var(--panel-hi)}
+#copy:active{filter:brightness(.92)}
+@media (hover:hover) and (pointer:fine){
+  .pick a,.tools a,#reset,#copy{transition:background-color .12s,border-color .12s,filter .12s}
+  .pick a:hover,.tools a:hover,#reset:hover{border-color:var(--chart)}
+  #copy:hover{filter:brightness(1.08)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Windgrade</h1>
+  <p class="sub">
+    Nearby wind stations drawn <b>on the terrain they sit on</b>, each an arrow
+    coloured by measured speed and gust. Existing tools list stations by name —
+    which tells you nothing if you don't fly the area, because a name can't say
+    whether a reading came from a valley floor, a summit or a gorge that funnels.
+  </p>
+
+  <div class="pick">
+    <a id="toapp" href="app.html">
+      <b>List →</b>
+      <span>Nearby stations as chips, ranked by distance. Works on any phone or laptop.</span>
+    </a>
+    <a id="towidget" href="widget.html">
+      <b>XCTrack overlay →</b>
+      <span>Transparent arrows to stack <strong>over XCTrack's own map</strong>. Needs the setup below.</span>
+    </a>
+  </div>
+
+  <h2>Configurator</h2>
+  <div id="fields"></div>
+  <button type="button" id="reset">Reset to defaults</button>
+
+  <textarea id="url" rows="3" readonly></textarea>
+  <button id="copy" type="button">Copy overlay URL</button>
+
+  <div class="qr">
+    <canvas id="qrc" role="img" aria-label="QR code of the overlay URL"></canvas>
+    <small>Same URL as above. Point your phone's camera at it to open it there,
+      then paste it into XCTrack.</small>
+  </div>
+
+  <h2>Add it to XCTrack</h2>
+  <ol>
+    <li>Add an <b>XC map</b> widget. Set its <b>scale</b> to the value shown beside
+      the zoom setting above, and its rotation to <b>North-up</b>.</li>
+    <li>Add a <b>Web page</b> widget <b>over the same area</b>, on top, and paste
+      the URL.</li>
+    <li>Turn on <b>Allow web page to access XCTrack data</b> — this is what gives
+      it your position.</li>
+    <li>Set <b>refresh rate to 0</b>. Anything else makes XCTrack reload the page
+      every minute or two and throw away everything it has drawn.</li>
+    <li>Turn on <b>Allow tapping on the web page when locked</b> if you want it to
+      respond to touch, and <b>Disable unlocking</b> so a stray swipe doesn't
+      rearrange the page.</li>
+  </ol>
+
+  <p class="note">
+    <b>The zoom and the map scale must match.</b> XCTrack's scale ladder is not on
+    integer map zoom levels, so the pairing was measured rather than guessed — the
+    configurator shows the right scale for each zoom. The overlay prints its
+    assumption in the corner so a mismatch shows up as two labels disagreeing,
+    rather than as arrows quietly sitting on the wrong ridge.
+  </p>
+
+  <p class="note">
+    <b>An empty overlay is normal</b> while the GPS is still getting a fix. The
+    list page never goes blank, because there a blank page just reads as broken.
+  </p>
+
+  <p class="warn">
+    <b>The colours are not a safety verdict.</b> They are a rough aid on a
+    supplied scale, not an assessment of whether a flight is safe. Everything
+    shown is measured — station altitude, speed, gust, direction — with no
+    interpolation between stations and no lee-side inference, because Alpine
+    terrain makes such guesses unreliable and a confident wrong answer is worse
+    than none. <b>Readings cannot work offline.</b> Anything marked stale is old
+    and must be treated as unknown.
+  </p>
+
+  <h2>Tools</h2>
+  <div class="tools">
+    <a href="tools/registration.html">Overlay registration<small>Check the map scale pairing</small></a>
+    <a href="tools/arrow.html">Marker geometry<small>Every fill × rim pair</small></a>
+    <a href="tools/arrow.svg">arrow.svg<small>Editable master shape</small></a>
+    <a href="probe.html">Capability probe<small>WebView storage, CORS, WebGL</small></a>
+  </div>
+
+  <footer>
+    Unofficial, no warranty. Station data via <a href="https://winds.mobi">winds.mobi</a>,
+    which aggregates MeteoSwiss, SLF, Holfuy, OpenWindMap and others — the data
+    belongs to those networks. You are responsible for your own flight preparation.
+  </footer>
+
+</div>
+
+<script src="wg/core.js"></script>
+<script src="wg/qr.js"></script>
+<script src="wg/fields.js"></script>
+<script>
+"use strict";
+
+/* Seed from the URL, so a shared link opens the configurator on its settings. */
+WG.initConfig(location.search);
+
+var urlBox = document.getElementById("url");
+var qrCanvas = document.getElementById("qrc");
+
+function drawQr(url){
+  var r = WG.qr(url);
+  if (!r){ qrCanvas.hidden = true; return; }      /* longer than version 10 holds */
+  qrCanvas.hidden = false;
+
+  var quiet = 4, n = r.size + quiet * 2;
+  var scale = Math.max(3, Math.floor(260 / n));
+  qrCanvas.width = qrCanvas.height = n * scale;
+  qrCanvas.style.width = qrCanvas.style.height = (n * scale) + "px";
+
+  var g = qrCanvas.getContext("2d");
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, n * scale, n * scale);         /* the quiet zone is part of it */
+  g.fillStyle = "#000";
+  for (var y = 0; y < r.size; y++)
+    for (var x = 0; x < r.size; x++)
+      if (r.modules[y][x])
+        g.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale);
+}
+
+function refreshLinks(){
+  var w = WG.buildUrl("widget.html");
+  var a = WG.buildUrl("app.html");
+  document.getElementById("towidget").href = w;
+  document.getElementById("toapp").href = a;
+  urlBox.value = new URL(w, location.href).href;
+  drawQr(urlBox.value);
+}
+
+/* Generated from WG.SPEC — nothing is skipped here except URL-only rows,
+   because this is where overlay URLs get built. */
+var fields = WG.fields(document.getElementById("fields"), { onChange: refreshLinks });
+
+document.getElementById("reset").addEventListener("click", function(){
+  WG.resetConfig();
+  fields.reload();
+  refreshLinks();
+});
+
+document.getElementById("copy").addEventListener("click", function(){
+  var btn = this;
+  var done = function(){
+    btn.textContent = "Copied";
+    setTimeout(function(){ btn.textContent = "Copy overlay URL"; }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(urlBox.value).then(done, function(){ urlBox.select(); });
+  } else {
+    urlBox.select();
+    try { document.execCommand("copy"); done(); } catch(e){}
+  }
+});
+
+refreshLinks();
+</script>
+</body>
+</html>

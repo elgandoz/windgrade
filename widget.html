@@ -22,6 +22,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 <div id="badge"></div>
 
 <script src="wg/core.js"></script>
+<script src="wg/marker.js"></script>
 <script src="wg/windsmobi.js"></script>
 <script>
 "use strict";
@@ -72,52 +73,9 @@ function resize(){
 }
 window.addEventListener("resize", resize);
 
-/* ── marker: canvas twin of the SVG in app.html, from the same point arrays
-   in core.js so the two cannot drift. Concentric stroke outsets, widest
-   first; never a scaled second copy. ─────────────────────────────────── */
-function tracePath(g, pts, cx, cy, rot, scale){
-  var r = rot * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r), i, x, y, px, py;
-  g.beginPath();
-  for (i = 0; i < pts.length; i++){
-    x = pts[i][0] * scale; y = pts[i][1] * scale;
-    px = cx + x * cos - y * sin; py = cy + x * sin + y * cos;
-    if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
-  }
-  g.closePath();
-}
-
-function drawMarker(g, st, x, y, scale){
-  var a = WG.colour(st.rAvg), gc = WG.colour(st.rGust), B = WG.BANDS;
-  var calm = !(st.dir === st.dir) || (st.avg === 0 && st.gust === 0);
-  var pts = calm ? WG.LEAF_PTS : WG.ARROW_PTS;
-  var rot = calm ? 0 : ((st.dir + 180) % 360);   /* w-dir is a FROM bearing */
-
-  g.lineJoin = "round"; g.lineCap = "round";
-  tracePath(g, pts, x, y, rot, scale);
-  g.strokeStyle = WG.HALO;         g.lineWidth = B.halo  * scale; g.stroke();
-  g.strokeStyle = WG.STROKE_OUTER; g.lineWidth = B.outer * scale; g.stroke();
-  g.strokeStyle = gc.fill;         g.lineWidth = B.gust  * scale; g.stroke();
-  g.fillStyle   = a.fill;                                         g.fill();
-  g.strokeStyle = WG.STROKE_INNER; g.lineWidth = B.inner * scale; g.stroke();
-}
-
-/* Label: the avg/gust pair BELOW the marker, never rotating with it, with a
-   white casing so it survives over airspace lines, roads and water. The
-   number is mandatory at every size — the scale's middle is a hue-only
-   cluster, invisible to a significant fraction of male pilots. */
-function drawLabel(g, st, x, y, scale, fs){
-  var t = fmt(st.avg) + "/" + fmt(st.gust);
-  g.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
-  g.textAlign = "center"; g.textBaseline = "top";
-  g.lineJoin = "round";
-  var ly = y + WG.REACH * scale - 1;
-  g.strokeStyle = "#FFFFFF"; g.lineWidth = Math.max(3, fs * 0.34);
-  g.strokeText(t, x, ly);
-  /* a stale reading announces itself in the number too, not only the badge */
-  g.fillStyle = (st.stale.cls === "stale") ? "#B3160E" : "#0A1116";
-  g.fillText(t, x, ly);
-}
-function fmt(v){ return (v !== v) ? "—" : (Math.round(v * 10) / 10); }
+/* Marker and label come from wg/marker.js, shared with app.html's SVG so the
+   geometry, the band widths and the downwind rotation cannot drift between the
+   two renderings. Extracted from this file because it was untestable here. */
 
 /* ── draw ─────────────────────────────────────────────────────────────
    Declutter by collision, nearest first, evicting WHOLE markers. A number
@@ -145,8 +103,8 @@ function draw(fix, ranked){
       }
       if (hit) continue;
       placed.push([x, y]);
-      drawMarker(bctx, st, x, y, scale);
-      drawLabel(bctx, st, x, y, scale, fs);
+      WG.marker.canvas(bctx, st, x, y, scale);
+      WG.marker.label(bctx, st, x, y, scale, fs);
     }
     shown = placed.length;
   }
