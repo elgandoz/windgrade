@@ -1,6 +1,6 @@
 # Plan
 
-## Phase 0 — feasibility gate  ← we are here
+## Phase 0 — feasibility gate  ✅ CLEARED 2026-08-10
 
 Run `probe.html` **inside XCTrack's Web page widget**, and again in Chrome for
 comparison. Record the JSON in `docs/findings.md`.
@@ -18,8 +18,15 @@ It answers, in one page:
 | WebGL present and sane? | Canvas vs MapLibre. |
 | Does a `tel:` link open the dialer? | Not needed here, but the sibling project needs the answer. |
 
-**Do not start Phase 1 until this is filled in.** A negative on storage
-persistence should trigger a conversation with the owner, not a workaround.
+**Cleared.** `docs/findings.md` has the run. Every row above is answered, and
+nothing came back negative enough to need a conversation: no WebGL (Canvas was
+already the plan), the blob survives a restart, ~10 GB of quota, Service Worker
+present, 206 on ranges, and MeteoSwiss serving CORS headers so the build stays
+static. Phase 1 is unblocked.
+
+Two results did not gate anything but changed the plan, below: relative altitude
+was withdrawn, and byte ranges turned out to resolve against the *negotiated*
+representation, which is a Phase 3 risk to verify on a real pack.
 
 ### Altitude — downgraded 2026-08-10
 

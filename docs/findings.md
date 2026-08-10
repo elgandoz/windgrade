@@ -6,11 +6,17 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ### 2026-08-10 — XCTrack on Android 17 (Build/CP41.260717.006)
 
-**Verdict:** settles the renderer question outright and unblocks the map
-architecture. The Phase 0 gate is down to **two** blockers — blob survival
-across an app restart, and `persist()`. The third open item, `getLocation()`'s
-payload, stopped being a blocker later the same day when the owner downgraded
-relative altitude and required the map to render without a position.
+**Verdict: the Phase 0 gate is CLEARED — Phase 1 can start.** Every question in
+`plan.md`'s feasibility table now has an answer. WebGL is absent, so Canvas is
+settled. The 10 MB blob survives a full app restart, so the offline design holds.
+Quota is ~10 GB. Service Worker, Cache Storage and IndexedDB are all present.
+MeteoSwiss serves CORS headers, so no proxy and no backend. Byte ranges return
+206.
+
+What is left is not gating: `persist()` was never tapped (hardening, not a
+precondition), `getLocation()`'s payload shape is unknown but was downgraded out
+of the critical path, and byte ranges against a real `.pmtiles` cannot be tested
+until a pack exists — a Phase 3 risk with a known fallback.
 
 ```json
 {
@@ -139,7 +145,32 @@ Pass = 206, **no** `content-encoding`, and a `content-range` total equal to the
 file's real byte size. Anything else and the packs go to R2 — which is why
 Phase 3's manifest already holds absolute pack URLs.
 
-#### Still open — two blockers, one loose end.
+#### Settled: the 10 MB blob survives a full XCTrack restart.
+
+**Owner-confirmed** — the JSON above was copied out of XCTrack *after* force-
+closing and reopening the app, and `test blob present: true` with
+`test blob written: 2026-08-10T10:34:58.661Z` is the pre-restart blob being read
+back.
+
+This entry originally disputed that, on the grounds that only 20 seconds separate
+the write from the page load. That was an inference from a timestamp, and it was
+wrong: the restart happened inside that window.
+
+**This is the result Phase 3 depends on.** Offline map packs in Cache Storage are
+viable, so the offline design stands as written.
+
+Two things worth drawing out:
+
+- It survived while `persisted` was `false`. Eviction did not touch a 10 MB blob
+  across an app restart *without* a persistence grant, which makes
+  `navigator.storage.persist()` a hardening step rather than a precondition. The
+  handover called eviction "an unsolved problem" quoting the CDMX PWA author;
+  on this device, at this size, it did not occur.
+- 10 MB is not 50 MB. Nothing here says a full-size pack behaves the same under
+  real storage pressure, so check quota and call `persist()` before downloading,
+  as Phase 3 already specifies.
+
+#### Still open — nothing that gates Phase 1.
 
 1. **`getLocation()`'s payload shape — no longer a blocker.** It returned the
    string `"null"`, so `JSON.parse` yielded `null` and `Object.keys(null)` threw
@@ -157,16 +188,16 @@ Phase 3's manifest already holds absolute pack URLs.
    function — `getLocation`. There is no separate altitude accessor, so if
    altitude exists it is a field in that payload.
 
-2. **Blob survival across an XCTrack restart.** The blob is present at 10.0 MB,
-   but it was written at `10:34:58.661Z` and read at `10:35:18.743Z` — 20
-   seconds. That proves the write succeeded and survives a page reload. It says
-   nothing about an app restart, which is the question Phase 3 depends on.
-   **Fully kill XCTrack, reopen, reload the page, and check the timestamp is
-   still the old one.**
+2. **`persist()` — not requested, and no longer a gate.** `persisted (already):
+   false`, and neither `persist() granted` nor `persist()` appears in the JSON,
+   so the button was not tapped (or the JSON was copied before the promise
+   resolved). Worth doing, but see the blob result below: eviction did not bite
+   even *without* a grant, so `persist()` is hardening rather than a
+   prerequisite.
 
-3. **`persist()`.** `persisted (already): false`, and the `persist() granted`
-   key is absent from the JSON — the button was never tapped. Without a grant,
-   a ~50 MB pack is evictable under storage pressure.
+3. **Byte ranges against a real `.pmtiles`.** The one genuinely unresolved
+   architectural risk, described above. It cannot be tested until a pack exists,
+   so it is a Phase 3 risk with a known fallback (R2), not a Phase 0 blocker.
 
 #### Probe defects that cost this run
 

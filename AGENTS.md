@@ -4,10 +4,11 @@ An XCTrack web widget (plus a standalone page) that shows nearby **wind-station
 readings on a light offline map**, each rendered as an arrow coloured by a
 safety rating. For paraglider XC pilots flying areas they don't know.
 
-**Status: Phase 0.** Nothing is built yet except `probe.html`, a capability
-probe that must be run before any architecture is committed to. Read
-`docs/plan.md` for the phases and `docs/handover.md` for why every decision
-was made the way it was.
+**Status: Phase 0 cleared, Phase 1 not started.** The capability probe has been
+run inside XCTrack and `docs/findings.md` holds the results — read it before
+proposing anything, because it settles the renderer, the offline story and the
+data source. Nothing is built yet except `probe.html`. Read `docs/plan.md` for
+the phases and `docs/handover.md` for why every decision was made the way it was.
 
 `windgrade` is a placeholder name — renaming is a folder move and three lines
 of docs.
