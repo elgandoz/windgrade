@@ -29,6 +29,12 @@ Two concrete scenarios he described:
 
 Both need **altitude** and **terrain position**, not proximity.
 
+**Amended 2026-08-10.** The owner has since ruled that *relative* altitude
+(pilot − station) is not important, so of that pair only **terrain position**
+survives as a requirement. Station altitude is still displayed, as a fact. The
+comprehension both scenarios need comes from seeing where the station sits, not
+from a computed height difference. See `plan.md` → "Altitude — downgraded".
+
 ## Decisions and the reasoning behind them
 
 ### No inference, only facts
@@ -87,17 +93,62 @@ licensed, global, no key). Same download and cache path, no new architecture.
 
 ### The rating scale
 
-Owner's design, thresholds owner-supplied: green safe, yellow tricky, orange
-hard, red dangerous, black extremely dangerous. **Fill colour from the average,
-border colour from the gust.**
+Owner's design. **Draft scale, four levels** (2026-08-10):
+
+| Colour | Meaning |
+|---|---|
+| green | safe |
+| yellow | warning |
+| red | dangerous |
+| black | extremely dangerous |
+
+**Colour is driven by wind speed only.** Fill from the average, gust colour from
+the gust, both read off the same four-level table.
+
+Note this dropped **orange** ("hard") from the earlier five-level draft, which
+ran green / yellow / orange / red / black. Four buckets, not five. The km/h
+boundaries are still not supplied — see `plan.md` open decision 2.
+
+### The marker: two stacked arrows
+
+Owner's spec. Two arrow shapes sharing an origin and a bearing, the gust arrow
+behind and roughly 5 px larger on every edge, so the gust colour reads as a rim
+around the average colour.
+
+| Layer | Fill | Outline | Size |
+|---|---|---|---|
+| Back (gust) | gust rating colour | 2 px, almost black | ~5 px larger |
+| Front (average) | average rating colour | 1 px, dark grey | base |
+
+The gust is therefore **not a stroke on a single shape** — it is the exposed
+margin of a larger shape behind. That keeps both readings as full-saturation
+blocks of colour rather than a block plus a thin line, which is what makes the
+gust legible at small sizes and through gloves.
 
 Two consequences worth preserving:
 
-- The mismatch is free information. Green fill with a red border means a calm
+- The mismatch is free information. Green front with a red rim means a calm
   average hiding violent gusts — arguably the single most useful thing the
   display can show.
-- Black needs a white halo, unconditionally on every marker. A black arrow with
-  a black border on a grey basemap over a dark map is a hole in the screen.
+- The two outlines exist to separate the marker from any basemap, dark or light.
+  They are not decoration.
+
+**Unresolved — a black gust conflicts with the white-halo rule.** This document
+previously required a white halo on every marker, unconditionally, because "a
+black arrow with a black border on a grey basemap over a dark map is a hole in
+the screen." A 2 px almost-black outer stroke reintroduces exactly that failure
+when the gust rating is black. The two rules can coexist as
+
+```
+white halo -> near-black 2 px -> gust fill -> dark grey 1 px -> average fill
+```
+
+but the owner has not confirmed that stack, so it is not settled.
+
+**Also unresolved — where the speed number goes.** `AGENTS.md` requires the
+number stay visible at every size, since the green→black scale is invisible to a
+significant fraction of male pilots and the number is the fallback. Two stacked
+arrows consume the space a number would occupy. Placement is unspecified.
 
 ### Lesson from the "Empathizing Map" PWA
 

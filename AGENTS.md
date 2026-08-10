@@ -55,9 +55,12 @@ station on terrain is the whole point.
   100 MB, and Git LFS is not an option — GitHub Pages serves the LFS pointer
   file, not the content. Split regions into multiple packs rather than raising
   the ceiling.
-- **Canvas over WebGL** for map rendering (`protomaps-leaflet`), unless the
-  probe shows WebGL is solid in XCTrack's WebView. MapLibre's WebGL context
-  sits next to XCTrack's own map renderer in the same process.
+- **Canvas, not WebGL**, for map rendering (`protomaps-leaflet`). This is
+  **settled, not a preference**: the 2026-08-10 probe reported `webgl: false`
+  inside XCTrack's WebView on Android 17 with 8 GB of RAM, so WebGL is simply
+  not available to us. MapLibre is out. Cap the canvas backing store at DPR 1–2
+  — the probe measured DPR 3, and full-DPR rendering costs ~9× the fill rate for
+  no legibility gain at ~100 m/px.
 - **Minimise DOM writes and wakeups.** Same discipline as `hx-call`: build
   elements once, write only changed text nodes, poll no faster than the data
   actually changes. Wind readings update on a ~10 minute cadence; don't fetch

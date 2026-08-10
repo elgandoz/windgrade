@@ -6,9 +6,11 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ### 2026-08-10 — XCTrack on Android 17 (Build/CP41.260717.006)
 
-**Verdict:** unblocks the map architecture and settles the renderer question
-outright, but does **not** clear the Phase 0 gate. Three questions are still
-open, one of which (altitude) is the core feature.
+**Verdict:** settles the renderer question outright and unblocks the map
+architecture. The Phase 0 gate is down to **two** blockers — blob survival
+across an app restart, and `persist()`. The third open item, `getLocation()`'s
+payload, stopped being a blocker later the same day when the owner downgraded
+relative altitude and required the map to render without a position.
 
 ```json
 {
@@ -137,15 +139,19 @@ Pass = 206, **no** `content-encoding`, and a `content-range` total equal to the
 file's real byte size. Anything else and the packs go to R2 — which is why
 Phase 3's manifest already holds absolute pack URLs.
 
-#### Still open — the Phase 0 gate is not cleared.
+#### Still open — two blockers, one loose end.
 
-1. **Altitude — the core feature.** `getLocation()` returned the string
-   `"null"`, so `JSON.parse` yielded `null` and `Object.keys(null)` threw the
-   reported `Cannot convert undefined or null to object`. That is XCTrack
-   saying *no GPS fix*, not a broken bridge. The field name for altitude, and
-   whether altitude is exposed at all, remain unknown. Per `plan.md`: "No
-   altitude, no feature." **Re-run outdoors with a fix, or with XCTrack in
-   simulation mode.**
+1. **`getLocation()`'s payload shape — no longer a blocker.** It returned the
+   string `"null"`, so `JSON.parse` yielded `null` and `Object.keys(null)` threw
+   the reported `Cannot convert undefined or null to object`. That is XCTrack
+   saying *no GPS fix*, not a broken bridge. Field names for latitude, longitude
+   and altitude are all still unknown.
+
+   **Downgraded the same day.** The owner has ruled that relative altitude is
+   not important and that the map must render even with no position at all. So
+   this no longer gates anything — it is now just an unknown to resolve
+   opportunistically on the next run with a fix. `plan.md`'s old "no altitude,
+   no feature" is withdrawn.
 
    Useful anyway: the bridge *does* enumerate, and exposes exactly one
    function — `getLocation`. There is no separate altitude accessor, so if
@@ -252,9 +258,11 @@ Three things that change Phase 2, all facts, no inference:
   `crs.properties.name` declares it. A provider module must transform before
   anything can be placed on a map. swisstopo's approximate LV95→WGS84 formula
   is a short pure function, no library.
-- **`altitude` ships per station**, as a string in metres. The Δ-altitude
-  ranking works off provider data alone — no DEM lookup needed for stations.
-  The DEM is only ever for drawing terrain.
+- **`altitude` ships per station**, as a string in metres above sea level, so no
+  DEM lookup is needed to label a station. The DEM is only ever for drawing
+  terrain. (This entry originally added that it also powers Δ-altitude ranking;
+  that ranking was dropped later the same day. The altitude is still displayed
+  as a fact.)
 - `unit` is already `km/h`, matching the assumption in `plan.md`. `reference_ts`
   is ISO-8601 with `Z`, which feeds the staleness rule directly.
 
