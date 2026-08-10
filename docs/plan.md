@@ -93,6 +93,16 @@ Ships something useful on its own, and is where the rating scale gets tuned.
   speeds are already km/h.
 - Fetch layer with staleness: cache last good reading, show its age, go red
   past a threshold.
+- **One bounding-box call per ~10 minutes, not a whole-country download.** The
+  box is the visible area padded by 20 km, with `keys` trimmed to what we render,
+  `last-measure` filtering stale stations server-side and
+  `is-highest-duplicates-rating` collapsing co-located ones. Measured at ~18 KB
+  for 72 stations across six networks in the densest part of Switzerland — exact
+  query and numbers in `findings.md`.
+  The 20 km pad is a **cache** radius, not a display radius: it buys 30 minutes
+  of flight at 40 km/h, so movement never forces a refetch faster than the ~10
+  minute data cadence does. That satisfies winds.mobi's "do not overload" rule
+  without extra logic.
 - Rating table: **six levels** (white/grey, green, yellow, orange, red, black) on
   a burnair-style scale, thresholds supplied and recorded in `handover.md` along
   with the marker geometry. Colour comes from wind speed only. **Average and gust
@@ -128,9 +138,39 @@ button, and the unresolved `.pmtiles` byte-range risk. Essentially all of Phase 
 It also *improves* on our own basemap — XCTrack's map already shows terrain, and
 the pilot already knows how to read it.
 
+**Try this one first.** Owner's call, 2026-08-10: 3b is the easy win and gets
+built ahead of Phase 3, with Phase 3 kept as the durable answer that follows.
+
 **Registration is solvable today, at fixed scales.** Owner's position, and it is
 the right one: **do not wait on the XCTrack API change** — the devs are slow, and
 #1097 has sat untouched since April 2024. We do not need it.
+
+**The zoom desync is designed out, not mitigated.** Owner's insight: each XC map
+in XCTrack is a widget placed on a page, so this layout uses a **dedicated map
+widget pinned to a fixed scale**. chmd's observation that "there is exactly one XC
+map getting changed when zoom in/zoom out inputs are sent (the map at the bottom
+of the stack)" is what makes this work — a map widget that is not bottom-most
+never receives zoom input, so it holds its configured scale for the whole flight.
+There is then no drifting zoom to detect.
+
+**Position, however, must track continuously.** Also owner's, and it is the real
+problem with the naïve version: `${lat}` and `${lng}` are substituted **when the
+widget loads**, so a URL-parameter overlay would sit at its start-of-flight
+position while the XC map pans along underneath. The fix is to stop treating the
+URL as the position source:
+
+- `${lat}` / `${lng}` are a **bootstrap only**, and the fallback when "Allow web
+  page to access XCTrack data" is switched off.
+- `XCTrack.getLocation()`, polled, is the live centre. The probe already confirmed
+  the bridge exists and exposes exactly that method.
+
+**And this is cheap, which is the non-obvious part.** At z11 the ground resolution
+is 52 m/px, so a glider at 40 km/h (11.1 m/s) moves **0.21 px/s** — about one
+pixel every five seconds. Polling `getLocation()` every couple of seconds and
+redrawing only when the projected centre shifts by ≥1 px is both smooth and nearly
+free. `AGENTS.md`'s "minimise DOM writes and wakeups" and "the position should
+adjust frequently" do not actually conflict here: the zoom is coarse enough that
+frequent polling costs almost nothing.
 
 The comments on #1235 establish that XCTrack's XC map aligns **exactly** with OSM
 zoom levels at its odd scale settings, verified by overlaying airspace layers.
@@ -149,23 +189,22 @@ and uses plain Web Mercator maths. What remains unavailable:
 
 | Needed | Available? |
 |---|---|
-| Map centre | Approximately — `${lat}`/`${lng}` and `getLocation()` give the *pilot*, and XCTrack centres on the pilot |
-| Zoom | Not exposed, but **deterministically pairable** via the table |
+| Map centre | Live, via polled `getLocation()` |
+| Zoom | Not exposed, but **fixed by configuration** and pairable via the table |
 | Rotation (north-up vs track-up) | **No.** `heading` is exposed, but not whether the map is using it — so the pilot must select north-up |
 | Widget rect vs map rect alignment | **No** |
 
-**The risk that remains, and why it is now manageable.** If the pilot changes
-zoom mid-flight, or leaves the map track-up, the arrows land on the wrong terrain
-*while still looking authoritative* — a valley station read as a summit station.
-That is the confident wrong answer `AGENTS.md` forbids, and it is worse than no
-map.
+**The risk that remains.** Rotation and alignment, not zoom. If the map is left
+track-up, or the widget rectangle does not sit exactly over the map rectangle, the
+arrows land on the wrong terrain *while still looking authoritative* — a valley
+station read as a summit station. That is the confident wrong answer `AGENTS.md`
+forbids, and it is worse than no map.
 
-What makes it survivable is that **XCTrack displays its own map scale on screen.**
-So the desync is checkable by the pilot rather than invisible:
+Mitigations, in order of how much they actually buy:
 
-- The widget **states its assumption permanently** — a `6 km · z11 · N↑` badge —
-  to be read against the scale XCTrack is already showing. A mismatch becomes a
-  visible disagreement between two labels, not silent drift.
+- The widget **states its assumptions permanently** — a `6 km · z11 · N↑` badge —
+  to be read against the scale XCTrack already displays. A mismatch becomes a
+  visible disagreement between two labels rather than silent drift.
 - Arrow *positions* are the only thing at risk. The `avg/gust` numbers, colours,
   names and altitudes stay correct regardless, so a desynced widget degrades into
   a still-useful list rather than into a lie.
@@ -173,6 +212,22 @@ So the desync is checkable by the pilot rather than invisible:
 - Keep it visually thin, and prefer our layer **on top** — chmd stacks the web
   page below a transparent XC map, which would put airspace lines and the track
   across our arrows.
+
+**Feasibility unknowns to settle before building — all measurable in one test
+layout:**
+
+1. **Is the map scale in CSS pixels or device pixels?** The probe measured DPR 3.
+   Guessing wrong scales every offset by 3×. This is the single biggest risk to
+   registration.
+2. **Does XCTrack centre the map exactly on the pilot,** or offset it (many
+   navigators place the aircraft low on screen when moving)?
+3. **Does a non-bottom-most map widget really hold its scale** against zoom input?
+4. **Is north-up settable per map widget** or only globally?
+5. **Does XCTrack ever re-substitute `${lat}`/`${lng}`** — i.e. reload the widget —
+   or is it strictly load-time?
+
+Answer 1 and 2 with chmd's airspace method below; 3 and 4 by trying it; 5 by
+logging whether the page ever re-navigates.
 
 **Acceptance test, borrowed from chmd:** overlay against a layer that exists in
 both renderings and toggle it. Airspace boundaries are hard-edged and shared, so

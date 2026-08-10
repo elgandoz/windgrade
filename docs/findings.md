@@ -84,7 +84,78 @@ any notice." Contact is Yann, `info@winds.mobi`.
 name in the Fetch spec, so `fetch()` silently drops any attempt to set it. Rules
 2 and 3 we meet trivially. This needs an email to Yann rather than a workaround —
 the automatic `Origin: https://elgandoz.github.io` header does identify the
-deployment, and proposing that is the obvious ask.
+deployment, and proposing that is the obvious ask. **Deferred by the owner** until
+overall feasibility is established; the API works without it in the meantime.
+
+#### The actual query, measured
+
+Every efficiency lever the owner asked for is a server-side parameter:
+
+| Parameter | Use |
+|---|---|
+| `within-pt1-lat/lon`, `within-pt2-lat/lon` | **bounding box** — visible area plus margin |
+| `near-lat`, `near-lon`, `near-distance` | radius alternative, distance in metres |
+| `last-measure` | **staleness filter, server-side.** Seconds, or an absolute datetime |
+| `keys` | select returned fields — the default set includes temp/hum/rain/pres we never use |
+| `is-highest-duplicates-rating` | **dedupes co-located stations** |
+| `is-peak`, `status`, `provider`, `ids`, `search` | further filters |
+| `limit` | default 20, **max 500** |
+
+Geometry for a widget at OSM z11 — the scale that pairs with XCTrack's "6 km" —
+using the 448×978 CSS px viewport the probe measured, at 47.04°N:
+
+```
+z11 resolution              52.09 m/px
+viewport 448 x 978 px       23.3 x 50.9 km
++ 20 km margin all round    63.3 x 90.9 km
+half-extents                dlat 0.4085°   dlon 0.4175°
+```
+
+Verified against the densest part of Switzerland (Lucerne / Gotthard):
+
+```
+GET https://winds.mobi/api/2/stations/
+   ?within-pt1-lat=46.6362&within-pt1-lon=8.2255
+   &within-pt2-lat=47.4532&within-pt2-lon=9.0605
+   &limit=500&last-measure=1800&is-highest-duplicates-rating=true
+   &keys=name&keys=short&keys=alt&keys=peak&keys=status&keys=pv-name
+   &keys=loc&keys=last._id&keys=last.w-dir&keys=last.w-avg&keys=last.w-max
+```
+
+| Query | Stations | Bytes |
+|---|---|---|
+| bbox, default keys | 78 | 23,442 |
+| + trimmed `keys` | 78 | 19,377 |
+| + `last-measure=1800` | 73 | 18,178 |
+| + `is-highest-duplicates-rating` | 72 | **17,934** |
+
+**One call, ~18 KB, 72 stations, six networks** — 27 SLF, 20 MeteoSwiss, 14
+Holfuy, 7 OpenWindMap, 3 aviationweather, 1 Windline. 49 of the 72 are
+`peak: true`; altitudes span 418–3187 m. Against MeteoSwiss-direct's 190 KB
+single-network file that is a tenfold reduction for six times the coverage, and
+nowhere near the 500 limit.
+
+A record at that key set:
+
+```json
+{"_id":"meteoswiss-DIS","alt":1208,
+ "loc":{"type":"Point","coordinates":[8.853427,46.706596]},
+ "name":"Disentis","peak":false,"pv-name":"meteoswiss.ch",
+ "short":"Disentis","status":"green",
+ "last":{"_id":1786371600,"w-dir":192,"w-avg":4.3,"w-max":11.9}}
+```
+
+**Gotcha:** `keys` must be **repeated parameters**, not comma-separated — the
+comma form returns a validation error. Valid values: `pv-id`, `pv-code`,
+`pv-name`, `short`, `name`, `alt`, `peak`, `status`, `tz`, `loc`, `url`, and
+`last.` prefixed `_id`, `w-dir`, `w-avg`, `w-max`, `temp`, `hum`, `rain`, `pres`.
+
+**The margin sets the refetch rate, and movement turns out not to drive it.**
+20 km of pad at 40 km/h ground speed is **30 minutes of flight** before the pilot
+reaches its edge. Readings refresh on a ~10 minute cadence, so the data clock
+forces a refetch long before movement does. One call per ~10 minutes serves both
+the display and winds.mobi's "do not overload" rule. The margin is a *cache*
+radius, not a display radius.
 
 #### XCTrack's documented JS interface — altitude answered from the desk
 
