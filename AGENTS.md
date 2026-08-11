@@ -196,7 +196,8 @@ explicitly. Terrain may be cached; terrain does not change, and wind does. A
 cache that served a stale reading as current would defeat the staleness logic
 from behind.
 
-**Scale is chosen as a ground distance, not as a ladder step.** `scale` is in
+**Scale is chosen as a ground distance, not as a ladder step** — and it is the
+OVERLAY's setting only. `scale` is in
 metres and `WG.resolveStep()` turns it into a step *on the device*, because the
 same step is a different scale at a different pixel density — that is exactly
 how the launcher came to offer step 25 as "8km" when a Pixel 9a prints 6km. The
@@ -239,14 +240,23 @@ switches off `no position`, `OFFLINE`, `ALL STALE` or `BOX FULL` — those are
 the display admitting it cannot be trusted.
 
 **How many markers get drawn is decided in three places, and two of them used
-to be wrong.** `prepare()` culls to a lat/lon rectangle *before* it applies
-`max`, because distance ranking is a circle and a widget is a tall rectangle —
-without the cull, 17 of 40 slots went to stations off the sides that could
-never be drawn. The widget passes its own view; `app.html` passes nothing,
-since a list wants nearest-regardless. `max` defaults to **120**, not 40: what
-should limit a map is collision eviction, which knows about pixels. And
-`bboxAround`'s `mul` defaults to `getCal()` — the same resolution the
-projector draws with — never the raw `CAL`. See `docs/findings.md` 2026-08-11.
+to be wrong.** `prepare()` culls *before* it applies `max`, because distance
+ranking is a circle and a widget is a tall rectangle — without the cull, 17 of
+40 slots went to stations off the sides that could never be drawn. `max`
+defaults to **120**, not 40: what should limit a map is collision eviction,
+which knows about pixels. And `bboxAround`'s `mul` defaults to `getCal()` — the
+same resolution the projector draws with — never the raw `CAL`. See
+`docs/findings.md` 2026-08-11.
+
+**The two pages fetch different SHAPES, and that is deliberate.** The overlay
+has a viewport, so it uses `scale` + `pad` and a view rectangle. **The list has
+no map, so it has no scale** — it uses `range`, a radius in km, via
+`WG.bboxRadius()` for the query and `prepare(..., {r:metres})` to trim the
+bounding square's corners back to a circle. `scale` used to drive the list too,
+which made its catchment a portrait 65 × 94 km rectangle borrowed from a
+viewport that page does not have, while it sorted purely by distance: 20 km east
+dropped, 20 km north kept, and no way for a reader to tell why. `scale` and
+`pad` are `only:"widget"`; `range` is `only:"app"`. Do not reunify them.
 
 **winds.mobi's `name` and `short` are the opposite way round from what they
 sound like.** For openwindmap.org, `name` is a geocoded municipality and
@@ -257,7 +267,8 @@ documented ordering; that is reported as `meta.capped`, never papered over,
 and splitting the box into more calls would breach *"do not overload"*.
 
 Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC`
-works the same way, e.g. `?scale=15000&peaks=1&stale=45` — or just use the
+works the same way, e.g. `?scale=15000&peaks=1&stale=45` for the overlay or
+`?range=60&stale=45` for the list — or just use the
 configurator on `index.html`, which builds the URL and a QR code for it.
 
 Pages: `index.html` launcher/configurator, `app.html` list, `widget.html`

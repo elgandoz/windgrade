@@ -275,13 +275,25 @@ var SPEC = [
      it on the device, at the real density and latitude; if that scale has
      no step at all, it lands on the nearest and the overlay's bar says so.
      See docs/findings.md 2026-08-11 and stepForScale() above. */
-  { k:"scale", t:"scale", d:8000, min:100, max:2000000,
+  { k:"scale", t:"scale", d:8000, min:100, max:2000000, only:"widget",
     lab:"Map scale",
     help:"Set XCTrack's XC map to the same value." },
 
   { k:"alt",   t:"int", d:0, min:0, max:1, only:"widget",
     lab:"Show station altitude",
     help:"Adds each station's height under its speed." },
+
+  /* THE LIST HAS NO MAP, so it has no scale. `scale` on that page did exactly
+     one thing — feed zoomOf() and a nominal 448x978 widget to bboxAround —
+     which made its catchment a portrait rectangle roughly 65 km wide and 94 km
+     tall, while the list itself sorts purely by distance. A radius in km is the
+     same control said honestly, in a unit that survives having no viewport.
+     40 km is close to what the old default reached and is a sensible XC number:
+     an hour of glide at 40 km/h. */
+  { k:"range", t:"int", d:40, min:5, max:200, only:"app",
+    lab:"How far to look (km)",
+    help:"Stations further away than this are not shown. This is the list's " +
+         "own setting — the overlay uses the map scale above instead." },
 
   /* ── behind Advanced, by group ────────────────────────────────────── */
 
@@ -297,9 +309,10 @@ var SPEC = [
     help:"An upper limit on how many markers are considered. Overlapping ones " +
          "are dropped as well." },
   /* A cache radius, not a display radius: 20 km buys ~30 min of flight at
-     40 km/h, so movement never forces a refetch faster than the data
-     cadence does. */
-  { k:"pad",   t:"int", d:20, min:0, max:60, grp:"Which stations",
+     40 km/h, so movement never forces a refetch faster than the data cadence
+     does. Widget-only, because it is margin around a VIEW and the list has
+     none — there, `range` is both the fetch and the display radius. */
+  { k:"pad",   t:"int", d:20, min:0, max:60, only:"widget", grp:"Which stations",
     lab:"Extra area fetched (km)",
     help:"Downloads a little beyond the screen, so flying on does not mean " +
          "waiting for a new download." },
@@ -743,6 +756,28 @@ function bboxAround(fix, z, W, H, padKm, mul) {
            w: fix.lon - dLon, e: fix.lon + dLon };
 }
 
+/* ── a radius, for a page with no map ─────────────────────────────────
+   The list ranks by distance and shows no geometry, so what it wants is
+   "everything within R km" — one number, in a unit that means something
+   without a viewport.
+
+   It used to reach for bboxAround with a nominal 448x978 widget, which made
+   its catchment a PORTRAIT RECTANGLE about 65 km wide and 94 km tall. A list
+   sorted purely by distance was therefore dropping a station 40 km east while
+   keeping one 45 km north, with nothing on the page to explain why.
+
+   The box is the circle's bounding square, so the fetch overreaches to
+   R x sqrt(2) in the corners; prepare()'s `keep` trims that back to a real
+   circle. Overfetching the corners is the right way round — the alternative
+   is asking the provider for a shape it does not support, or missing
+   stations. */
+function bboxRadius(fix, metres) {
+  var dLat = metres / M_PER_DEG;
+  var dLon = metres / (M_PER_DEG * Math.cos(fix.lat * Math.PI / 180));
+  return { s: fix.lat - dLat, n: fix.lat + dLat,
+           w: fix.lon - dLon, e: fix.lon + dLon };
+}
+
 /* ── the rating scale ─────────────────────────────────────────────────
    Owner-supplied, burnair-style, six levels, km/h. AVERAGE and GUST use
    TWO DIFFERENT tables — the gust bands sit 8-10 km/h higher, and that
@@ -889,23 +924,36 @@ function staleness(st, c, now) {
    is still shown as a fact, and terrain position is what Phase 3/3b
    convey. `peaks` filters on the provider's own peak flag.
 
-   `keep` is an optional {s,n,w,e} rectangle applied BEFORE the `max` cut.
-   Without it the cut is radial while the screen is a rectangle, so at a
-   30 km scale on a 448x978 widget 17 of 40 slots went to stations that
-   could never be drawn — and 13 drawable ones were dropped to pay for
-   them. A list page wants nearest-regardless and passes nothing; a map
-   passes its own view rectangle. Kept as lat/lon so core stays DOM-free
-   and the rule stays testable. ─────────────────────────────────────── */
+   `keep` is applied BEFORE the `max` cut, and takes one of two shapes,
+   because the two pages want different things:
+
+     {s,n,w,e}  a rectangle — the OVERLAY's own view. Without it the cut was
+                radial while the screen is a rectangle, so at a 30 km scale on
+                a 448x978 widget 17 of 40 slots went to stations that could
+                never be drawn, and 13 drawable ones were dropped to pay.
+     {r:metres} a circle — the LIST, which ranks by distance and shows no
+                geometry, so a rectangle there is an arbitrary bias no reader
+                can see. Pairs with bboxRadius(), whose square overreaches to
+                r x sqrt(2) in the corners; this is what trims it.
+
+   Both are plain lat/lon so core stays DOM-free and the rule stays
+   testable. ─────────────────────────────────────────────────────────── */
 function inBox(st, b) {
   return st.lat >= b.s && st.lat <= b.n && st.lon >= b.w && st.lon <= b.e;
 }
 function prepare(list, fix, c, now, keep) {
-  var out = [], i, st;
+  var out = [], i, st, d;
+  var rad = (keep && keep.r > 0) ? keep.r : 0;
   for (i = 0; i < list.length; i++) {
     st = list[i];
     if (c.peaks && !st.peak) continue;
-    if (keep && !inBox(st, keep)) continue;
-    st.dist = fix ? dist(fix.lat, fix.lon, st.lat, st.lon) : NaN;
+    /* Distance first when the cut is radial — the test needs it anyway, so
+       computing it before the filter costs nothing and avoids two code paths
+       that could disagree about what "within R" means. */
+    d = fix ? dist(fix.lat, fix.lon, st.lat, st.lon) : NaN;
+    if (rad){ if (!(d <= rad)) continue; }
+    else if (keep && !inBox(st, keep)) continue;
+    st.dist = d;
     st.brg  = fix ? bearing(fix.lat, fix.lon, st.lat, st.lon) : NaN;
     st.rAvg  = rateAvg(st.avg);
     st.rGust = rateGust(st.gust);
@@ -959,7 +1007,7 @@ return {
   remember: remember,
 
   mppOsm: mppOsm, mppXct: mppXct, lonToPx: lonToPx, latToPx: latToPx,
-  projector: projector, bboxAround: bboxAround,
+  projector: projector, bboxAround: bboxAround, bboxRadius: bboxRadius,
 
   dist: dist, bearing: bearing,
 

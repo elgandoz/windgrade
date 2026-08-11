@@ -997,6 +997,42 @@ Also fixed: with no fix, `draw(null, [])` ran every tick — clearing an already
 clear canvas is still a full-surface `drawImage` copy. Guarded by a `"nofix"`
 sentinel in `drawKey`, which `resize()` still invalidates.
 
+## Phase 3n — the list had a "Map scale" and no map (2026-08-11)
+
+Owner's question: *"in the list app, what is the purpose of Map scale in the
+settings if we do not have any map?"* It had one purpose, and it was worse than
+a naming mistake.
+
+`scale` on `app.html` did exactly one thing: feed `zoomOf()` and a nominal
+448×978 widget to `bboxAround()`. So the fetch — and therefore the whole list —
+was **a portrait rectangle about 65 km wide and 94 km tall**, borrowed from a
+viewport that page does not have, while the list itself sorts purely by
+distance. A station 20 km east was dropped and one 20 km north kept, with
+nothing on the page able to explain the difference.
+
+**The list now has `range`, a radius in km, default 40** — an hour of glide at
+40 km/h, and close to what the old default reached. `WG.bboxRadius(fix, metres)`
+builds the circle's bounding square for the provider, which only takes a
+rectangle, and `prepare()`'s `keep` gained a second shape, `{r:metres}`, that
+trims the corners back to a real circle. Measured on the Swiss sample: 78
+stations come back inside the square, 66 survive the radius.
+
+| | overlay | list |
+|---|---|---|
+| what to fetch | `scale` + `pad`, a view rectangle | `range`, a circle |
+| what to show | the same rectangle, via `keep` | the same circle, via `keep` |
+
+`scale` and `pad` are now `only:"widget"`, so neither appears in the list's
+settings. `range` is `only:"app"` and is the list's single front-page row; the
+launcher shows all three, ordered overlay-then-list, and `range`'s help says
+which page it governs. Step 1's heading became *"choose what you'll see"*, since
+it was already covering more than a scale.
+
+`app.html`'s debug line prints `range 40 km  cap 120` in place of the ladder
+step and effective zoom, which were only ever meaningful for the overlay.
+
+Also removed: `VIEW_W` / `VIEW_H`, the fictional widget those numbers described.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

@@ -166,7 +166,6 @@ footer:empty{display:none}
 /* Stored settings, then the URL on top: a shared link means what it says. */
 var C = WG.initConfig(location.search, { store: true });
 var PROV = WG.providers.windsmobi;
-var VIEW_W = 448, VIEW_H = 978;      /* nominal widget, for the fetch bbox */
 var stations = [], lastFetch = 0, lastErr = "", fetching = false, meta1 = "";
 var capped = false;                   /* the API truncated at its own limit */
 var rows = {};                        /* id -> {el, cache} */
@@ -410,7 +409,10 @@ function syncDetail(ranked){
 /* ── render ───────────────────────────────────────────────────────── */
 function render(fix){
   var list = el("list"), i, st, r, seen = {}, id;
-  var ranked = WG.prepare(stations, fix, C, Date.now());
+  /* The same radius the fetch used, so the list shows a circle and not the
+     bounding square's corners — a station at 55 km appearing while another at
+     45 km does not is exactly the arbitrary bias this replaced. */
+  var ranked = WG.prepare(stations, fix, C, Date.now(), { r: C.range * 1000 });
 
   for (i = 0; i < ranked.length; i++){
     st = ranked[i]; seen[st.id] = 1;
@@ -466,7 +468,8 @@ function say(ranked){
   for (i = 0; i < n; i++) if (ranked[i].stale.cls === "stale") nStale++;
 
   if (!n){
-    setSay("No stations found nearby. Try a wider <b>Map scale</b> in Settings.");
+    setSay("No stations within " + C.range + " km. Try a larger " +
+           "<b>How far to look</b> in Settings.");
     return;
   }
   parts = "<b>" + n + (n === 1 ? " station</b> near you" : " stations</b> near you") +
@@ -479,7 +482,8 @@ function say(ranked){
   /* The provider truncates at its own limit with no documented ordering, so
      stations exist that we were never sent. Never silent. */
   if (capped) parts += " There are more stations around you than can be " +
-                       "downloaded at once — narrow the <b>Map scale</b>.";
+                       "downloaded at once — try a smaller <b>How far to " +
+                       "look</b>.";
   setSay(parts);
 }
 function setSay(html){
@@ -491,7 +495,11 @@ function setSay(html){
 function refresh(fix){
   if (fetching || !fix) return;
   fetching = true;
-  var bbox = WG.bboxAround(fix, WG.zoomOf(C, fix.lat), VIEW_W, VIEW_H, C.pad);
+  /* A CIRCLE, not a phone-shaped rectangle. This page has no map, so it had no
+     business borrowing the overlay's viewport geometry to decide how far to
+     look — see bboxRadius() in core.js. The square is the circle's bounding
+     box; prepare() trims the corners back to the real radius. */
+  var bbox = WG.bboxRadius(fix, C.range * 1000);
   paintAge();                                   /* show "checking…" at once */
   PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list, meta){
     fetching = false;
@@ -563,8 +571,7 @@ function paintDbg(fix, p){
   var t = fix
     ? ("src=" + fix.src + "  " + fix.lat.toFixed(5) + "," + fix.lon.toFixed(5) +
        (isFinite(fix.alt) ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
-       "scale " + WG.scaleLabel(WG.resolveStep(C, fix.lat), fix.lat) +
-       " = z" + WG.zoomOf(C, fix.lat).toFixed(1) + "  dpr " + (window.devicePixelRatio || 1) +
+       "range " + C.range + " km  cap " + C.max +
        (meta1 ? "\n" + meta1 : ""))
     : ("no fix — " + p.note);
   if (d.textContent !== t) d.textContent = t;

@@ -37,7 +37,19 @@ for (gi = 0; gi < WG.SPEC.length; gi++) {
   if (gs.ui === false || gs.hidden) continue;
   (gs.grp ? noGrp : front).push(gs.k);
 }
-eq("exactly two rows are shown before the accordion", front.join(","), "scale,alt");
+/* Three, and each is view-specific: the overlay shows scale and alt, the list
+   shows range. No page has more than two rows before its accordion. */
+eq("only these are shown before the accordion", front.join(","), "scale,alt,range");
+eq("the overlay's front page is two rows",
+   front.filter(function (k) {
+     var s = WG.SPEC.filter(function (x) { return x.k === k; })[0];
+     return s.only !== "app";
+   }).join(","), "scale,alt");
+eq("the list's front page is one row",
+   front.filter(function (k) {
+     var s = WG.SPEC.filter(function (x) { return x.k === k; })[0];
+     return s.only !== "widget";
+   }).join(","), "range");
 eq("every other UI row names a group", noGrp.indexOf(undefined), -1);
 eq("groups are few enough to scan", (function () {
   var seen = {}, n = 0, i2;
@@ -494,6 +506,55 @@ eq("and it is the one inside that survives",
    WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now, view)[0].id, "near");
 eq("no rectangle means no cull — the list page wants nearest regardless",
    WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now).length, 2);
+/* THE LIST HAS NO MAP, so it has no scale and no viewport — it wants a radius.
+   Before this it borrowed bboxAround with a nominal 448x978 widget, which made
+   its catchment a PORTRAIT RECTANGLE while the list sorted purely by distance:
+   a station 40 km east dropped, one 45 km north kept, and nothing on the page
+   to explain the difference. */
+head("prepare: a radius, for the page with no map");
+(function () {
+  var here = { lat:47.0, lon:8.0 };
+  function at(km, brgDeg) {                       /* a station km away, on a bearing */
+    var r = brgDeg * Math.PI / 180, m = km * 1000;
+    return { id:km + "@" + brgDeg, name:"s", ts:now,
+             lat: here.lat + (m * Math.cos(r)) / 111319.49,
+             lon: here.lon + (m * Math.sin(r)) / (111319.49 * Math.cos(here.lat * Math.PI / 180)),
+             alt:900, avg:8, gust:12, peak:false, provider:"p" };
+  }
+  var ring = [], b;
+  for (b = 0; b < 360; b += 30) ring.push(at(45, b));
+
+  /* The nominal viewport is 27 km tall and 12 km wide at z11, so 20 km is
+     inside it going north and outside going east — same distance, opposite
+     answers, and no reader of a distance-sorted list could tell why. */
+  var oldBox = WG.bboxAround(here, 11, 448, 978, 0);
+  eq("the old rectangle was anisotropic: 20 km N in, 20 km E out",
+     WG.inBox(at(20, 0), oldBox) === true &&
+     WG.inBox(at(20, 90), oldBox) === false, true);
+  eq("a radius answers both the same way",
+     WG.prepare([at(20, 0), at(20, 90)], here, cf, now, { r:25000 }).length, 2);
+
+  eq("a radius keeps every bearing at the same distance",
+     WG.prepare(ring, here, cf, now, { r:50000 }).length, ring.length);
+  eq("and drops every bearing beyond it",
+     WG.prepare(ring, here, cf, now, { r:40000 }).length, 0);
+  var edge = at(45, 210), edgeD = WG.dist(here.lat, here.lon, edge.lat, edge.lon);
+  eq("the boundary is inclusive", WG.prepare([edge], here, cf, now, { r:edgeD }).length, 1);
+  eq("and a metre inside it excludes",
+     WG.prepare([edge], here, cf, now, { r:edgeD - 1 }).length, 0);
+
+  /* bboxRadius is the circle's bounding SQUARE, so the corners overreach to
+     r x sqrt(2) — deliberately, since the provider takes a rectangle. The
+     radius in prepare is what trims them back. */
+  var bb = WG.bboxRadius(here, 45000);
+  eq("the box reaches the radius due north",
+     WG.dist(here.lat, here.lon, bb.n, here.lon), 45000, 60);
+  eq("and due east", WG.dist(here.lat, here.lon, here.lat, bb.e), 45000, 60);
+  eq("its corner overreaches, which the radius then trims",
+     WG.inBox(at(60, 45), bb) === true &&
+     WG.prepare([at(60, 45)], here, cf, now, { r:45000 }).length === 0, true);
+})();
+
 /* The case that matters: a station that is NEARER but off the side of the
    screen. Radial ranking hands it the only slot; the cull gives the slot to
    the one that can actually be drawn. */
