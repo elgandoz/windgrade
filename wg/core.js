@@ -121,6 +121,16 @@ var SPEC = [
   { k:"zbtn",  t:"int", d:0, min:0, max:1, only:"widget",
     lab:"Visible zoom buttons",
     help:"A dedicated +/- pair. Can be combined with the invisible halves." },
+  { k:"zpos",  t:"enum", only:"widget", d:"bottom-right",
+    opts:["bottom-right", "bottom-left", "top-right", "top-left",
+          "top-centre", "bottom-centre", "left-centre", "right-centre"],
+    lab:"Zoom button position",
+    help:"Bottom-left overlaps the scale bar and top-left the badge — pick a " +
+         "corner you are not already using." },
+  { k:"zrow",  t:"int", d:0, min:0, max:1, only:"widget",
+    lab:"Zoom buttons side by side",
+    help:"Lays the pair horizontally instead of stacked, so a second pair for " +
+         "XCTrack's own map can sit beside them." },
   { k:"ztap",  t:"int", d:0, min:0, max:1, only:"widget",
     lab:"Tap zones to change scale",
     help:"Advanced. Needs XCTrack's zoom buttons moved OUTSIDE the widget, and " +

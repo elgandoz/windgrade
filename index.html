@@ -143,8 +143,11 @@ a{color:var(--chart)}
       hours of readings as small arrows, oldest left. Tap anywhere to dismiss, or
       let it time out. <code>0</code> keeps it open until dismissed.</li>
     <li><b>Trend length</b> — how far back the popup reaches.</li>
-    <li><b>Visible zoom buttons</b> — a small <code>+</code>/<code>−</code> pair,
-      bottom right.</li>
+    <li><b>Visible zoom buttons</b> — a small <code>+</code>/<code>−</code> pair.
+      <b>Zoom button position</b> puts them in any corner or against any edge, and
+      <b>side by side</b> lays them horizontally instead of stacked — which leaves
+      room to park a second pair for XCTrack's own map zoom beside them. Avoid
+      bottom-left (the scale bar) and top-left (the badge).</li>
     <li><b>Tap zones to change scale</b> — the top and bottom halves of the widget
       become invisible zoom controls. Combines with the buttons. A tap on a marker
       always opens its popup first, so the two never fight.</li>
@@ -157,8 +160,10 @@ a{color:var(--chart)}
   </p>
   <p class="note">
     <b>Scale bar height</b> nudges our bar up or down so it sits just above
-    XCTrack's own. They are compared by eye, so the closer together the better —
-    the right value depends on your screen, so set it once and forget it.
+    XCTrack's own. Our end ticks point <b>down</b> and XCTrack's point up, so the
+    two close on each other like facing brackets — when the ends line up
+    vertically, the scales match, and you never have to read either number. The
+    right height depends on your screen: set it once and forget it.
   </p>
 
   <p class="warn">

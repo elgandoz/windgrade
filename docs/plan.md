@@ -535,9 +535,15 @@ over the widget area.
   the bar's *number* is drawn amber — permanent, unobtrusive, and sitting on the
   exact value that needs comparing. Reset lives on the badge, which never fades,
   as well as on the prompt while it is up.
-- **The zoom buttons never move.** An earlier version lifted them clear of the
-  full-width banner; with the banner gone they simply stay put, which is what a
-  control the pilot is aiming at should do.
+- **The zoom buttons never move**, and their placement is the pilot's: any corner
+  or edge centre via `zpos`, stacked or side by side via `zrow`. The widget shares
+  its rectangle with XCTrack's own controls and only the pilot knows what is
+  already there — the row layout exists so a second pair, driving XCTrack's map,
+  can sit beside ours.
+- **The prompt sits beside the bar, not above it**, with the arrow pointing back:
+  `← match scale`. It says *where* to look as well as what to do, and it is the
+  one place that neither stacks into a corner nor covers XCTrack's own bar. Its
+  left edge follows the bar's right end, which moves with the scale.
 
 ## Phase 4 — polish
 
