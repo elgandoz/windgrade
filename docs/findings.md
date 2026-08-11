@@ -121,6 +121,17 @@ no 8km at all, so asking for 8km lands on 10km (10/8 is a smaller factor than
 a device can print the requested scale, it is what the pilot gets** — 
 checked across both devices' full label lists.
 
+Then the same bug's other half: resolving on the device is no use if the pilot
+cannot *express* the scale. Built from the reference phone's ladder the list had
+no **6km** at all — which a Pixel 9a prints — so that pilot could not choose what
+their own screen was showing. The two failure modes are not symmetric: an option
+this phone cannot reach costs nothing, because nobody picks a number their screen
+never shows, but a scale that IS on their screen and missing from the list cannot
+be asked for at all. So the list is now the **union over the densities a phone
+plausibly has** (`WG.scaleOptions`), 38 entries, generated from the ladder rather
+than hand-written so it cannot drift from it. Tested: nothing either measured
+device prints is missing.
+
 `step` survives as an explicit override, hidden from the UI by a new `adv:true`
 marker. `ui:false` would have been wrong: it also strips the parameter from every
 URL the launcher builds.

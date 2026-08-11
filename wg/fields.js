@@ -46,18 +46,17 @@ function buildRow(sp, onInput) {
   if (isLadder) {
     /* Ground scales, not ladder steps — the value stored is METRES, so the
        choice survives a move to a phone with a different pixel density and the
-       overlay resolves it there. The list is generated from the ladder so it
-       only ever offers reachable scales, and a duplicate is skipped because two
-       neighbouring steps can round to the same nice number on a wide screen. */
+       overlay resolves it there.
+
+       The union across densities, not this device's ladder: built from one
+       device the list omitted 6km entirely, which a Pixel 9a does print, so
+       that pilot could not choose what their own screen was showing. */
     input = document.createElement("select");
-    var seen = {}, m;
-    for (o = WG.STEP_MAX; o >= WG.STEP_MIN; o--) {
-      m = WG.scaleMetres(o, null);
-      if (!m || seen[m]) continue;
-      seen[m] = 1;
+    var opts = WG.scaleOptions(null), n;
+    for (n = 0; n < opts.length; n++) {
       op = document.createElement("option");
-      op.value = m;
-      op.textContent = WG.fmtScale(m);
+      op.value = opts[n];
+      op.textContent = WG.fmtScale(opts[n]);
       input.appendChild(op);
     }
   } else if (isEnum) {
@@ -93,8 +92,12 @@ function buildRow(sp, onInput) {
   function load() {
     var v = WG.getConfig()[sp.k];
     if (isBool) input.checked = !!v; else input.value = v;
+    /* Approximate on purpose. The step this scale becomes depends on the
+       pilot's pixel density, which the launcher cannot know, so an exact-looking
+       "=" here would be the same false precision the scale list just stopped
+       claiming. */
     if (pair) pair.textContent =
-      "≙ z" + WG.zoomForStep(WG.stepForScale(v, null)).toFixed(1);
+      "≈ z" + WG.zoomForStep(WG.stepForScale(v, null)).toFixed(1);
   }
 
   input.addEventListener("change", function () {

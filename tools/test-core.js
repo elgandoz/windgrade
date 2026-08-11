@@ -172,6 +172,38 @@ eq("8km resolves to step 25 at dpr 3 and step 24 at dpr 2.625",
 })();
 WG.setDpr(3);
 
+head("the launcher's scale list covers every device");
+/* THE SECOND HALF OF THE SAME BUG. Resolving the step on the device is no use
+   if the pilot cannot express the scale in the first place: built from the
+   reference phone's ladder the list had no 6km at all, and a Pixel 9a prints
+   6km. Missing an option is a hard failure; an extra one nobody would pick is
+   not, so the list is the union over the densities a phone plausibly has. */
+(function () {
+  var opts = WG.scaleOptions(47.361), d, v, m, missing = [];
+  eq("6km is offered, which one device's ladder alone did not",
+     opts.indexOf(6000) >= 0, true);
+  eq("so is 8km, which the other one needs", opts.indexOf(8000) >= 0, true);
+  for (d = 0; d < 2; d++) {
+    WG.setDpr(d ? 2.625 : 3);
+    for (v = WG.STEP_MIN; v <= WG.STEP_MAX; v++) {
+      m = WG.scaleMetres(v, 47.361);
+      if (m && opts.indexOf(m) < 0) missing.push(m);
+    }
+  }
+  WG.setDpr(3);
+  eq("nothing either measured device can print is missing from the list",
+     missing.join(",") || "none", "none");
+  eq("descending, so the select reads coarse to fine like XCTrack's",
+     opts[0] > opts[opts.length - 1], true);
+  /* Every offered scale must be a scale SOME device really prints, or the list
+     has drifted from the ladder into invented numbers. */
+  eq("no duplicates", opts.length, (function () {
+    var u = {}, n = 0, i;
+    for (i = 0; i < opts.length; i++) if (!u[opts[i]]) { u[opts[i]] = 1; n++; }
+    return n;
+  })());
+})();
+
 head("pixel density");
 /* MEASURED 2026-08-11, tools/ruler.html, one emulator at two densities, reading
    XCTrack's own scale bar against a css-pixel ruler — so nothing here depends

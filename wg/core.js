@@ -132,9 +132,13 @@ function niceBelow(x) {
    null through, Math.cos(null) is 1, and the whole label table came out
    computed at the EQUATOR — one step off, which sent the owner to the wrong
    map scale. Reject anything that is not a real number. */
-function scaleMetres(step, lat) {
+function scaleMetresAtDpr(step, lat, dpr) {
   var la = (typeof lat === "number" && lat === lat) ? lat : 47;
-  return niceBelow(BAR_MAX_DP * mppXct(la, zoomForStep(step)));
+  var cal = CAL * (dpr > 0 ? DPR_REF / dpr : 1) * calAdj;
+  return niceBelow(BAR_MAX_DP * mppOsm(la, zoomForStep(step)) / cal);
+}
+function scaleMetres(step, lat) {
+  return scaleMetresAtDpr(step, lat, dprAdj > 0 ? DPR_REF / dprAdj : DPR_REF);
 }
 /* XCTrack switches to km only for whole thousands: it prints 1km and 2km but
    1200m and 2500m. Getting this wrong is cosmetic on our side but makes the
@@ -170,6 +174,33 @@ function stepForScale(metres, lat) {
     if (e < bestErr) { bestErr = e; best = v; }
   }
   return best;
+}
+
+/* ── what the launcher may offer ───────────────────────────────────────
+   Generated from ONE device's ladder, the list is missing scales that other
+   devices do print: the reference phone has no 6km step, so a Pixel 9a pilot
+   — whose screen shows 6km — could not choose it at all.
+
+   The two failure modes are not symmetric. An option that this pilot's phone
+   cannot reach costs nothing, because nobody picks a number their own screen
+   never shows; a scale that IS on their screen but missing from the list
+   cannot be expressed at all. So offer the union over the densities a phone
+   plausibly has, and let resolveStep sort out the rest on the device.
+
+   Union, not a hand-written list of nice numbers: this stays bounded by what
+   the ladder can actually produce, so it cannot drift from the ladder. */
+var DPR_SPAN = [1.5, 1.75, 2, 2.25, 2.5, 2.625, 2.75, 3, 3.25, 3.5, 4];
+
+function scaleOptions(lat) {
+  var seen = {}, out = [], i, v, m;
+  for (i = 0; i < DPR_SPAN.length; i++) {
+    for (v = STEP_MIN; v <= STEP_MAX; v++) {
+      m = scaleMetresAtDpr(v, lat, DPR_SPAN[i]);
+      if (m && !seen[m]) { seen[m] = 1; out.push(m); }
+    }
+  }
+  out.sort(function (a, b) { return b - a; });
+  return out;
 }
 
 /* `step` is an escape hatch: set explicitly it wins, otherwise the scale
@@ -770,6 +801,7 @@ return {
   BAR_MAX_DP: BAR_MAX_DP, niceBelow: niceBelow,
   scaleMetres: scaleMetres, scaleLabel: scaleLabel, fmtScale: fmtScale,
   stepForScale: stepForScale, resolveStep: resolveStep,
+  scaleOptions: scaleOptions, scaleMetresAtDpr: scaleMetresAtDpr,
   STEP_MIN: STEP_MIN, STEP_MAX: STEP_MAX,
   XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
