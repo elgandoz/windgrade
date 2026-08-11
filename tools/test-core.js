@@ -100,6 +100,16 @@ eq("zoom=11 maps to 8km", WG.XCT_LADDER[WG.cfg("?zoom=11").step], "8km");
 eq("an explicit step wins over a legacy zoom",
    WG.cfg("?zoom=10&step=27").step, 27);
 
+head("scale labels survive a missing latitude");
+/* A null latitude used to reach Math.cos and become the equator, shifting every
+   label a whole step and sending the pilot to the wrong map scale. */
+eq("null latitude falls back, not to the equator", WG.scaleLabel(24, null, 448), "10km");
+eq("undefined too", WG.scaleLabel(24, undefined, 448), "10km");
+eq("NaN too", WG.scaleLabel(24, NaN, 448), "10km");
+eq("a real latitude is still used", WG.scaleLabel(24, 47, 448), "10km");
+eq("and it genuinely varies with latitude",
+   WG.scaleLabel(24, 0, 448) !== WG.scaleLabel(24, 60, 448), true);
+
 head("per-device scale correction");
 eq("defaults to no change", WG.getCal(), WG.CAL);
 WG.setCal(3 / 2.625);

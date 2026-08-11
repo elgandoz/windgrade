@@ -101,9 +101,15 @@ function niceBelow(x) {
   return best;
 }
 
-/* metres the bar will show, and the text XCTrack prints for it */
+/* metres the bar will show, and the text XCTrack prints for it.
+
+   The latitude guard is not decoration: `lat === undefined ? 47 : lat` let a
+   null through, Math.cos(null) is 1, and the whole label table came out
+   computed at the EQUATOR — one step off, which sent the owner to the wrong
+   map scale. Reject anything that is not a real number. */
 function scaleMetres(step, lat, widthPx) {
-  return niceBelow(barMaxPx(widthPx) * mppXct(lat === undefined ? 47 : lat, zoomForStep(step)));
+  var la = (typeof lat === "number" && lat === lat) ? lat : 47;
+  return niceBelow(barMaxPx(widthPx) * mppXct(la, zoomForStep(step)));
 }
 /* XCTrack switches to km only for whole thousands: it prints 1km and 2km but
    1200m and 2500m. Getting this wrong is cosmetic on our side but makes the

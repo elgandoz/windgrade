@@ -4,6 +4,70 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — configurator was labelling at the equator; pair by BARS not labels
+
+**A real defect, and it sent the owner to the wrong map scale.** `wg/fields.js`
+called `scaleLabel(step, null, wpx)`. The guard was `lat === undefined ? 47 : lat`
+— and `null` is not `undefined`, so `null` reached `Math.cos`, which returns 1.
+Every label in the configurator was computed at the **equator**, one whole step
+off:
+
+| step | offered (bug) | correct at 47°N |
+|---|---|---|
+| 23 | 20km | 15km |
+| **24** | **15km** | **10km** |
+| 25 | 10km | 8km |
+
+The owner asked for `15km`, got `step=24`, set their map to 15 km, and the widget
+drew step 24 — which it correctly calls 10 km. Two different scales. Fixed, with
+tests for `null`, `undefined` and `NaN`.
+
+#### The design lesson is bigger than the bug
+
+The label depends on **widget width and latitude**, both of which vary by device,
+by layout and by where the pilot is flying. So a label is a poor thing to pair on,
+and the launcher no longer asks pilots to:
+
+> Set the map roughly, then **fine-tune until the two scale bars are the same
+> length**. Match the bars, not the labels.
+
+The bar lengths are the invariant — that is the whole reason the bar exists.
+
+#### What the same screenshot says about density
+
+Both bars are visible with known labels, so it can be read as a measurement:
+
+```
+ours    10 km over 127.4 css px  ->   78.5 m/px   (model predicts 77.73)
+theirs  15 km over 112.2 css px  ->  133.7 m/px
+```
+
+Against our ladder at that latitude:
+
+| XCTrack step | model A | model B (× dpr ratio) |
+|---|---|---|
+| 22 | 158.6 — 19% off | **138.7 — 4% off** |
+| 23 | 112.1 — 16% off | 98.1 — 27% off |
+
+Step 22 under model B is the only close fit. **Suggestive that the owner is right
+about density** — but which step the map actually landed on is unknown, because it
+was set from a buggy label. Not proof, and not acted on.
+
+#### The controlled experiment is already available
+
+The owner has a **Pixel 8 Pro with the density changed**. That is far better than
+comparing two different devices: same screen, same XCTrack, one variable.
+
+1. Pick a map scale and match the two bars with `cal`. Record `cal` and the DPR.
+2. Change the device density. Repeat without touching anything else.
+
+If `cal` moves by the DPR ratio, XCTrack works in device pixels and the correction
+is `3 ÷ devicePixelRatio` — computable, with no per-device setting ever. If `cal`
+does not move, resolution is density-independent and the residual is something
+else.
+
+---
+
 ### 2026-08-11 — the label list belongs to the SCREEN, not to the ladder
 
 **Verdict: the √2 ladder was right all along. A correction made earlier today was
