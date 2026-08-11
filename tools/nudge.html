@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Windgrade — nudged markers over terrain</title>
+<link rel="icon" type="image/svg+xml" href="../icon.svg">
+<style>
+body{margin:0;background:#0A1116;color:#E8F0F5;
+  font:400 13px/1.5 system-ui,-apple-system,Roboto,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:18px 14px 40px}
+h1{margin:0 0 6px;font-size:1.2em}
+p{color:#8FA3B0;margin:0 0 14px}
+p b{color:#E8F0F5}
+canvas{display:block;border:1px solid #2A3B48;border-radius:3px}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.col h2{margin:0 0 6px;font:600 .82em/1.3 system-ui;letter-spacing:.08em;
+  text-transform:uppercase;color:#7B909F}
+label{display:inline-flex;align-items:center;gap:6px;margin:0 14px 12px 0;color:#8FA3B0}
+input[type=range]{width:150px}
+a{color:#54A6DC}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Nudged markers over terrain</h1>
+<p>
+  The overlay moves a marker <b>down</b> when it would overlap one already
+  placed, rather than dropping the reading — see <code>draw()</code> in
+  <code>widget.html</code>. This page exists because
+  <b>a canvas drawn asynchronously does not survive a headless screenshot</b>,
+  so the widget's own markers cannot be checked that way. Here the same
+  <code>WG.marker</code> calls run synchronously on load, over bands standing in
+  for snow, rock, forest, a river and an airspace edge.
+</p>
+<p>
+  What to judge: <b>the number and the altitude must stay fully legible on a
+  moved marker</b> — they are drawn at full strength on purpose, because the
+  number is the fallback for a colour scale many pilots cannot separate. Only
+  the arrow fades. Fading the whole marker to 0.6 was measured as marginal
+  against dark forest.
+</p>
+<p>
+  Positions are the real Zermatt cluster at <code>scale=3000</code>: ZFC:
+  Landing 2600 m over Zermatt 1648 m (387 m apart), Gornergratsee over
+  Gornergrat (434 m), Stafelalp over ZFC: Schwarzsee (1041 m).
+  <a href="../tools.html">← Tools</a>
+</p>
+
+<label>marker size <input id="sz" type="range" min="0" max="100" value="50"></label>
+<label>arrow fade <input id="fa" type="range" min="20" max="100" value="55"></label>
+<label><input id="al" type="checkbox" checked> altitude line</label>
+
+<div class="row">
+  <div class="col"><h2>nudge on</h2><canvas id="on" width="411" height="560"></canvas></div>
+  <div class="col"><h2>nudge off — what is lost</h2><canvas id="off" width="411" height="560"></canvas></div>
+</div>
+</div>
+
+<script src="../wg/core.js"></script>
+<script src="../wg/marker.js"></script>
+<script>
+"use strict";
+/* Measured offsets of the real cluster, in css px at 24.7 m/px. The pairs are
+   the ones the overlay actually collides on — findings.md 2026-08-11. */
+var CLUSTER = [
+  { x:216, y:171, avg:14, gust:22, dir:190, alt:2600, name:"ZFC: Landing" },
+  { x:216, y:184, avg:3,  gust:7,  dir:20,  alt:1648, name:"Zermatt" },
+  { x:352, y:503, avg:18, gust:26, dir:100, alt:2500, name:"ZFC: Blauherd" },
+  { x:113, y:313, avg:26, gust:41, dir:225, alt:2408, name:"Stafelalp" },
+  { x:86,  y:345, avg:12, gust:19, dir:230, alt:2576, name:"ZFC: Schwarzsee" },
+  { x:321, y:377, avg:21, gust:33, dir:210, alt:2953, name:"Gornergratsee" },
+  { x:328, y:393, avg:9,  gust:14, dir:205, alt:3139, name:"Gornergrat" }
+];
+
+function rate(s){
+  s.rAvg = WG.rateAvg(s.avg); s.rGust = WG.rateGust(s.gust); return s;
+}
+function terrain(g, W, H){
+  var bands = ["#F2F5F7","#C9CFC6","#9AA894","#6E7F63","#4A5A46","#8E8579"], i;
+  for (i = 0; i < bands.length; i++){ g.fillStyle = bands[i]; g.fillRect(0, i*90, W, 90); }
+  g.strokeStyle = "#7FB7E8"; g.lineWidth = 6;
+  g.beginPath(); g.moveTo(0,300); g.bezierCurveTo(140,240,260,380,W,320); g.stroke();
+  g.strokeStyle = "#C0392B"; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(0,150); g.lineTo(W,205); g.stroke();
+}
+
+function render(cv, nudge){
+  var g = cv.getContext("2d"), W = cv.width, H = cv.height;
+  var size = +document.getElementById("sz").value;
+  var alpha = +document.getElementById("fa").value / 100;
+  var wantAlt = document.getElementById("al").checked;
+  var scale = 0.55 + (size/100)*0.75, fs = Math.round(9 + (size/100)*7);
+  var box = WG.REACH * scale;
+  /* The one piece of arithmetic duplicated from widget.html's draw(). Kept in
+     step by hand; the DRAWING is shared, which is the part that matters. */
+  var vgap = box*1.9 + ((wantAlt || nudge) ? WG.marker.altSize(fs) + 2 : 0);
+
+  g.setTransform(1,0,0,1,0,0);
+  g.clearRect(0,0,W,H);
+  terrain(g, W, H);
+
+  var placed = [], lay = [], i, s, k, hit, ny, n;
+  for (i = 0; i < CLUSTER.length; i++){
+    s = rate(CLUSTER[i]);
+    hit = false;
+    for (k = 0; k < placed.length; k++)
+      if (Math.abs(s.x - placed[k][0]) < box*1.5 &&
+          Math.abs(s.y - placed[k][1]) < vgap){ hit = true; break; }
+    ny = s.y;
+    if (hit){
+      if (!nudge) continue;
+      for (n = 1; n <= 4; n++){
+        ny = s.y + vgap*n;
+        if (ny > H - box*0.5){ ny = -1; break; }
+        var free = true;
+        for (k = 0; k < placed.length; k++)
+          if (Math.abs(s.x - placed[k][0]) < box*1.5 &&
+              Math.abs(ny - placed[k][1]) < vgap){ free = false; break; }
+        if (free) break;
+        ny = -1;
+      }
+      if (ny < 0) continue;
+    }
+    placed.push([s.x, ny]);
+    lay.push({ st:s, x:s.x, y:s.y, ny:ny });
+  }
+
+  for (i = 0; i < lay.length; i++)
+    if (lay[i].ny !== lay[i].y) WG.marker.leader(g, lay[i].x, lay[i].y, lay[i].ny, box);
+
+  for (i = 0; i < lay.length; i++){
+    var moved = lay[i].ny !== lay[i].y;
+    if (moved) g.globalAlpha = alpha;
+    WG.marker.canvas(g, lay[i].st, lay[i].x, lay[i].ny, scale);
+    g.globalAlpha = 1;
+    var ly = WG.marker.label(g, lay[i].st, lay[i].x, lay[i].ny, scale, fs);
+    if (wantAlt || moved) WG.marker.alt(g, lay[i].st, lay[i].x, ly, fs);
+  }
+
+  var lost = CLUSTER.length - lay.length;
+  cv.title = lay.length + " of " + CLUSTER.length + " drawn" +
+             (lost ? ", " + lost + " lost" : "");
+}
+
+function all(){
+  render(document.getElementById("on"), true);
+  render(document.getElementById("off"), false);
+}
+["sz","fa","al"].forEach(function(id){
+  document.getElementById(id).addEventListener("input", all);
+});
+all();
+</script>
+</body>
+</html>

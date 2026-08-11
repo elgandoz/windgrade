@@ -160,6 +160,40 @@ function svg(st, px, opts) {
   return s + "</g></svg>";
 }
 
+/* ── leader line, for a marker that had to be moved ───────────────────
+   The overlay nudges a marker DOWN when it would overlap one already placed,
+   rather than dropping the reading — see draw() in widget.html. This is what
+   keeps that honest: the line says the marker is not where it is drawn, and the
+   dot says where it really is.
+
+   Drawn from the true point down to just above the moved marker, cased in white
+   like everything else on that canvas, because it has to survive snow, rock and
+   an airspace edge. It belongs here rather than in the page so tools/nudge.html
+   judges the same drawing the widget makes.
+
+   The CALLER must draw every leader before any marker: a line that has to cross
+   a speed number must be hidden behind it, not scribbled over it. Painting each
+   marker as it was placed put the next line straight through the previous
+   marker's number — caught by screenshotting it, not by reading it. */
+function leader(g, x, y, ny, box) {
+  g.lineCap = "round";
+  g.beginPath();
+  g.moveTo(x, y);
+  g.lineTo(x, ny - box * 0.55);
+  g.strokeStyle = "#FFFFFF"; g.lineWidth = 3.4; g.stroke();
+  g.strokeStyle = "#3A4A56"; g.lineWidth = 1.4; g.stroke();
+  g.beginPath(); g.arc(x, y, 3.1, 0, 6.2832);
+  g.fillStyle = "#FFFFFF"; g.fill();
+  g.beginPath(); g.arc(x, y, 1.9, 0, 6.2832);
+  g.fillStyle = "#3A4A56"; g.fill();
+}
+
+/* How pale a moved marker's ARROW is drawn. The number and the altitude stay at
+   full strength: the number is the fallback for a colour scale a lot of pilots
+   cannot separate, so it never pays for the annotation. 0.6 applied to the whole
+   marker was measured as marginal against dark forest. */
+var NUDGE_ALPHA = 0.55;
+
 /* ── the trend strip ──────────────────────────────────────────────────
    Recent history as a row of small markers, oldest left. Purely descriptive —
    the same measured values, over time — so it breaks no rule, and it answers
@@ -240,6 +274,7 @@ WG.marker = {
   label: labelCanvas, labelText: labelText, fmt: fmt,
   alt: altCanvas, altText: altText, altSize: altSize,
   svg: svg, trendHtml: trendHtml, trendScroll: trendScroll,
+  leader: leader, NUDGE_ALPHA: NUDGE_ALPHA,
   hhmm: hhmm, esc: esc
 };
 

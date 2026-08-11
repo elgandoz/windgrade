@@ -25,7 +25,7 @@
    the background revalidation picks those up on its own.
    ═══════════════════════════════════════════════════════════════════ */
 
-var CACHE = "windgrade-v3";
+var CACHE = "windgrade-v4";
 
 var ASSETS = [
   "./",

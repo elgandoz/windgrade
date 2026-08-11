@@ -248,18 +248,35 @@ which knows about pixels. And `bboxAround`'s `mul` defaults to `getCal()` — th
 same resolution the projector draws with — never the raw `CAL`. See
 `docs/findings.md` 2026-08-11.
 
-**A station missing from the overlay but present in the list is usually
-DECLUTTERING, not the fetch.** `draw()` evicts a whole marker that would overlap
-one already placed, nearest kept, with a 29 x 49 px exclusion zone — smaller
-than the marker's own footprint. In Zermatt at `scale=3000` that removes
-Zermatt, Gornergrat, Schwarzsee and Platthorn, whose partners are 390 m to
-1450 m away: 16 to 59 px at that resolution. **Zooming in does not always fix
-it** — both axes must clear and the vertical requirement is the larger, so in a
-north-south valley the overlay declutters hardest along the valley. The badge
-therefore reads **"9 of 12 stations"** whenever anything was dropped; a bare
-count means nothing was hidden. Do not remove that, and do not "fix" the
-eviction by nudging markers — an arrow that is not on its own terrain defeats
-the whole tool. Full numbers in `docs/findings.md` 2026-08-11.
+**A station missing from the overlay but present in the list is DECLUTTERING,
+not the fetch.** Two stations closer together than a marker is wide cannot both
+be drawn in place, and in Zermatt at `scale=3000` four pairs are 390 m to 1450 m
+apart — 16 to 59 px. **Zooming in does not always separate them**: both axes must
+clear and the vertical requirement is the larger, so in a north-south valley the
+overlay declutters hardest along the valley. Full numbers in `docs/findings.md`
+2026-08-11.
+
+**`nudge=1` (default) moves the loser down instead of dropping it**, faded, with
+a leader line back to its true position. That is allowed to coexist with "an
+arrow sits on its own terrain" only because it is ANNOTATED: the fade says it has
+been moved and the line says where from. Never displace a marker silently.
+Three rules that go with it, each of which cost a screenshot to find:
+
+- `draw()` is three passes — lay out, then every leader line, then every marker.
+  Painting as you place puts the next leader line straight through the previous
+  marker's speed number.
+- **Only the arrow fades** (`WG.marker.NUDGE_ALPHA`). The number and the altitude
+  stay at full strength; the number is the fallback for a colour scale many
+  pilots cannot separate, so it never pays for the annotation.
+- A nudged marker always prints its altitude, whatever `alt` says — stacked
+  markers are the one case where the pilot cannot tell which reading is which,
+  and 1648 m vs 2600 m is the whole point in a valley wind.
+
+The badge reads `12 stations ↓4` when markers were moved and `9 of 12 stations`
+when any were dropped; a bare count means nothing was hidden. Keep both.
+`tools/nudge.html` is how the fade gets judged — **a canvas drawn asynchronously
+does not survive a headless screenshot**, so the widget's own markers cannot be
+checked that way and that page draws the same calls synchronously.
 
 **The two pages fetch different SHAPES, and that is deliberate.** The overlay
 has a viewport, so it uses `scale` + `pad` and a view rectangle. **The list has
@@ -290,8 +307,8 @@ Engine: `wg/core.js` (no DOM), `wg/marker.js` (both renderers), `wg/windsmobi.js
 (provider), `wg/fields.js` (SPEC-driven controls), `wg/qr.js` (launcher only).
 Tools: `tools/ruler.html` (measures XCTrack's resolution *without* our
 calibration — the instrument that settled pixel density, keep it),
-`tools/registration.html`, `tools/arrow.html`, `tools/arrow.svg`,
-`tools/test-core.js`, `probe.html`. **They are linked from `tools.html`, not
+`tools/registration.html`, `tools/arrow.html`, `tools/nudge.html`,
+`tools/arrow.svg`, `tools/test-core.js`, `probe.html`. **They are linked from `tools.html`, not
 from the launcher** — six diagnostic pages were six things a pilot had to
 scroll past. Add a new one there and to `sw.js`.
 

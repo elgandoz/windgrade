@@ -301,6 +301,16 @@ var SPEC = [
   { k:"peaks", t:"int", d:0, min:0, max:1, grp:"Which stations",
     lab:"Summits only",
     help:"Hides everything the network does not mark as being on a summit." },
+  /* Zermatt is the case: ZFC: Landing at 2600 m and Zermatt at 1648 m are 387 m
+     apart on the ground, so the valley floor reading was being discarded for one
+     a kilometre above it. Under strong valley winds those are not near
+     duplicates, they are the question. Off restores the old drop-it behaviour
+     for comparison. See draw() in widget.html and findings 2026-08-11. */
+  { k:"nudge", t:"int", d:1, min:0, max:1, only:"widget", grp:"Which stations",
+    lab:"Move overlapping markers",
+    help:"Two stations too close together to draw side by side: the second is " +
+         "moved down, faded, with a line back to where it really is. Off hides " +
+         "it instead." },
   /* Applied AFTER the view cull in prepare(), so on a map it caps what could
      be drawn rather than what happens to fall inside a radius. It was 40,
      which cost half the drawable markers at wide scales — findings 2026-08-11. */

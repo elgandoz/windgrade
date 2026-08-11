@@ -1033,6 +1033,60 @@ step and effective zoom, which were only ever meaningful for the overlay.
 
 Also removed: `VIEW_W` / `VIEW_H`, the fictional widget those numbers described.
 
+## Phase 3o — nudge instead of drop (2026-08-11)
+
+Owner, after the Zermatt diagnosis: *"if a marker will be nudged, can we still
+paint it below slightly faded? just as an experiment. the reason why in Zermatt
+put all those is because some reading can be important given strong valley
+winds. the altitude would also be relevant."*
+
+That reframes the problem. ZFC: Landing at 2600 m and Zermatt at 1648 m are
+387 m apart on the ground — 16 px at `scale=3000` — so the old rule discarded
+the valley floor reading in favour of one nearly a kilometre above it. Under
+strong valley winds those are not near-duplicates, they are the question. Same
+for Gornergrat over Gornergratsee and ZFC: Schwarzsee over Stafelalp.
+
+**`nudge=1`, on by default.** A marker that would overlap is moved straight
+down in `vgap` steps until it clears, up to four tries, and drawn with a leader
+line back to its true position ending in a dot.
+
+**Why this does not break "an arrow sits on its own terrain":** a nudged marker
+is not claiming to be where it is drawn. The fade says it has been moved, the
+line says where from. A silently displaced marker would be a lie; an annotated
+one is a fact plus a label. Straight down always, so the direction is learnable.
+
+**Nudged markers always print their altitude**, whatever `alt` says — two
+markers stacked on each other are the one case where the pilot cannot tell which
+reading is which, and altitude is what separates a valley floor from a ridge
+950 m up. `vgap` reserves the line's height whenever nudging is on.
+
+The badge gained `↓N`: `12 stations ↓4` at the Zermatt URL, against `9 of 12
+stations` with `nudge=0`.
+
+#### Two things the first version got wrong, both caught by screenshotting
+
+- **The leader line ran straight through the previous marker's speed number.**
+  Painting each marker as it was placed meant the next line went on top of it.
+  `draw()` is now three passes — lay out, then all leader lines, then all
+  markers — so a line that must cross a label is hidden behind it.
+- **Fading the whole marker to 0.6 faded the NUMBER**, which is the fallback for
+  a colour scale many pilots cannot separate, and it was marginal against dark
+  forest. Only the arrow fades now, at `WG.marker.NUDGE_ALPHA` = 0.55; number
+  and altitude stay at full strength. The pale glyph is the signal and it costs
+  nothing that has to be read.
+
+#### New instrument: `tools/nudge.html`
+
+`leader()` moved into `wg/marker.js` so the tool draws exactly what the widget
+draws. **A canvas drawn asynchronously does not survive a headless screenshot**
+— that is recorded in AGENTS.md and it means the widget's own markers cannot be
+checked that way. This page runs the same `WG.marker` calls synchronously over
+bands standing in for snow, rock, forest, a river and an airspace edge, with the
+real Zermatt offsets, nudge-on beside nudge-off, and sliders for marker size and
+fade. 7 of 7 drawn against 4 of 7.
+
+`sw.js` `CACHE` → `v4`.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

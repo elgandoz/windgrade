@@ -202,6 +202,9 @@ var stations = [], lastFetch = 0, fetchErr = "", fetching = false;
    and how many survived the view cull — the three numbers that say whether a
    missing marker was never fetched, was capped away, or lost a collision. */
 var fetchCapped = false, nRanked = 0;
+/* How many markers had to be moved to fit. Reported, because a displaced
+   marker is a fact with an asterisk and the pilot should know how many. */
+var nNudged = 0;
 var drawKey = "", lastShown = 0;
 
 /* ── sizing. Cap the backing store at DPR 2: the probe measured DPR 3, and
@@ -222,14 +225,53 @@ window.addEventListener("resize", resize);
    two renderings. Extracted from this file because it was untestable here. */
 
 /* ── draw ─────────────────────────────────────────────────────────────
-   Declutter by collision, nearest first, evicting WHOLE markers. A number
-   without its arrow has lost its direction; an arrow without its number has
-   lost the reading. Either half alone is worse than omitting the station —
-   see the SeeYou decluttering bug in handover.md. ──────────────────── */
+   Declutter by collision, nearest first. A whole marker at a time: a number
+   without its arrow has lost its direction, an arrow without its number has
+   lost the reading, and either half alone is worse than omitting the station —
+   see the SeeYou decluttering bug in handover.md.
+
+   NUDGE (`nudge=1`, on): a loser is moved straight DOWN until it clears,
+   drawn at 60% with a leader line back to where it really is.
+
+   The case that forced it, from Zermatt: ZFC: Landing at 2600 m and Zermatt at
+   1648 m are 387 m apart on the ground — 16 px at scale 3000 — so the valley
+   floor station was being discarded in favour of one nearly a kilometre above
+   it. With strong valley winds those two readings are not near-duplicates,
+   they are the whole question, and the same is true of Gornergrat over
+   Gornergratsee and Schwarzsee over Stafelalp. Dropping one was throwing away
+   the more interesting half of a pair.
+
+   Why this does not break "an arrow sits on its own terrain": a nudged marker
+   is not claiming to be where it is drawn. The fade says it has been moved and
+   the leader line says where from, ending in a dot on the true point. A
+   silently displaced marker would be a lie; an annotated one is a fact plus a
+   label. Straight down, always, so the displacement direction is learnable and
+   the leader line never crosses the arrow it belongs to.
+
+   Nudged markers ALWAYS print their altitude, whatever `alt` says. Two markers
+   stacked on top of each other are the one case where the pilot cannot tell
+   which reading is which, and altitude is what separates them — it is the
+   difference between a valley floor and a ridge 950 m up. `vgap` therefore
+   reserves the altitude line's height whenever nudging is on, or the line would
+   land on the arrow below.
+
+   TWO THINGS THE FIRST VERSION GOT WRONG, both caught by screenshotting it:
+
+     * Drawing each marker as it was placed put the next leader line straight
+       THROUGH the previous marker's speed number. So layout and painting are
+       now separate passes, and every leader line goes down before any marker
+       goes on top — a line that has to cross a label is hidden behind it
+       instead of scribbling over it.
+     * Fading the whole marker to 0.6 faded the NUMBER, which is the fallback
+       for a colour scale a lot of pilots cannot separate, and it was marginal
+       against dark forest. Only the arrow fades now; the number and the
+       altitude stay at full strength. The pale glyph is the signal, and it
+       costs nothing that has to be read. ─────────────────────────────── */
 function draw(fix, ranked){
   bctx.clearRect(0, 0, W, H);
   hits = [];
   var shown = 0;
+  nNudged = 0;                       /* or a no-fix tick keeps the last count */
   if (fix){
     var scale = 0.55 + (C.size / 100) * 0.75;      /* 0.55 .. 1.30 */
     var fs = Math.round(9 + (C.size / 100) * 7);   /* 9 .. 16 px */
@@ -238,8 +280,10 @@ function draw(fix, ranked){
     /* The altitude line grows each marker downwards, so the vertical spacing
        has to grow with it — by exactly the line's height, taken from the
        renderer rather than guessed, or one marker's altitude lands on the
-       arrow of the station below it. */
-    var vgap = box * 1.9 + (C.alt ? WG.marker.altSize(fs) + 2 : 0);
+       arrow of the station below it. Nudged markers print it unconditionally,
+       so nudging reserves the room even when `alt` is off. */
+    var altH = WG.marker.altSize(fs) + 2;
+    var vgap = box * 1.9 + ((C.alt || C.nudge) ? altH : 0);
 
     /* Rectangles a marker may not cover. The scale bar is the check that the
        pairing is right, and the badge is how a mis-pairing announces itself;
@@ -264,6 +308,30 @@ function draw(fix, ranked){
       return false;
     }
 
+    function clear(px, py){
+      for (var q = 0; q < placed.length; q++){
+        if (Math.abs(px - placed[q][0]) < box * 1.5 &&
+            Math.abs(py - placed[q][1]) < vgap) return false;
+      }
+      return !blocked(px, py);
+    }
+
+    /* Straight down in vgap steps. Capped: past a few marker heights the leader
+       line is longer than the eye will follow and the reading would be better
+       omitted than filed under the wrong ridge. */
+    var NUDGE_TRIES = 4;
+    function nudgeDown(px, py){
+      var n, ny;
+      for (n = 1; n <= NUDGE_TRIES; n++){
+        ny = py + vgap * n;
+        if (ny > H - box * 0.5) return -1;         /* off the bottom */
+        if (clear(px, ny)) return ny;
+      }
+      return -1;
+    }
+
+    /* ── pass 1: lay out. Nothing is painted here. ── */
+    var lay = [], ny, ly, nMoved = 0;
     for (i = 0; i < ranked.length; i++){
       st = ranked[i];
       x = P.x(st.lon); y = P.y(st.lat);
@@ -276,13 +344,40 @@ function draw(fix, ranked){
         if (Math.abs(x - placed[k][0]) < box * 1.5 &&
             Math.abs(y - placed[k][1]) < vgap){ hit = true; break; }
       }
-      if (hit) continue;
-      placed.push([x, y]);
-      hits.push({ st: st, x: x, y: y, r: box });
-      WG.marker.canvas(bctx, st, x, y, scale);
-      var ly = WG.marker.label(bctx, st, x, y, scale, fs);
-      if (C.alt) WG.marker.alt(bctx, st, x, ly, fs);
+
+      ny = y;
+      if (hit){
+        if (!C.nudge) continue;
+        ny = nudgeDown(x, y);
+        if (ny < 0) continue;                      /* nowhere to put it */
+        nMoved++;
+      }
+
+      placed.push([x, ny]);
+      lay.push({ st: st, x: x, y: y, ny: ny });
+      /* The tap target follows the DRAWN marker, not the true position — the
+         pilot taps what they can see. */
+      hits.push({ st: st, x: x, y: ny, r: box });
     }
+
+    /* ── pass 2: every leader line, underneath everything ── */
+    for (i = 0; i < lay.length; i++)
+      if (lay[i].ny !== lay[i].y)
+        WG.marker.leader(bctx, lay[i].x, lay[i].y, lay[i].ny, box);
+
+    /* ── pass 3: the markers ── */
+    for (i = 0; i < lay.length; i++){
+      st = lay[i].st; x = lay[i].x; ny = lay[i].ny;
+      var moved = (ny !== lay[i].y);
+      /* Only the ARROW fades. The number is the fallback for a colour scale a
+         lot of pilots cannot separate, so it never pays for the annotation. */
+      if (moved) bctx.globalAlpha = WG.marker.NUDGE_ALPHA;
+      WG.marker.canvas(bctx, st, x, ny, scale);
+      bctx.globalAlpha = 1;
+      ly = WG.marker.label(bctx, st, x, ny, scale, fs);
+      if (C.alt || moved) WG.marker.alt(bctx, st, x, ly, fs);
+    }
+    nNudged = nMoved;
     shown = placed.length;
     if (C.bar) { barLat = fix.lat; drawScaleBar(bctx, P.res); }
   }
@@ -390,6 +485,9 @@ function paintBadge(fix, shown, nStale){
        "the data is broken". */
     s = shown + (nRanked > shown ? " of " + nRanked : "") +
         (nRanked === 1 ? " station" : " stations");
+    /* A moved marker is a fact with an asterisk, so the count says how many
+       carry one. The arrow points at the leader lines. */
+    if (nNudged) s += " ↓" + nNudged;
     /* All-stale replaces the count of stale ones rather than adding to it:
        "12 stations (12 stale)" states the same fact twice and buries it. */
     if (shown && nStale === shown){ s += "  ALL STALE"; bad = true; }
