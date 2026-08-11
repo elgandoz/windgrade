@@ -517,17 +517,27 @@ over the widget area.
 
 ### Placement, after the first device run
 
-- **The two scale bars are compared by eye**, so they are now aligned: same left
-  inset (15 px, matching XCTrack's), label centred over the bar at XCTrack's own
-  size, and `barY` to tune the vertical gap. That last one is a parameter rather
-  than a constant because XCTrack's bar height is device-specific and guessing it
-  wrong is the difference between "easy to compare" and "useless".
-- **The off-scale warning moved from the top to the bottom**, beside the scale bar
-  it is about and the zoom buttons that caused it. It was previously at the top,
-  far from both.
-- **The zoom buttons lift clear of the warning** when it appears. The warning
-  shows *because* the pilot zoomed, so burying the control they would reach for
-  next was exactly backwards.
+- **The two bars close on each other like facing brackets.** Ours draws its end
+  ticks pointing **down**, XCTrack's point up, so the four tick ends line up in a
+  single vertical glance. That turns the check into a shape-match rather than a
+  length estimate, and it works without reading either number. Same left inset
+  (15 px, matching XCTrack's), number centred **above** the line so the gap
+  between the bars stays clear.
+- **`barY` tunes the vertical gap** and is a parameter rather than a constant,
+  because XCTrack's bar height is device-specific and guessing it wrong is the
+  difference between "easy to compare" and "useless".
+- **The off-scale message is a prompt, not a banner.** A full-width bar at the
+  bottom covered XCTrack's own scale — the very thing it was asking to be
+  compared against, so it made itself pointless. It is now a compact `set map ↓`
+  chip directly above our bar, pointing at the pair, and it **fades after 15 s**:
+  being told once is enough.
+- **The lasting signal is quieter and better placed.** While the scale is offset
+  the bar's *number* is drawn amber — permanent, unobtrusive, and sitting on the
+  exact value that needs comparing. Reset lives on the badge, which never fades,
+  as well as on the prompt while it is up.
+- **The zoom buttons never move.** An earlier version lifted them clear of the
+  full-width banner; with the banner gone they simply stay put, which is what a
+  control the pilot is aiming at should do.
 
 ## Phase 4 — polish
 

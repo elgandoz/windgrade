@@ -15,13 +15,15 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
   background:rgba(10,17,22,.78);color:#E8F0F5;
   font:600 11px/1.25 ui-monospace,"Roboto Mono",monospace;white-space:pre}
 #badge.bad{background:rgba(126,26,20,.92)}
-/* The off-scale warning lives at the BOTTOM, next to the scale bar it is about
-   and next to the zoom buttons that caused it — not at the top, where it was
-   far from both. Full width and thumb-sized, because when it is showing,
-   resetting is the only thing the pilot wants; absent the rest of the time. */
-#warn{position:absolute;left:0;right:0;bottom:0;z-index:6;
-  padding:12px 10px;background:rgba(150,105,15,.94);color:#FFF6E6;
-  font:700 13px/1.2 ui-monospace,"Roboto Mono",monospace;text-align:center}
+/* A compact chip sitting directly ABOVE our scale bar, pointing at it. A
+   full-width bar here covered XCTrack's own scale, which is the one thing the
+   pilot has to compare against — it made itself pointless. Transient: it is a
+   prompt, not a state, and the state lives on in the amber bar number. */
+#warn{position:absolute;left:15px;z-index:6;
+  padding:7px 10px;background:rgba(150,105,15,.95);color:#FFF6E6;border-radius:3px;
+  font:700 12px/1.15 ui-monospace,"Roboto Mono",monospace;
+  opacity:1;transition:opacity .5s}
+#warn.fade{opacity:0;pointer-events:none}
 /* Only present when ztap=1. Invisible: they exist to catch a tap, not to be
    looked at. Nothing else in this widget is a hit target, deliberately —
    with tapping enabled the WebView swallows every touch over its area, so a
@@ -32,11 +34,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 /* Dedicated zoom buttons. Small and cornered, so they cost little area — the
    invisible halves can stay on alongside them. */
 #zbtns{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;gap:4px;
-  padding:4px;z-index:7;transition:bottom .12s}
-/* The warning appears BECAUSE the pilot zoomed, so it must not bury the control
-   they would reach for next. Lift the buttons clear of it rather than letting
-   them overlap. */
-body.warned #zbtns{bottom:50px}
+  padding:4px;z-index:7}
 #zbtns button{width:46px;height:46px;background:rgba(10,17,22,.82);color:#E8F0F5;
   border:1px solid #2A3B48;border-radius:4px;font:700 22px ui-monospace,monospace}
 
@@ -71,7 +69,7 @@ body.warned #zbtns{bottom:50px}
 <div id="zin" class="zone" hidden></div>
 <div id="zout" class="zone" hidden></div>
 <div id="zbtns" hidden><button id="bIn" type="button">+</button><button id="bOut" type="button">−</button></div>
-<div id="warn" hidden></div>
+<div id="warn" hidden>set map ↓</div>
 <div id="pop" hidden></div>
 <div id="badge"></div>
 
@@ -229,23 +227,26 @@ function drawScaleBar(g, res){
   var x = 15, y = H - C.barY, t = WG.XCT_LADDER[curStep];
   g.lineCap = "butt"; g.lineJoin = "miter";
 
-  /* white casing under everything, so it survives a dark or light map */
-  g.strokeStyle = "#FFFFFF"; g.lineWidth = 5;
-  g.beginPath();
-  g.moveTo(x, y - 7); g.lineTo(x, y); g.lineTo(x + px, y); g.lineTo(x + px, y - 7);
-  g.stroke();
-  g.strokeStyle = "#0A1116"; g.lineWidth = 2;
-  g.beginPath();
-  g.moveTo(x, y - 7); g.lineTo(x, y); g.lineTo(x + px, y); g.lineTo(x + px, y - 7);
-  g.stroke();
+  /* TICKS POINT DOWN. XCTrack's point up, so the two bars close on each other
+     like facing brackets and their ends line up in a single vertical glance —
+     which is the whole comparison, done without reading either number. */
+  function trace(){
+    g.beginPath();
+    g.moveTo(x, y + 7); g.lineTo(x, y); g.lineTo(x + px, y); g.lineTo(x + px, y + 7);
+  }
+  g.strokeStyle = "#FFFFFF"; g.lineWidth = 5; trace(); g.stroke();
+  g.strokeStyle = "#0A1116"; g.lineWidth = 2; trace(); g.stroke();
 
-  /* Centred over the bar and sized like XCTrack's, so the pair reads as one
-     control rather than as two unrelated things that happen to be nearby. */
+  /* Number above the line: below it would land in the gap that has to stay
+     clear for the comparison. Centred and at XCTrack's size, so the pair reads
+     as one control rather than two things that happen to be near each other. */
   g.font = "700 17px ui-monospace, 'Roboto Mono', monospace";
   g.textAlign = "center"; g.textBaseline = "bottom";
   g.lineWidth = 5; g.strokeStyle = "#FFFFFF"; g.lineJoin = "round";
   g.strokeText(t, x + px / 2, y - 4);
-  g.fillStyle = "#0A1116";
+  /* Amber while the scale is offset: a permanent, quiet marker that outlives
+     the prompt, sitting on the very number that needs comparing. */
+  g.fillStyle = (curStep !== C.step) ? "#8A5A00" : "#0A1116";
   g.fillText(t, x + px / 2, y - 4);
 }
 
@@ -297,16 +298,7 @@ function paintBadge(fix, shown, nStale){
   /* Separate element, separate concern: the badge reports the data, this
      reports that the pilot still has to act. Amber, not red — red means the
      readings are stale, and conflating the two would blunt both. */
-  var wn = document.getElementById("warn"), off = (curStep !== C.step);
-  wn.hidden = !off;
-  if (document.body.className !== (off ? "warned" : "")) {
-    document.body.className = off ? "warned" : "";
-  }
-  if (off){
-    var t = WG.XCT_LADDER[curStep] + " — set the map to match, or tap to reset";
-    if (wn.firstChild){ if (wn.firstChild.nodeValue !== t) wn.firstChild.nodeValue = t; }
-    else wn.appendChild(document.createTextNode(t));
-  }
+  if (curStep === C.step) hideWarn();
 }
 
 /* ── tick: poll at 2 Hz to match XCTrack's map redraw, but repaint only
@@ -466,11 +458,38 @@ function hitTest(x, y){
    OUTSIDE the widget rectangle, then re-zoom the map by hand to match. The
    widget cannot verify that happened, so it says SET MAP until reset and the
    scale bar is there to be compared against XCTrack's. ─────────────── */
+/* ── the off-scale prompt ─────────────────────────────────────────────
+   Shown when the pilot changes our scale, because the map was not told and
+   cannot be. It is a PROMPT and it fades: having been told once is enough, and
+   a permanent banner down here would sit on XCTrack's own scale bar, which is
+   the thing it is asking to be compared against.
+
+   The lasting signal is elsewhere and quieter — the bar's number goes amber
+   while offset, right on the value that needs checking. Reset stays on the
+   badge, which never fades. ───────────────────────────────────────────── */
+var WARN_MS = 15000;
+var warnTimer = null;
+
+function showWarn(){
+  var wn = document.getElementById("warn");
+  wn.style.bottom = (C.barY + 30) + "px";
+  wn.hidden = false;
+  wn.className = "";
+  if (warnTimer) clearTimeout(warnTimer);
+  warnTimer = setTimeout(function(){ wn.className = "fade"; }, WARN_MS);
+}
+function hideWarn(){
+  if (warnTimer){ clearTimeout(warnTimer); warnTimer = null; }
+  var wn = document.getElementById("warn");
+  wn.hidden = true; wn.className = "";
+}
+
 function stepBy(d){
   var n = curStep + d;
   if (n < WG.XCT_STEP_MIN || n > WG.XCT_STEP_MAX) return;
   curStep = n;
   drawKey = ""; lastFetch = 0;              /* the box moved with the zoom */
+  showWarn();
   tick();
 }
 /* Precedence, and it matters: a marker tap must never be eaten by a zoom zone
@@ -506,10 +525,14 @@ if (C.zbtn){
   });
 }
 
-document.getElementById("warn").addEventListener("click", function(ev){
-  ev.stopPropagation();
-  curStep = C.step; drawKey = ""; lastFetch = 0; tick();
-});
+function resetScale(ev){
+  if (ev) ev.stopPropagation();
+  if (curStep === C.step) return;
+  curStep = C.step; drawKey = ""; lastFetch = 0; hideWarn(); tick();
+}
+/* Two ways back, because the prompt fades but the need to reset does not. */
+document.getElementById("warn").addEventListener("click", resetScale);
+document.getElementById("badge").addEventListener("click", resetScale);
 
 resize();
 tick();
