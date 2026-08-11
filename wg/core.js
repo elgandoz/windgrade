@@ -89,10 +89,6 @@ var XCT_METRES = (function () {
   }
   return o;
 })();
-/* The ends of mapWidget_scale. Exported because the scale <select> has to walk
-   the LADDER to find the reachable scales — walking its own metre range walked
-   two million integers and produced an empty list. */
-var STEP_MIN = 12, STEP_MAX = 34;
 function zoomForStep(v) { return (v - 3) / 2; }
 function stepForZoom(z) { return Math.round(z * 2 + 3); }
 
@@ -167,7 +163,7 @@ function scaleLabel(step, lat) { return fmtScale(scaleMetres(step, lat)); }
 function stepForScale(metres, lat) {
   var best = 25, bestErr = Infinity, v, m, e;
   if (!(metres > 0)) return best;
-  for (v = STEP_MIN; v <= STEP_MAX; v++) {
+  for (v = XCT_STEP_MIN; v <= XCT_STEP_MAX; v++) {
     m = scaleMetres(v, lat);
     if (!m) continue;
     e = Math.abs(Math.log(m / metres));
@@ -194,7 +190,7 @@ var DPR_SPAN = [1.5, 1.75, 2, 2.25, 2.5, 2.625, 2.75, 3, 3.25, 3.5, 4];
 function scaleOptions(lat) {
   var seen = {}, out = [], i, v, m;
   for (i = 0; i < DPR_SPAN.length; i++) {
-    for (v = STEP_MIN; v <= STEP_MAX; v++) {
+    for (v = XCT_STEP_MIN; v <= XCT_STEP_MAX; v++) {
       m = scaleMetresAtDpr(v, lat, DPR_SPAN[i]);
       if (m && !seen[m]) { seen[m] = 1; out.push(m); }
     }
@@ -206,7 +202,7 @@ function scaleOptions(lat) {
 /* `step` is an escape hatch: set explicitly it wins, otherwise the scale
    decides. Anything below 12 is not a ladder step, so it reads as "unset". */
 function resolveStep(c, lat) {
-  return (c && c.step >= STEP_MIN) ? c.step : stepForScale(c ? c.scale : 0, lat);
+  return (c && c.step >= XCT_STEP_MIN) ? c.step : stepForScale(c ? c.scale : 0, lat);
 }
 
 /* Integer-zoom labels, derived so the two cannot disagree. */
@@ -417,7 +413,16 @@ function initConfig(search, opts) {
 function setConfig1(k, v) {
   var i;
   for (i = 0; i < SPEC.length; i++) {
-    if (SPEC[i].k === k) { config[k] = clamp(SPEC[i], v); return true; }
+    if (SPEC[i].k === k) {
+      config[k] = clamp(SPEC[i], v);
+      /* Choosing a scale means the scale is what you want. Without this, a
+         pilot who opened the launcher from an old ?step=NN link could pick a
+         new scale, watch the select change, get a URL carrying both — and the
+         pinned step would silently win. The step row is hidden, so nothing on
+         screen would have explained why the overlay ignored them. */
+      if (k === "scale") config.step = 0;
+      return true;
+    }
   }
   return false;
 }
@@ -802,7 +807,6 @@ return {
   scaleMetres: scaleMetres, scaleLabel: scaleLabel, fmtScale: fmtScale,
   stepForScale: stepForScale, resolveStep: resolveStep,
   scaleOptions: scaleOptions, scaleMetresAtDpr: scaleMetresAtDpr,
-  STEP_MIN: STEP_MIN, STEP_MAX: STEP_MAX,
   XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
   zoomOf: zoomOf,

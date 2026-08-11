@@ -185,7 +185,7 @@ head("the launcher's scale list covers every device");
   eq("so is 8km, which the other one needs", opts.indexOf(8000) >= 0, true);
   for (d = 0; d < 2; d++) {
     WG.setDpr(d ? 2.625 : 3);
-    for (v = WG.STEP_MIN; v <= WG.STEP_MAX; v++) {
+    for (v = WG.XCT_STEP_MIN; v <= WG.XCT_STEP_MAX; v++) {
       m = WG.scaleMetres(v, 47.361);
       if (m && opts.indexOf(m) < 0) missing.push(m);
     }
@@ -203,6 +203,23 @@ head("the launcher's scale list covers every device");
     return n;
   })());
 })();
+
+head("a pinned step must not silently outrank a fresh choice");
+/* The step row is hidden from the settings UI, so if an old ?step=NN link
+   opened the launcher and the pilot then picked a scale, the step would win
+   with nothing on screen to explain why. Choosing a scale clears it. */
+WG.initConfig("?step=24");
+eq("the old link's step is honoured on arrival", WG.getConfig().step, 24);
+WG.setConfig({ scale: 6000 });
+eq("choosing a scale clears the pin", WG.getConfig().step, 0);
+eq("and the scale is what is stored", WG.getConfig().scale, 6000);
+eq("so the URL carries no stale step",
+   WG.buildUrl("widget.html").indexOf("step=") < 0, true);
+/* But a URL that only pins a step still works untouched — that is the whole
+   reason the parameter still exists. */
+WG.initConfig("?step=24");
+eq("step=24 still resolves to step 24", WG.resolveStep(WG.getConfig(), 47.361), 24);
+WG.initConfig("");
 
 head("pixel density");
 /* MEASURED 2026-08-11, tools/ruler.html, one emulator at two densities, reading
