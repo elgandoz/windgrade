@@ -273,8 +273,16 @@ var SPEC = [
   { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto",
     lab:"Theme", help:"Auto follows your phone." },
   { k:"badge", t:"int", d:1, min:0, max:1, only:"widget",
-    lab:"Show calibration badge",
-    help:"States the assumed scale so a mis-paired map is visible." },
+    lab:"Show status line",
+    help:"How many stations are drawn, and how many are stale. Turning it off " +
+         "hides the routine count ONLY — no position, OFFLINE and ALL STALE " +
+         "still appear, because those are the display admitting it cannot be " +
+         "trusted." },
+  { k:"debug", t:"int", d:0, min:0, max:1, only:"widget",
+    lab:"Debug in the status line",
+    help:"Adds the assumed scale and heading. Off by default: the scale bar " +
+         "already shows the scale against XCTrack's own, which is the " +
+         "comparison that matters, and north-up is required setup, not news." },
   { k:"bar",   t:"int", d:1, min:0, max:1, only:"widget",
     lab:"Show scale bar",
     help:"Draws our scale bar above XCTrack's own. Equal lengths = correctly paired." },

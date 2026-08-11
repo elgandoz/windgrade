@@ -58,30 +58,55 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 #zbtns button{width:46px;height:46px;background:rgba(10,17,22,.82);color:#E8F0F5;
   border:1px solid #2A3B48;border-radius:4px;font:700 22px ui-monospace,monospace}
 
+/* Theme tokens, the same names and values base.css carries, restated here
+   because this page cannot load it. Light is the base, dark applies on a dark
+   phone unless ?theme=light forces otherwise, and [data-theme] wins over both.
+
+   ONLY the popup is themed. The badge, the warn chip and the scale bar sit on
+   XCTrack's map, where they need contrast against terrain — grass, snow, rock —
+   not against a page, so they stay dark on light at every setting. */
+:root{
+  --pop-bg:rgba(255,255,255,.97);
+  --rule:#CBD6DE; --fg:#0F1A21; --dim:#5C7180; --chart:#1E6FA8;
+  --amber:#A96608; --red:#B3271C;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --pop-bg:rgba(10,17,22,.96);
+    --rule:#2A3B48; --fg:#E8F0F5; --dim:#7B909F; --chart:#54A6DC;
+    --amber:#E9A33C; --red:#D6483C;
+  }
+}
+[data-theme="dark"]{
+  --pop-bg:rgba(10,17,22,.96);
+  --rule:#2A3B48; --fg:#E8F0F5; --dim:#7B909F; --chart:#54A6DC;
+  --amber:#E9A33C; --red:#D6483C;
+}
+
 /* Detail popup. Carries its own background — the body must stay unpainted. */
 #pop{position:absolute;left:0;right:0;bottom:0;z-index:9;max-height:74%;overflow:auto;
-  background:rgba(10,17,22,.96);border-top:1px solid #2A3B48;
-  color:#E8F0F5;font:400 12px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:9px 10px 11px}
+  background:var(--pop-bg);border-top:1px solid var(--rule);
+  color:var(--fg);font:400 12px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:9px 10px 11px}
 #pop h3{margin:0 0 1px;font-size:15px;font-weight:700}
-#pop .sub{color:#7B909F;font:400 11px/1.35 ui-monospace,"Roboto Mono",monospace;margin:0 0 8px}
+#pop .sub{color:var(--dim);font:400 11px/1.35 ui-monospace,"Roboto Mono",monospace;margin:0 0 8px}
 #pop .now{display:flex;gap:14px;align-items:baseline;margin:0 0 9px}
 #pop .now b{font:700 26px ui-monospace,monospace;letter-spacing:-.02em}
-#pop .now i{font-style:normal;color:#7B909F;font-size:11px}
+#pop .now i{font-style:normal;color:var(--dim);font-size:11px}
 /* Fixed height. The strip fills in a moment after the header, and without a
    reserved box the whole panel would resize as it arrives — which is what the
    flash on tapping a second marker actually was. */
 #pop .trend{display:flex;gap:3px;overflow-x:auto;padding-bottom:2px;
   min-height:62px;align-items:center}
-#pop .trend .wait{color:#7B909F;font:400 11px ui-monospace,monospace}
+#pop .trend .wait{color:var(--dim);font:400 11px ui-monospace,monospace}
 #pop .t{flex:none;width:44px;text-align:center}
 #pop .t svg{display:block;width:34px;height:34px;margin:0 auto}
 #pop .t em{display:block;font:700 11px ui-monospace,monospace;font-style:normal}
-#pop .t span{display:block;color:#7B909F;font:400 9px ui-monospace,monospace}
-#pop .src{color:#7B909F;font-size:10px;margin-top:8px;line-height:1.45}
+#pop .t span{display:block;color:var(--dim);font:400 9px ui-monospace,monospace}
+#pop .src{color:var(--dim);font-size:10px;margin-top:8px;line-height:1.45}
 /* Must out-specify "#pop .now i", which sets the muted colour. The age is the
    field that says whether the reading can be trusted; it has to carry its state. */
-#pop .now i.stale, #pop .stale{color:#D6483C;font-weight:700}
-#pop .now i.warn, #pop .warn{color:#E9A33C}
+#pop .now i.stale, #pop .stale{color:var(--red);font-weight:700}
+#pop .now i.warn, #pop .warn{color:var(--amber)}
 </style>
 </head>
 <body>
@@ -89,7 +114,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 <div id="zin" class="zone" hidden></div>
 <div id="zout" class="zone" hidden></div>
 <div id="zbtns" hidden><button id="bIn" type="button">+</button><button id="bOut" type="button">−</button></div>
-<div id="warn" hidden>← match scale</div>
+<div id="warn" hidden>← Check scale!</div>
 <div id="pop" hidden></div>
 <div id="badge"></div>
 
@@ -103,7 +128,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
    TOP of an XCTrack map widget covering the same rectangle.
 
    REQUIRED XCTrack SETUP
-     XC map widget (below):  scale per the badge, rotation NORTH-UP
+     XC map widget (below):  scale per the bar, rotation NORTH-UP
      This widget (above):    same rectangle, refresh rate 0,
                              "Allow web page to access XCTrack data" ON
 
@@ -135,6 +160,11 @@ var W = 0, H = 0, dpr = 1;
 WG.setDpr(C.dpr || window.devicePixelRatio || WG.DPR_REF);
 WG.setCal(C.cal);
 
+/* Theme, by the same <html data-theme> convention base.css uses — WG.applyTheme
+   lives in fields.js, which this page does not load. Only the popup reacts;
+   see the CSS. */
+if (C.theme !== "auto") document.documentElement.setAttribute("data-theme", C.theme);
+
 /* The scale actually being drawn. Equals homeStep until the pilot taps a zone;
    after that the widget CANNOT know whether the map followed, which is why the
    badge marks it and the scale bar exists.
@@ -148,9 +178,15 @@ function setHome(lat) {
   homeStep = WG.resolveStep(C, lat);
   if (!curStep) curStep = homeStep;
 }
-/* Right edge of the scale bar in css px, so the prompt can sit beside it. The
-   bar's length changes with the scale, so this cannot be a constant. */
-var barRight = 15, barLat = 47;
+/* Left inset of both bars, matching XCTrack's — measured off the owner's screen
+   at ~15 css px, so the two start at the same x and a difference in LENGTH is
+   the only thing left to see. */
+var BAR_X = 15;
+/* Height of XCTrack's own bar off the bottom, measured from the ruler runs at
+   two densities (~10 css px). Only used to centre the prompt in the gap
+   between the two bars; nothing about the geometry depends on it. */
+var XCT_BAR_Y = 10;
+var barLat = 47;
 /* Screen positions of the markers actually drawn, so a tap can be matched to a
    station. Rebuilt on every draw. */
 var hits = [];
@@ -201,7 +237,12 @@ function draw(fix, ranked){
       var barPx = WG.scaleMetres(curStep, fix.lat) / P.res;
       keepOut.push([0, H - C.barY - 26, 25 + (barPx > 0 ? barPx : 0), H]);
     }
-    if (C.badge) keepOut.push([0, 0, 190, 26]);
+    /* Measured, not assumed: the status line is much shorter than the 190 px
+       constant that was here, and it appears even with badge=0 when something
+       is wrong — so the rectangle has to follow the element, not the setting. */
+    var bEl = document.getElementById("badge");
+    if (!bEl.hidden) keepOut.push([0, 0, bEl.offsetWidth || 190,
+                                         bEl.offsetHeight || 26]);
     function blocked(px, py){
       for (var q = 0; q < keepOut.length; q++){
         var r = keepOut[q];
@@ -258,14 +299,11 @@ function drawScaleBar(g, res){
   var px = m / res;
   if (px < 24 || px > W - 20) return;          /* would not be comparable */
 
-  /* Left inset matches XCTrack's, measured off the owner's screenshot at ~15 css
-     px, so the two bars start at the same x and a difference in LENGTH is the
-     only thing left to see. barY tunes the vertical gap: they are compared by
-     eye, so the closer together the better, but XCTrack's own label sits above
-     its bar and the exact height is device-specific — hence a parameter rather
-     than a guess baked in. */
-  var x = 15, y = H - C.barY, t = WG.fmtScale(m);
-  barRight = x + px;
+  /* barY tunes the vertical gap: the bars are compared by eye, so the closer
+     together the better, but XCTrack's own label sits above its bar and the
+     exact height is device-specific — hence a parameter rather than a guess
+     baked in. */
+  var x = BAR_X, y = H - C.barY, t = WG.fmtScale(m);
   g.lineCap = "butt"; g.lineJoin = "miter";
 
   /* TICKS POINT DOWN. XCTrack's point up, so the two bars close on each other
@@ -304,9 +342,12 @@ function refresh(fix){
   });
 }
 
-/* ── badge ────────────────────────────────────────────────────────────
-   States the assumption permanently, so a mismatch with the scale XCTrack
-   already shows is readable rather than silent.
+/* ── status line ───────────────────────────────────────────────────────
+   What is on screen, and whether it can be trusted. It used to lead with the
+   assumed scale and "N↑" permanently; both are redundant now — the scale bar
+   shows the scale against XCTrack's OWN, which is the comparison that actually
+   catches a mis-pairing, and north-up is required setup rather than news. They
+   moved behind ?debug=1.
 
    Goes red on the two things that make the display untrustworthy: the last
    fetch failed, or every visible reading is stale. Deliberately NOT driven
@@ -314,23 +355,32 @@ function refresh(fix){
    stopped reporting is not a reason to alarm the whole widget, and
    per-marker staleness already shows in red numbers. ──────────────── */
 function paintBadge(fix, shown, nStale){
-  var b = document.getElementById("badge"), s, bad = false;
+  var b = document.getElementById("badge"), s, bad = false, fetchAge;
   if (!fix){
     s = "no position"; bad = true;
+  } else if (!lastFetch){
+    s = fetchErr ? ("no data: " + fetchErr) : "loading…";
+    bad = !!fetchErr;
   } else {
-    s = WG.scaleLabel(curStep, fix.lat) + " N↑";
-    if (!lastFetch){
-      s += fetchErr ? ("  no data: " + fetchErr) : "  loading…";
-      bad = !!fetchErr;
-    } else {
-      var fetchAge = Math.round((Date.now() - lastFetch) / 60000);
-      s += "  " + shown;
-      if (nStale) s += "  " + nStale + " stale";
-      if (fetchErr){ s += "  OFFLINE " + fetchAge + "m"; bad = true; }
-      else if (shown && nStale === shown){ s += "  ALL STALE"; bad = true; }
-      else if (fetchAge >= Math.ceil(C.poll / 60) * 2){ s += "  " + fetchAge + "m"; bad = true; }
-    }
+    fetchAge = Math.round((Date.now() - lastFetch) / 60000);
+    s = shown + (shown === 1 ? " station" : " stations");
+    /* All-stale replaces the count of stale ones rather than adding to it:
+       "12 stations (12 stale)" states the same fact twice and buries it. */
+    if (shown && nStale === shown){ s += "  ALL STALE"; bad = true; }
+    else if (nStale) s += " (" + nStale + " stale)";
+    if (fetchErr){ s += "  OFFLINE " + fetchAge + "m"; bad = true; }
+    else if (fetchAge >= Math.ceil(C.poll / 60) * 2){ s += "  " + fetchAge + "m"; bad = true; }
+    if (C.debug) s = WG.scaleLabel(curStep, fix.lat) + " N↑  " + s;
   }
+
+  /* Hidden by choice, but NEVER while something is wrong. `badge` turns off a
+     routine count; it does not turn off the display admitting it cannot be
+     trusted, which would be the one way this could quietly mislead someone.
+     (Before this, badge=0 hid nothing at all — the setting was inert.) */
+  var want = C.badge ? true : bad;
+  if (b.hidden === want) b.hidden = !want;
+  if (!want) return;
+
   if (b.firstChild){ if (b.firstChild.nodeValue !== s) b.firstChild.nodeValue = s; }
   else b.appendChild(document.createTextNode(s));
   var cls = bad ? "bad" : "";
@@ -433,7 +483,7 @@ function paintPop(){
   if (p.getAttribute("data-for") === st.id){ paintTrend(); return; }
   p.setAttribute("data-for", st.id);
 
-  h += '<h3>' + esc(st.name) + (st.peak ? ' <span style="color:#54A6DC">▲</span>' : '') + '</h3>';
+  h += '<h3>' + esc(st.name) + (st.peak ? ' <span style="color:var(--chart)">▲</span>' : '') + '</h3>';
   h += '<div class="sub">' +
        (isFinite(st.alt) ? Math.round(st.alt) + ' m · ' : '') +
        (Math.round(st.dist / 100) / 10) + ' km · ' + esc(st.provider) + '</div>';
@@ -517,13 +567,23 @@ var warnTimer = null;
 
 function showWarn(){
   var wn = document.getElementById("warn");
-  /* Beside the bar and level with it, arrow pointing back at the pair — so the
-     prompt says WHERE to look, not just what to do. Above it would have been
-     one more thing stacked in the corner; below it would cover XCTrack's. */
-  wn.style.left = Math.round((C.bar ? barRight : 15) + 12) + "px";
-  wn.style.bottom = Math.max(0, C.barY - 14) + "px";
   wn.hidden = false;
   wn.className = "";
+  /* FIXED horizontally. It used to start at the bar's right edge, which moves
+     with the scale — so the prompt slid left and right every time the pilot
+     zoomed, movement that reads as a fault rather than as a pointer. BAR_MAX_DP
+     is the bar's ceiling by construction, so clearing it clears the bar at
+     EVERY scale, ours and XCTrack's alike, without ever covering either. */
+  var wx = BAR_X + WG.BAR_MAX_DP + 8;
+  /* On a widget too narrow to hold both, being on screen beats being clear of
+     the bar — a prompt hanging off the edge says nothing at all. */
+  if (wx + wn.offsetWidth > W) wx = Math.max(0, W - wn.offsetWidth);
+  wn.style.left = Math.round(wx) + "px";
+  /* Centred on the GAP between the two bars, so the arrow points at the pair
+     rather than at one of them — the instruction is to compare, not to look at
+     ours. Measured from the element so it stays centred if the text changes. */
+  wn.style.bottom = Math.max(0, Math.round(
+    (C.barY + XCT_BAR_Y) / 2 - wn.offsetHeight / 2)) + "px";
   if (warnTimer) clearTimeout(warnTimer);
   warnTimer = setTimeout(function(){ wn.className = "fade"; }, WARN_MS);
 }
