@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Windgrade — CSS pixel ruler</title>
+<style>
+/* Unpainted, like the widget: XCTrack renders white or absent as transparent. */
+html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none !important}
+#cv{position:absolute;left:0;top:0;width:100%;height:100%}
+#out{position:absolute;left:0;top:0;right:0;padding:4px 6px;
+  background:rgba(10,17,22,.86);color:#E8F0F5;white-space:pre;
+  font:700 12px/1.35 ui-monospace,"Roboto Mono",monospace}
+#copy{position:absolute;right:4px;bottom:4px;padding:10px 12px;
+  background:rgba(10,17,22,.86);color:#54A6DC;border:1px solid #2A3B48;
+  border-radius:4px;font:700 13px ui-monospace,monospace}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="out"></div>
+<button id="copy" type="button">copy</button>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════
+   tools/ruler.html — measure XCTrack's map resolution directly.
+
+   It draws a ruler in CSS PIXELS across the screen. XCTrack's own scale bar
+   is labelled with a ground distance. Read the bar's length off the ruler
+   and you have the resolution, with no dependence on any model of ours:
+
+       metres per css pixel  =  the bar's label  /  the bar's length
+
+   That is the point of doing it this way. Matching our bar to theirs only
+   works if our calibration is already close; a ruler does not care.
+
+   WHY: the scale ladder is known, but whether XCTrack's resolution is fixed
+   in css pixels or scales with PIXEL DENSITY is not. Those predict different
+   things, and one device measured at two densities separates them cleanly.
+
+   HOW TO RUN — one screenshot per density
+     1. Put an XC map widget on a page, North-up, any scale that shows a
+        scale bar. Put this page on top of it, same rectangle.
+     2. Screenshot. The header gives dpr and the widget size; the ruler gives
+        the bar's length; XCTrack gives the label.
+     3. Change the device density and repeat, changing nothing else:
+            adb shell wm density 320        (dpr 2.0)
+            adb shell wm density reset      (back to default)
+     4. Send both screenshots.
+
+   WHAT IT DECIDES
+     resolution the same in css px at both densities  -> density-independent
+     resolution scaling with dpr                      -> XCTrack works in
+       device pixels, and our correction is 3/devicePixelRatio — computed,
+       never configured, and right on every future device.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var cv = document.getElementById("cv"), g = cv.getContext("2d");
+var W = 0, H = 0, dpr = 1;
+
+function resize(){
+  W = window.innerWidth; H = window.innerHeight;
+  dpr = window.devicePixelRatio || 1;
+  /* Full device resolution here, deliberately: this is a measuring tool and
+     the ruler's own edges must not be softened by a capped backing store. */
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+  report();
+}
+window.addEventListener("resize", resize);
+
+function draw(){
+  g.clearRect(0, 0, W, H);
+
+  /* Vertical lines every 10 css px so a bar end can be read wherever it
+     sits vertically, rather than only against one baseline. */
+  var x, major;
+  for (x = 0; x <= W; x += 10){
+    major = (x % 50 === 0);
+    g.strokeStyle = major ? "rgba(255,45,140,.95)" : "rgba(255,45,140,.35)";
+    g.lineWidth = major ? 1.5 : 1;
+    g.beginPath();
+    g.moveTo(x + 0.5, 0);
+    g.lineTo(x + 0.5, H);
+    g.stroke();
+  }
+
+  /* Numbers on the majors, top and bottom, each with a white casing so they
+     stay readable over any map. */
+  g.font = "700 11px ui-monospace, 'Roboto Mono', monospace";
+  g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
+  for (x = 0; x <= W; x += 50){
+    g.textBaseline = "bottom";
+    g.strokeStyle = "#FFFFFF"; g.strokeText(String(x), x, H - 4);
+    g.fillStyle = "#B3160E";   g.fillText(String(x), x, H - 4);
+    /* clear of the header panel, which is five lines tall */
+    g.textBaseline = "top";
+    g.strokeStyle = "#FFFFFF"; g.strokeText(String(x), x, 100);
+    g.fillStyle = "#B3160E";   g.fillText(String(x), x, 100);
+  }
+}
+
+function lines(){
+  var s = [];
+  s.push("RULER — read XCTrack's scale bar against it");
+  s.push("dpr " + dpr + "   widget " + W + " x " + H + " css px");
+  s.push("device px " + Math.round(W * dpr) + " x " + Math.round(H * dpr));
+  s.push("");
+  s.push("report:  label,  bar starts at,  bar ends at");
+  return s.join("\n");
+}
+function report(){ document.getElementById("out").textContent = lines(); }
+
+document.getElementById("copy").addEventListener("click", function(){
+  var btn = this;
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(lines()).then(function(){
+      btn.firstChild.nodeValue = "copied";
+      setTimeout(function(){ btn.firstChild.nodeValue = "copy"; }, 1500);
+    }, function(){});
+  }
+});
+
+resize();
+</script>
+</body>
+</html>
