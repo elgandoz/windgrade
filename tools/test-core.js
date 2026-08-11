@@ -446,6 +446,22 @@ eq("pad 0 gives the view rectangle itself, which is what prepare's keep wants",
    WG.dist(47.0447, bHi.w, 47.0447, bHi.e) / 448, WG.mppXct(47.0447, 11), 0.5);
 WG.setDpr(3);
 
+/* position() calls remember() on EVERY read, and setGeoFix on every
+   watchPosition callback — so unthrottled this was a synchronous localStorage
+   write twice a second in the overlay. The stored value exists so a cold start
+   with no GPS has somewhere to point; half a minute of staleness there is
+   nothing against being absent. */
+head("last-known position is written at most every 30 s");
+(function () {
+  var f = { lat:47.05, lon:8.64, alt:600 }, t0 = 1786370000000;
+  eq("the first fix is written", WG.remember(f, t0), true);
+  eq("a second later, no", WG.remember(f, t0 + 1000), false);
+  eq("29 s later, still no", WG.remember(f, t0 + 29000), false);
+  eq("31 s later, yes", WG.remember(f, t0 + 31000), true);
+  eq("and the clock restarts from there", WG.remember(f, t0 + 32000), false);
+  eq("no fix writes nothing and says so", WG.remember(null, t0 + 90000), false);
+})();
+
 head("staleness — old wind must never look current");
 var cf = WG.cfg(""), now = 1786370000000;
 eq("5 min  -> fresh", WG.staleness({ ts:now - 5 * 60000 }, cf, now).cls, "fresh");

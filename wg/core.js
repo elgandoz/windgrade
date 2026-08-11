@@ -628,10 +628,29 @@ function fromStore() {
            at: toNum(p[3]) };
 }
 
-function remember(f) {
-  if (!f) return;
+/* ── last known position ──────────────────────────────────────────────
+   THROTTLED, and that is the point of it. `position()` calls this on every
+   read and `setGeoFix` on every watchPosition callback — so before the
+   throttle this was a synchronous localStorage write twice a second in the
+   overlay and roughly once a second from browser geolocation. Synchronous
+   disk I/O is the single most expensive thing that was in the tick loop, and
+   it bought nothing: the value exists so a COLD START with no GPS has
+   somewhere to point the map, where being half a minute out of date is
+   irrelevant next to being absent.
+
+   `now` is injectable so the throttle is testable without faking the clock.
+   Returns whether it actually wrote. ──────────────────────────────────── */
+var REMEMBER_MS = 30000;
+var rememberedAt = 0;
+
+function remember(f, now) {
+  var t = (typeof now === "number") ? now : Date.now();
+  if (!f) return false;
+  if (rememberedAt && t - rememberedAt < REMEMBER_MS) return false;
+  rememberedAt = t;
   store.set("lastfix", [f.lat.toFixed(6), f.lon.toFixed(6),
-                        (f.alt === f.alt ? Math.round(f.alt) : ""), Date.now()].join(","));
+                        (f.alt === f.alt ? Math.round(f.alt) : ""), t].join(","));
+  return true;
 }
 
 /* geoFix is filled by a watchPosition the page starts; core stays DOM-free

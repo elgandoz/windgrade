@@ -414,44 +414,74 @@ function paintBadge(fix, shown, nStale){
   if (curStep === homeStep) hideWarn();
 }
 
-/* ── tick: poll at 2 Hz to match XCTrack's map redraw, but repaint only
-   when something moved a whole pixel. At z11 a glider at 40 km/h moves
-   0.21 px/s, so this is nearly free. ─────────────────────────────── */
+/* ── tick ──────────────────────────────────────────────────────────────
+   THE KEY IS COMPUTED BEFORE ANY WORK, and everything expensive sits behind
+   it. That ordering is the whole optimisation, and it used to be the other way
+   round: the old loop ran WG.prepare() — distance, bearing, two rating lookups
+   and a staleness test per station, then a sort — plus a localStorage write,
+   TWICE A SECOND, and only then asked whether anything had moved a pixel. The
+   comment claiming it was "nearly free" was true of the canvas repaint and of
+   nothing else.
+
+   What the key covers, and therefore what can change the display:
+     position, quantised to a whole DEVICE PIXEL — a glider at 40 km/h moves
+       0.21 px/s at z11, so this fires about every 5 s of flight
+     the widget's size, the ladder step, and the last fetch
+     the MINUTE, which is the granularity at which staleness can change
+
+   Nothing else can alter a marker, so nothing else needs recomputing. At 1 Hz
+   the common tick is now one bridge read and a string compare.
+
+   1 Hz, not 2: getLocation() is a call across the JS bridge into native and
+   XCTrack's own GPS is 1 Hz, so the second poll each second could only ever
+   return the same answer. Interaction does not wait for the tick — the zoom
+   handlers call it directly. ─────────────────────────────────────────── */
+var nStaleShown = 0;
+
 function tick(){
   var p = WG.position(C), fix = p.fix;
   /* The pilot asked for a ground scale; which ladder step that is depends on
      this screen's density and on where they are, so it can only be answered
      here. Before the first fix there is nothing to draw anyway. */
   if (fix) setHome(fix.lat);
-  if (!fix){ draw(null, []); paintBadge(null, 0, 0); return; }
+  if (!fix){
+    /* Clearing an already-clear canvas is still a full-surface copy. */
+    if (drawKey !== "nofix"){ drawKey = "nofix"; draw(null, []); lastShown = 0; }
+    nStaleShown = 0;
+    paintBadge(null, 0, 0);
+    return;
+  }
 
   if (!lastFetch || Date.now() - lastFetch > C.poll * 1000) refresh(fix);
 
   var now = Date.now();
   var z = WG.zoomForStep(curStep);
-
-  /* Cull to the view BEFORE C.max, or the cap is spent on stations that are
-     off the sides of a tall screen. A marker's width of slack so one at the
-     very edge is still a candidate — draw() does the exact clipping. */
-  var view = WG.bboxAround(fix, z, (W || 448) + 60, (H || 978) + 60, 0);
-  var ranked = WG.prepare(stations, fix, C, now, view), i, nStale = 0;
-  nRanked = ranked.length;
-
   var key = Math.round(WG.lonToPx(fix.lon, z) * WG.getCal()) + "/" +
             Math.round(WG.latToPx(fix.lat, z) * WG.getCal()) + "/" +
             W + "x" + H + "/" + curStep + "/" + lastFetch + "/" + Math.round(now / 60000);
-  if (key !== drawKey){ drawKey = key; lastShown = draw(fix, ranked); }
 
-  /* Count stale over the markers ACTUALLY DRAWN, not over everything ranked.
-     Comparing a count from one population against a total from another made the
-     badge claim ALL STALE whenever the stale count in the ranked list happened
-     to equal the number drawn — which trains a pilot to ignore the warning, the
-     worst possible outcome for it. hits[] is refreshed on every draw, and the
-     station objects it points at are re-staled by prepare() every tick, so this
-     stays current even when nothing is redrawn. */
-  for (i = 0; i < hits.length; i++) if (hits[i].st.stale.cls === "stale") nStale++;
+  if (key !== drawKey){
+    drawKey = key;
+    /* Cull to the view BEFORE C.max, or the cap is spent on stations that are
+       off the sides of a tall screen. A marker's width of slack so one at the
+       very edge is still a candidate — draw() does the exact clipping. */
+    var view = WG.bboxAround(fix, z, (W || 448) + 60, (H || 978) + 60, 0);
+    var ranked = WG.prepare(stations, fix, C, now, view), i;
+    nRanked = ranked.length;
+    lastShown = draw(fix, ranked);
 
-  paintBadge(fix, lastShown, nStale);
+    /* Counted over the markers ACTUALLY DRAWN, not over everything ranked.
+       Comparing a count from one population against a total from another made
+       the badge claim ALL STALE whenever the stale count in the ranked list
+       happened to equal the number drawn — which trains a pilot to ignore the
+       warning, the worst possible outcome for it. Cached alongside the draw,
+       because hits[] and their staleness only change when prepare() runs, and
+       the minute in the key is what guarantees prepare() runs when it can. */
+    nStaleShown = 0;
+    for (i = 0; i < hits.length; i++) if (hits[i].st.stale.cls === "stale") nStaleShown++;
+  }
+
+  paintBadge(fix, lastShown, nStaleShown);
 }
 
 /* ── detail popup ─────────────────────────────────────────────────────
@@ -663,7 +693,16 @@ document.getElementById("badge").addEventListener("click", resetScale);
 
 resize();
 tick();
-setInterval(tick, 500);
+
+/* 1 Hz. See tick(): the expensive work is behind the key, so most wakeups are a
+   bridge read and a string compare. Paused while the page is hidden — Android
+   may or may not throttle a background WebView, and this tool has to leave the
+   battery something for the rest of the flight. */
+var timer = setInterval(tick, 1000);
+document.addEventListener("visibilitychange", function(){
+  if (document.hidden){ if (timer){ clearInterval(timer); timer = 0; } }
+  else if (!timer){ timer = setInterval(tick, 1000); tick(); }
+});
 </script>
 </body>
 </html>

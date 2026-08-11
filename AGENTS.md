@@ -79,6 +79,21 @@ station on terrain is the whole point.
   elements once, write only changed text nodes, poll no faster than the data
   actually changes. Wind readings update on a ~10 minute cadence; don't fetch
   faster than that.
+
+  **Both tick loops compute a cheap key FIRST and put every expensive thing
+  behind it.** `widget.html` keys on position quantised to a device pixel, the
+  widget size, the ladder step, the last fetch and the minute; `app.html` on
+  position to 0.001°, the last fetch, the minute and which row is expanded. The
+  minute is what makes it safe — staleness is the only thing that changes
+  without an input changing. Do not move work in front of the key: that was the
+  original bug, and `widget.html` was running `WG.prepare()` over every station,
+  plus a synchronous `localStorage` write, **twice a second** while claiming in a
+  comment to be "nearly free" (measured 82 of each per 40 s, now 2). Compare
+  before assigning, including `className`. Both loops pause on
+  `document.hidden`. `widget.html` ticks at 1 Hz — `getLocation()` crosses the JS
+  bridge and XCTrack's GPS is 1 Hz, so a faster poll cannot return anything new —
+  and `app.html` at 15 s. `WG.remember()` is throttled to 30 s for the same
+  reason; it exists for a cold start, not as a log.
 - **The widget's `<body>` stays unpainted.** XCTrack renders white or absent
   backgrounds as transparent so the widget floats over its map. That is also why
   `widget.html` cannot load `wg/base.css` — so any guard living there has to be

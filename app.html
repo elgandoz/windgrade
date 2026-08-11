@@ -170,6 +170,8 @@ var VIEW_W = 448, VIEW_H = 978;      /* nominal widget, for the fetch bbox */
 var stations = [], lastFetch = 0, lastErr = "", fetching = false, meta1 = "";
 var capped = false;                   /* the API truncated at its own limit */
 var rows = {};                        /* id -> {el, cache} */
+/* Caches, so a tick that changes nothing writes nothing. See tick(). */
+var renderKey = "", footNets = null, ageText = "", ageCls = "", detailOn = null;
 
 function el(id){ return document.getElementById(id); }
 
@@ -212,9 +214,12 @@ function paintAge(){
     var min = Math.round((Date.now() - lastFetch) / 60000);
     t = (min < 1) ? "just now" : (min + " min ago");
   }
-  if (el("age").textContent !== t) el("age").textContent = t;
+  if (t !== ageText){ ageText = t; el("age").textContent = t; }
+  /* Compared before assigning: setting className to the value it already holds
+     is still a style invalidation, and this runs on every tick. */
   var old = !!lastFetch && (Date.now() - lastFetch) > C.poll * 2000;
-  b.className = (fetching ? "busy" : "") + (old ? " old" : "");
+  var cls = (fetching ? "busy" : "") + (old ? " old" : "");
+  if (cls !== ageCls){ ageCls = cls; b.className = cls; }
 }
 
 /* Shared with the overlay widget, so the two renderings cannot drift. */
@@ -371,25 +376,35 @@ function paintDetail(){
   WG.marker.trendScroll(tr);
 }
 
-/* Called from render(): add the panel to whichever row is open, and make sure
-   no other row still carries one. Driven from `openId` rather than from the
-   click, so a re-render (new readings, a settings change) cannot leave a stale
-   panel attached to a row that has since moved or gone. */
+/* Called from render(): attach the panel to whichever row is open, detach the
+   one that used to hold it. Driven from `openId` rather than from the click, so
+   a re-render — new readings, a settings change — cannot leave a stale panel on
+   a row that has since moved or gone.
+
+   `detailOn` tracks where the panel currently is, so this touches AT MOST TWO
+   rows. It used to walk every ranked row and run a querySelector on each, which
+   at the default cap is 120 selector queries per render for a thing that can
+   only ever be attached in one place. */
 function syncDetail(ranked){
-  var i, st, r, d;
-  for (i = 0; i < ranked.length; i++){
-    st = ranked[i];
-    r = rows[st.id];
-    if (!r) continue;
+  var r, d, i, st = null;
+  if (detailOn === openId) return;
+
+  if (detailOn && rows[detailOn]){
+    r = rows[detailOn];
     d = r.el.querySelector(".detail");
-    if (openId === st.id){
-      if (!d) openDetail(r, st);
-      r.el.firstChild.setAttribute("aria-expanded", "true");
-    } else if (d){
-      r.el.removeChild(d);
-      r.el.firstChild.setAttribute("aria-expanded", "false");
-    }
+    if (d) r.el.removeChild(d);
+    r.el.firstChild.setAttribute("aria-expanded", "false");
   }
+  detailOn = null;
+  if (!openId) return;
+
+  r = rows[openId];
+  if (!r) return;                       /* left the list; render() clears openId */
+  for (i = 0; i < ranked.length; i++) if (ranked[i].id === openId){ st = ranked[i]; break; }
+  if (!st) return;
+  openDetail(r, st);
+  r.el.firstChild.setAttribute("aria-expanded", "true");
+  detailOn = openId;
 }
 
 /* ── render ───────────────────────────────────────────────────────── */
@@ -422,14 +437,23 @@ function render(fix){
   /* Attribution is owed to the networks that own the readings, not only to the
      aggregator, so the list is rebuilt from what is actually on screen. The
      safety wording stays — it is the shortest it can be and still say what it
-     has to. */
-  var nets = WG.attribution(ranked), f = el("foot");
-  f.textContent =
-    "Readings from " + (nets.length ? nets.join(", ") : "—") + ", via winds.mobi. " +
-    "Measured values only: altitude, speed, gust, direction. Nothing is " +
-    "interpolated or guessed between stations. The colours are a rough aid, " +
-    "NOT an assessment of whether a flight is safe. Readings cannot work " +
-    "offline — treat anything marked old as unknown.";
+     has to.
+
+     CACHED ON THE NETWORK LIST. This was an unconditional textContent write on
+     every render, so ~250 characters of unchanging legal text were replaced
+     every few seconds — visible as a flicker, and the reason this whole pass
+     happened. The networks only change when the fetch brings different
+     stations, which is at most once per poll interval. */
+  var nets = WG.attribution(ranked).join(", ");
+  if (nets !== footNets){
+    footNets = nets;
+    el("foot").textContent =
+      "Readings from " + (nets || "—") + ", via winds.mobi. " +
+      "Measured values only: altitude, speed, gust, direction. Nothing is " +
+      "interpolated or guessed between stations. The colours are a rough aid, " +
+      "NOT an assessment of whether a flight is safe. Readings cannot work " +
+      "offline — treat anything marked old as unknown.";
+  }
 }
 
 /* ── the sentence ──────────────────────────────────────────────────────
@@ -487,7 +511,28 @@ function refresh(fix){
   });
 }
 
-/* ── tick ─────────────────────────────────────────────────────────── */
+/* ── tick ──────────────────────────────────────────────────────────────
+   Same discipline as the overlay: A KEY FIRST, and render() only when it
+   changes. Before this, every tick ran WG.prepare() over up to 120 stations —
+   distance, bearing, two rating lookups and a staleness test each, then a sort
+   — walked every row, and rewrote the footer's ~250 characters of unchanging
+   text. That last one was visible as a flicker every few seconds, which is what
+   started this.
+
+   What can change a row, and therefore what is in the key:
+     the position, to ~0.001° (about 100 m). Rows are sorted by distance and the
+       printed value is to 0.1 km, so reordering below that is noise.
+     the last fetch — new readings
+     the MINUTE, the granularity at which "14 min ago" and the amber/red
+       staleness classes can change
+     which row is expanded
+
+   A settings change goes through dropRows(), which clears the key, so the whole
+   list is rebuilt rather than diffed against stale caches.
+
+   paintAge() stays OUTSIDE the key: it is two string compares and it is the one
+   thing that must never be stale, since it is the display's own claim about how
+   much it can be trusted. ────────────────────────────────────────────── */
 function tick(){
   var p = WG.position(C), fix = p.fix;
   paintAge();
@@ -496,10 +541,15 @@ function tick(){
            "add <code>?lat=47.05&amp;lng=8.64</code> to the address to try a " +
            "fixed spot.");
     paintDbg(null, p);
+    renderKey = "";                /* so the first fix always draws */
     return;
   }
   if (!lastFetch || Date.now() - lastFetch > C.poll * 1000) refresh(fix);
-  render(fix);                     /* render() writes the sentence too */
+
+  var now = Date.now();
+  var key = fix.lat.toFixed(3) + "," + fix.lon.toFixed(3) + "/" + lastFetch +
+            "/" + Math.round(now / 60000) + "/" + openId;
+  if (key !== renderKey){ renderKey = key; render(fix); }
   paintDbg(fix, p);
 }
 
@@ -541,6 +591,8 @@ function dropRows(){
   /* Cached histories go too: `hours` may have just changed, and a cached
      3-hour strip shown under a 6-hour heading is a quiet lie. */
   histCache = {};
+  /* Every per-element cache is now invalid — the elements are gone. */
+  renderKey = ""; footNets = null; detailOn = null;
 }
 
 el("reset").addEventListener("click", function(){
@@ -555,7 +607,21 @@ el("reset").addEventListener("click", function(){
 el("bRef").addEventListener("click", function(){ lastFetch = 0; tick(); });
 
 tick();
-setInterval(tick, 5000);
+
+/* 15 s, not 5. Nothing on this page changes faster than once a minute — the age
+   text, the staleness colours, and the poll trigger are all minute-or-slower —
+   so 5 s was three times the wakeups for the same display, and a wakeup on a
+   phone is a radio and a CPU coming out of idle.
+
+   Paused while the page is hidden. An installed PWA left on a home screen was
+   running a full prepare-and-render every 5 s behind whatever the pilot was
+   actually looking at; on becoming visible it ticks at once, and tick() refetches
+   by itself if the data has gone past its poll interval. */
+var timer = setInterval(tick, 15000);
+document.addEventListener("visibilitychange", function(){
+  if (document.hidden){ if (timer){ clearInterval(timer); timer = 0; } }
+  else if (!timer){ timer = setInterval(tick, 15000); tick(); }
+});
 </script>
 </body>
 </html>

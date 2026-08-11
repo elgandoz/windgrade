@@ -928,6 +928,75 @@ a left-edge gradient mask makes the partial cell read as *scrolled* rather than
 as a number. Only while something IS hidden: a permanent fade would dim a cell
 that is fully visible. A `scroll` listener keeps it right as the pilot swipes.
 
+## Phase 3m — the tick loops were doing everything, every time (2026-08-11)
+
+Reported: the list's footer rewrites itself every few seconds. It did — and
+finding out why turned up a much larger waste in both pages.
+
+#### Measured, before and after, over the same 40 s
+
+`WG.prepare` is distance, bearing, two rating lookups and a staleness test per
+station, then a sort. `localStorage.setItem` is synchronous disk I/O.
+
+| widget.html | before | after |
+|---|---|---|
+| `WG.prepare` calls | **82** | **2** |
+| `localStorage.setItem` calls | **82** | **2** |
+
+| app.html | before | after |
+|---|---|---|
+| ticks | 10 | 4 |
+| full renders | 10 | 3 |
+| footer rewrites | **10** | **2** |
+
+82 is 40 s at 2 Hz: the overlay was doing a full prepare-and-sort over every
+station, plus a synchronous localStorage write, **twice a second**.
+
+#### The three causes
+
+**1. The guard was on the wrong side of the work.** `widget.html`'s `tick()`
+computed `drawKey` — the cheap "has anything moved a whole pixel" test — *after*
+calling `WG.prepare()`. Its comment said the loop was "nearly free", which was
+true of the canvas repaint and of nothing else. The key is now computed first
+and everything expensive sits behind it. `app.html` had no key at all and now
+has one, quantised to 0.001° of position (~100 m; rows are sorted by distance
+and the printed value is to 0.1 km, so reordering below that is noise), plus the
+last fetch, the minute, and which row is expanded.
+
+The minute is what makes this safe: staleness is the only thing that changes
+without an input changing, and it changes at minute granularity.
+
+**2. `remember()` wrote to `localStorage` on every call.** `position()` calls it
+on every read and `setGeoFix` on every `watchPosition` callback. Now throttled to
+once per 30 s, with `now` injectable so the throttle is unit-tested. The stored
+value exists so a cold start with no GPS has somewhere to point the map; half a
+minute of staleness there is nothing against being absent.
+
+**3. Unconditional DOM writes.** The footer's ~250 characters of unchanging legal
+text, rewritten on every render — the reported flicker. Now cached on the network
+list, which can only change when a fetch brings different stations. Also
+`paintAge`'s `className`, which was assigned every tick even when identical, and
+`syncDetail`, which walked every ranked row running a `querySelector` on each —
+120 selector queries per render for a panel that can only be attached in one
+place. It now tracks where the panel is and touches at most two rows.
+
+#### Cadence, and hidden pages
+
+- `widget.html` 500 ms → **1000 ms**. `getLocation()` is a call across the JS
+  bridge into native and XCTrack's GPS is 1 Hz, so the second poll each second
+  could only ever return the same answer. Interaction does not wait for the
+  tick; the zoom handlers call it directly.
+- `app.html` 5 s → **15 s**. Nothing on the page changes faster than once a
+  minute, so 5 s was three times the wakeups for the same display.
+- **Both pause while `document.hidden`** and tick immediately on becoming
+  visible, where `tick()` refetches by itself if the data is past its poll
+  interval. An installed PWA left on a home screen was running a full
+  prepare-and-render every 5 s behind whatever the pilot was actually looking at.
+
+Also fixed: with no fix, `draw(null, [])` ran every tick — clearing an already
+clear canvas is still a full-surface `drawImage` copy. Guarded by a `"nofix"`
+sentinel in `drawKey`, which `resize()` still invalidates.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,
