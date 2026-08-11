@@ -67,16 +67,41 @@ its help text now says so.
 
 #### What this explains, retrospectively
 
-- **The Pixel 9a's different label list.** Two independent causes were stacked:
-  a narrower widget (411 vs 448 css px) *and* a coarser dpr. The bar-width model
-  alone reproduced the labels — because labels only ever constrain the *product*
-  of bar width and resolution — which is exactly why they could never have
-  settled this and why a ruler was needed.
+- **The Pixel 9a's different label list** — but not for the reason first
+  proposed. See the next section: it is density, not width.
 - **The ~8% crop mismatch** measured earlier from the screenshot: at dpr 2.625
   the uncorrected model was 158.6 against a true 135.1, and the residual after
   the density correction is 2.7%.
 - **Why the alternating-ladder hypothesis fit one device and nothing else.** It
   was absorbing a density effect into the ladder. The √2 ladder is intact.
+
+#### Consequence: the scale bar is a constant ~150 dp, not a fraction of the width
+
+The label model had been fitted with `CAL` held fixed, so once `mppXct` started
+scaling with dpr the two label lists stopped both falling out of it (23/23 and
+11/23). That is a genuine disagreement between two measurements, and worth
+following rather than patching.
+
+The resolution of it: label lists constrain only the **product** of bar width
+and resolution, which is exactly why they could not choose between the candidate
+bar rules on their own. Now that the ruler has pinned the resolution
+independently, they can. Swept against both devices with the density law applied:
+
+| bar-width rule | labels reproduced |
+|---|---|
+| **constant max length in dp** | **46 / 46** |
+| fraction of widget width (the old 0.325) | 42 / 46 |
+| constant in device pixels | 35 / 46 |
+
+Everything in **147.1 – 154.3 dp** scores 46/46; `BAR_MAX_DP = 150` is the
+middle. A fixed max length in dp is also simply how an Android widget gets
+written, so this is the mundane answer rather than a clever one.
+
+Consequences: `scaleMetres`/`scaleLabel` no longer take a width — a label
+depends on **latitude and density**, not on how wide the widget is. The `wpx`
+parameter therefore had no consumer left and is replaced by `dpr` (0 = use this
+device's own). And the `step` field no longer tells pilots to pair by label: the
+launcher shows the dpr-3 list, says so, and asks them to match **bar length**.
 
 #### Kept
 
