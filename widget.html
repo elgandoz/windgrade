@@ -252,9 +252,9 @@ window.addEventListener("resize", resize);
    Nudged markers ALWAYS print their altitude, whatever `alt` says. Two markers
    side by side are the one case where the pilot cannot tell which reading is
    which, and altitude is what separates them — it is the difference between a
-   valley floor and a ridge 950 m up. `vgap` therefore reserves the altitude
-   line's height whenever nudging is on, or the line would land on the arrow
-   below.
+   valley floor and a ridge 950 m up. `textH` therefore includes the altitude
+   line whenever nudging is on, so the layout reserves room for a line it knows
+   will be drawn.
 
    TWO THINGS THE FIRST VERSION GOT WRONG, both caught by screenshotting it:
 
@@ -284,7 +284,6 @@ function draw(fix, ranked){
        arrow of the station below it. Nudged markers print it unconditionally,
        so nudging reserves the room even when `alt` is off. */
     var altH = WG.marker.altSize(fs) + 2;
-    var vgap = box * 1.9 + ((C.alt || C.nudge) ? altH : 0);
 
     /* Rectangles a marker may not cover. The scale bar is the check that the
        pairing is right, and the badge is how a mis-pairing announces itself;
@@ -323,17 +322,30 @@ function draw(fix, ranked){
     /* Clustering, priority and placement all live in wg/marker.js: it is pure
        arithmetic, so tools/test-core.js exercises the rules directly and
        tools/nudge.html draws exactly what this draws. */
-    /* hgap MEASURED, not assumed. `box*1.5` sizes the exclusion to the ARROW,
-       which was fine while the only escape was downward. Now that sideways is
-       the preferred direction, two markers routinely end up level — and the
-       label "31/44" is wider than the arrow it hangs under, so an arrow-sized
-       gap let the numbers touch. The number is the fallback for a colour scale
-       many pilots cannot separate; it may not be the thing that collides. */
+    /* Text width MEASURED PER MARKER. WG.marker.layout treats the text as its
+       own rectangle and never lets one be covered, so it has to know how wide
+       each really is — and "3/7" is barely half of "14/22". Using the widest
+       possible label for everyone cost about 10 px of needless displacement on
+       every short one. The altitude line is measured too, because it is drawn
+       in a smaller font but can still be the wider of the pair ("1648m"). */
     bctx.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
-    var hgap = Math.max(box * 1.5, bctx.measureText("00/00").width + 8);
+    var labelW = bctx.measureText("00/00").width + 5;
+    var afs = WG.marker.altSize(fs);
+    for (i = 0; i < cand.length; i++){
+      st = cand[i].st;
+      bctx.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
+      var wLab = bctx.measureText(WG.marker.labelText(st)).width;
+      var wAlt = 0;
+      if (C.alt || C.nudge){
+        bctx.font = "600 " + afs + "px ui-monospace, 'Roboto Mono', monospace";
+        wAlt = bctx.measureText(WG.marker.altText(st)).width;
+      }
+      cand[i].tw = (Math.max(wLab, wAlt) + 5) / 2;
+    }
 
     var lay = WG.marker.layout(cand, {
-      hgap: hgap, vgap: vgap, box: box,
+      box: box, labelW: labelW,
+      textH: fs + ((C.alt || C.nudge) ? altH : 0),
       nudge: !!C.nudge, maxPerCluster: 3,
       blocked: blocked,
       inBounds: function (px, py){

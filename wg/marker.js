@@ -160,111 +160,156 @@ function svg(st, px, opts) {
   return s + "</g></svg>";
 }
 
-/* ── laying out a cluster of markers that will not fit ────────────────
+/* ── laying out markers that will not all fit ─────────────────────────
    Pure arithmetic, no DOM, so tools/test-core.js exercises it directly. Given
    projected positions it returns where each marker should actually be drawn.
 
-   WHY IT ROTATES. The exclusion zone is a rectangle — `hgap` wide, `vgap`
-   tall — and vgap is much the larger, because a marker is its arrow plus a
-   number plus an altitude line. Escaping it downward therefore costs ~49 px
-   while escaping it SIDEWAYS costs ~29 px. The first version only ever pushed
-   straight down and so always paid the expensive direction. Candidates are
-   ordered by how far they move the marker, which puts the lateral ones first.
+   WHAT A MARKER OCCUPIES, and why it is two boxes and not one. A single
+   rectangle sized to the whole thing is what made the first two versions push
+   markers so far: it had to be as wide as the LABEL and as tall as the arrow
+   plus the label plus the altitude line, so any escape cost ~50 px whichever
+   way it went. In fact a marker is an arrow with a narrow column of text
+   hanging below it, and the gap between two of them is mostly empty:
 
-   WHY EVERY CANDIDATE HAS dy >= 0. The ordering below has to survive the
-   layout: a marker may be moved level with an earlier one or below it, never
-   above it, or the arrangement would contradict the priority it was sorted by.
+       arrow   x +- box*ARROW_TOL,  y +- box*ARROW_TOL
+       text    x +- labelW/2,       y + box-1 .. y + box-1 + textH
+
+   Two markers conflict if any of those four rectangles cross. So a marker can
+   be placed DIAGONALLY very close indeed — the arrows overlap a little and the
+   two text columns sit at different heights, which is exactly what the eye
+   needs and nothing more.
+
+   ARROW_TOL < 1 is the owner's "even if they overlap a tad is not an issue".
+   The TEXT boxes are never allowed to touch anything: the number is the
+   fallback for a colour scale many pilots cannot separate, so it is the one
+   thing that may not be covered — not by another number, and not by an arrow.
+
+   A NUDGED MARKER NEVER PUSHES ANOTHER ONE. Anchors — the highest-priority
+   member of each cluster — are all placed FIRST, at their true positions, in
+   one pass over every cluster. Only then is anything displaced. So a marker
+   that has been moved can never take territory a marker that has not been
+   moved was going to use. Two anchors cannot conflict with each other by
+   construction: if they did, they would be one cluster.
 
    ORDER WITHIN A CLUSTER, owner's rule:
      stale readings go to the bottom, whatever their altitude
      everything fresher is equal priority, and the HIGHEST STATION IS ON TOP
    So a stack reads as a vertical profile of the valley — which is the point,
    since 1648 m and 2600 m 390 m apart is the whole question in a valley wind.
-   The first member placed keeps its TRUE position and is drawn normally; the
-   rest are displaced, faded, and annotated with a leader line.
 
    AT MOST `maxPerCluster` (3) ARE DRAWN. Past three, a pile stops being
    readable and the extras are dropped rather than shuffled somewhere they
-   would be read as a different station's reading.
+   would be read as a different station's reading. ─────────────────────── */
+var ARROW_TOL = 0.72;              /* arrows may overlap by about a quarter */
 
-   Clusters are connected components of the overlap relation, computed from
-   TRUE positions — "which stations overlap each other" — not from wherever
-   the layout has since put them. ────────────────────────────────────── */
 function prioOf(it) {
   return (it.stale === "stale") ? 2 : (it.stale === "warn" ? 1 : 0);
 }
 
 function layout(items, o) {
-  var hgap = o.hgap, vgap = o.vgap, box = o.box || 0;
+  var box = o.box || 20;
+  var aw = box * ARROW_TOL;                 /* arrow half-extent, tolerant */
+  var dtw = (o.labelW || box * 2) / 2;      /* fallback text half-width */
+  var t0 = box - 1;                         /* label top, as labelCanvas draws */
+  var t1 = t0 + (o.textH || box);
   var maxPer = o.maxPerCluster || 3;
   var n = items.length, i, j, out = [], placed = [];
 
-  /* Just past the edge of the exclusion rectangle. The multiplier is what
-     stops a float comparison landing exactly on the boundary and looping.
+  /* PER MARKER, because "3/7" is barely half the width of "14/22" and using
+     the widest possible label for everyone was costing about 10 px of needless
+     displacement on every short one. The caller measures its own text. */
+  function twOf(it) { return (it.tw > 0) ? it.tw : dtw; }
 
-     SORTED BY DISTANCE at build time rather than written in order, so the
-     "closest first" promise cannot drift from the list as entries are added.
-     A lateral step is ~hgap and a vertical one ~vgap, so the sort is what puts
-     sideways ahead of downward without anyone having to remember to. */
-  var HX = hgap * 1.04, VY = vgap * 1.04;
-  var CAND = [
-    [ HX, 0], [-HX, 0],
-    [ HX, VY * 0.5], [-HX, VY * 0.5],
-    [ HX * 1.5, 0], [-HX * 1.5, 0],
-    [0, VY],
-    [ HX, VY], [-HX, VY],
-    [ HX * 2, 0], [-HX * 2, 0],
-    [ HX * 2, VY], [-HX * 2, VY],
-    [0, VY * 2]
-  ];
-  CAND.sort(function (a, b) {
-    return (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1]);
-  });
-
-  function overlap(ax, ay, bx, by) {
-    return Math.abs(ax - bx) < hgap && Math.abs(ay - by) < vgap;
+  function cross(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
+  function boxes(x, y, tw) {
+    return [[x - aw, y - aw, x + aw, y + aw],       /* arrow */
+            [x - tw, y + t0, x + tw, y + t1]];      /* text */
   }
-  function free(x, y) {
+  function conflict(ax, ay, atw, bx, by, btw) {
+    var A = boxes(ax, ay, atw), B = boxes(bx, by, btw), p, q;
+    for (p = 0; p < 2; p++)
+      for (q = 0; q < 2; q++)
+        if (cross(A[p][0], A[p][2], B[q][0], B[q][2]) &&
+            cross(A[p][1], A[p][3], B[q][1], B[q][3])) return true;
+    return false;
+  }
+  function free(x, y, tw) {
     var k;
     if (o.inBounds && !o.inBounds(x, y)) return false;
     if (o.blocked && o.blocked(x, y)) return false;
     for (k = 0; k < placed.length; k++)
-      if (overlap(x, y, placed[k][0], placed[k][1])) return false;
+      if (conflict(x, y, tw, placed[k][0], placed[k][1], placed[k][2])) return false;
     return true;
   }
 
-  /* connected components of "these two overlap" */
+  /* Candidates on rings of increasing radius, so the FIRST hit is the closest
+     placement there is — not the closest entry someone remembered to add to a
+     hand-written list. Angles are measured from straight down and never exceed
+     90 degrees, so dy >= 0 and a marker is never pushed above its own true
+     position; the priority floor below handles the rest of the ordering.
+     Diagonals come first at a given radius because that is where the two text
+     columns land at different heights, which is what lets them sit close. */
+  var ANG = [45, -45, 30, -30, 60, -60, 90, -90, 0];
+  var STEP = Math.max(2, box * 0.28), RMAX = (t1 + box) * 2.2;
+  var CAND = [], r, a, rad;
+  for (r = STEP; r <= RMAX; r += STEP)
+    for (a = 0; a < ANG.length; a++) {
+      rad = ANG[a] * Math.PI / 180;
+      CAND.push([r * Math.sin(rad), r * Math.cos(rad)]);
+    }
+
+  /* clusters: connected components of "these two conflict where they really
+     are", so membership is a fact about the stations, not about the layout */
   var parent = [];
   for (i = 0; i < n; i++) parent[i] = i;
-  function find(a) { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; }
+  function find(a2) { while (parent[a2] !== a2) { parent[a2] = parent[parent[a2]]; a2 = parent[a2]; } return a2; }
   for (i = 0; i < n; i++)
     for (j = i + 1; j < n; j++)
-      if (overlap(items[i].x, items[i].y, items[j].x, items[j].y)) {
+      if (conflict(items[i].x, items[i].y, twOf(items[i]),
+                   items[j].x, items[j].y, twOf(items[j]))) {
         var ra = find(i), rb = find(j);
         if (ra !== rb) parent[rb] = ra;
       }
 
   /* Grouped in first-appearance order, and `items` arrives nearest-first, so
      the nearest cluster gets first pick of the screen. */
-  var groups = [], byRoot = {}, r;
+  var groups = [], byRoot = {}, root;
   for (i = 0; i < n; i++) {
-    r = find(i);
-    if (byRoot[r] === undefined) { byRoot[r] = groups.length; groups.push([]); }
-    groups[byRoot[r]].push(i);
+    root = find(i);
+    if (byRoot[root] === undefined) { byRoot[root] = groups.length; groups.push([]); }
+    groups[byRoot[root]].push(i);
   }
 
   for (i = 0; i < groups.length; i++) {
-    var g = groups[i].slice();
-    g.sort(function (a, b) {
-      var pa = prioOf(items[a]), pb = prioOf(items[b]);
+    groups[i].sort(function (a2, b2) {
+      var pa = prioOf(items[a2]), pb = prioOf(items[b2]);
       if (pa !== pb) return pa - pb;                  /* stale sinks */
-      var aa = items[a].alt, ab = items[b].alt;       /* then highest on top */
+      var aa = items[a2].alt, ab = items[b2].alt;     /* then highest on top */
       var na = !(aa === aa), nb = !(ab === ab);       /* no altitude sorts last */
       if (na !== nb) return na ? 1 : -1;
       if (!na && aa !== ab) return ab - aa;
-      return a - b;                                   /* else nearest first */
+      return a2 - b2;                                 /* else nearest first */
     });
+  }
 
+  function put(idx, x, y, moved) {
+    placed.push([x, y, twOf(items[idx])]);
+    out.push({ i: idx, x: x, y: y, tx: items[idx].x, ty: items[idx].y, moved: moved });
+  }
+
+  /* ── pass A: every anchor, before anything is displaced ── */
+  var anchored = [];
+  for (i = 0; i < groups.length; i++) {
+    var top = groups[i][0];
+    if (o.blocked && o.blocked(items[top].x, items[top].y)) { anchored[i] = false; continue; }
+    if (o.inBounds && !o.inBounds(items[top].x, items[top].y)) { anchored[i] = false; continue; }
+    put(top, items[top].x, items[top].y, false);
+    anchored[i] = true;
+  }
+
+  /* ── pass B: the rest, closest free spot ── */
+  for (i = 0; i < groups.length; i++) {
+    var g = groups[i], drawn = anchored[i] ? 1 : 0;
     /* THE PRIORITY FLOOR. Candidates all have dy >= 0, which stops a marker
        being pushed above its OWN true position — but that is not the rule. The
        rule is about the arrangement: a stale reading goes to the bottom of the
@@ -272,24 +317,23 @@ function layout(items, o) {
        strictly lower priority is forbidden from landing above any higher-
        priority one already placed. Equal priority may sit level, which is what
        lets a same-tier pair go side by side at the cheapest distance. */
-    var drawn = 0, floorY = -Infinity, floorPrio = -1;
-    for (j = 0; j < g.length; j++) {
-      /* A flag, not a sentinel coordinate: a marker at the left edge has a
-         legitimately negative x and -1 would silently drop it. */
-      var it = items[g[j]], px = 0, py = 0, got = false, c, p = prioOf(it);
-      var floor = (p > floorPrio) ? floorY + 1 : -Infinity;
+    var floorY = anchored[i] ? items[g[0]].y : -Infinity;
+    var floorPrio = anchored[i] ? prioOf(items[g[0]]) : -1;
+    for (j = anchored[i] ? 1 : 0; j < g.length; j++) {
       if (drawn >= maxPer) break;                     /* a pile of four is lost */
-      if (it.y >= floor && free(it.x, it.y)) { px = it.x; py = it.y; got = true; }
+      var it = items[g[j]], p = prioOf(it);
+      var lim = (p > floorPrio) ? floorY + 1 : -Infinity;
+      var px = 0, py = 0, got = false, c, cx, cy;
+      var tw = twOf(it);
+      if (it.y >= lim && free(it.x, it.y, tw)) { px = it.x; py = it.y; got = true; }
       else if (o.nudge) {
         for (c = 0; c < CAND.length; c++) {
-          var cx = it.x + CAND[c][0], cy = it.y + CAND[c][1];
-          if (cy >= floor && free(cx, cy)) { px = cx; py = cy; got = true; break; }
+          cx = it.x + CAND[c][0]; cy = it.y + CAND[c][1];
+          if (cy >= lim && free(cx, cy, tw)) { px = cx; py = cy; got = true; break; }
         }
       }
       if (!got) continue;                             /* nowhere to put it */
-      placed.push([px, py]);
-      out.push({ i: g[j], x: px, y: py, tx: it.x, ty: it.y,
-                 moved: (px !== it.x || py !== it.y) });
+      put(g[j], px, py, px !== it.x || py !== it.y);
       /* floorY is the running maximum over everything placed in this cluster;
          floorPrio the lowest priority tier reached so far. Together they mean
          "the next tier down starts below all of this". */
@@ -421,7 +465,8 @@ WG.marker = {
   label: labelCanvas, labelText: labelText, fmt: fmt,
   alt: altCanvas, altText: altText, altSize: altSize,
   svg: svg, trendHtml: trendHtml, trendScroll: trendScroll,
-  leader: leader, layout: layout, NUDGE_ALPHA: NUDGE_ALPHA,
+  leader: leader, layout: layout,
+  NUDGE_ALPHA: NUDGE_ALPHA, ARROW_TOL: ARROW_TOL,
   hhmm: hhmm, esc: esc
 };
 

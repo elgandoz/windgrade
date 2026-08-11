@@ -265,13 +265,20 @@ been moved and the line says where from. Never displace a marker silently.
 is pure arithmetic — no DOM — so `tools/test-core.js` asserts the rules directly
 and `tools/nudge.html` draws exactly what the widget draws. The rules:
 
-- **Sideways first.** The exclusion zone is `hgap` wide and `vgap` tall, and vgap
-  is much the larger, so lateral escape costs ~30 px against ~50 px downward.
-  Candidates are sorted by distance at build time, which is what puts them in
-  that order — do not hand-order the list.
-- **`hgap` is MEASURED, not `box*1.5`.** The label "31/44" is wider than the
-  arrow it hangs under, and once markers sit level the label is what collides.
-  The caller measures it with `measureText` and passes it in.
+- **A marker is TWO boxes, not one** — the arrow (`x ± box·ARROW_TOL`) and the
+  narrow text column under it (`x ± tw`, `y+box-1` down). A single rectangle
+  round the whole thing had to be as wide as the label and as tall as
+  arrow+label+altitude, so every escape cost ~50 px. Two boxes let a neighbour
+  sit diagonally close: arrows overlap a little, text columns land at different
+  heights. Measured 51 px → 34 px on the Zermatt pair.
+- **Arrows may overlap a tad; TEXT NEVER MAY** — not with another number, not
+  under an arrow. `ARROW_TOL` is the tolerance and it applies to arrows only.
+- **Text width is measured PER MARKER** (`items[i].tw`), label and altitude line
+  both. `3/7` is barely half of `14/22`, and using the widest possible label for
+  everyone cost ~10 px of needless displacement on every short one.
+- **Candidates are rings of increasing radius**, generated not hand-written, so
+  the first hit is genuinely the closest placement — not the closest entry
+  someone remembered to add.
 - **Order:** stale sinks to the bottom of its cluster whatever its altitude;
   everything fresher is equal priority and the highest station keeps its true
   position. Enforced by a priority floor, because a stale marker can start out
@@ -279,6 +286,11 @@ and `tools/nudge.html` draws exactly what the widget draws. The rules:
 - **At most three per cluster** — past that a pile stops being readable and the
   extras are dropped rather than put somewhere they read as another station.
 - Clusters are connected components of the overlap relation on TRUE positions.
+- **A NUDGED MARKER NEVER PUSHES AN UNNUDGED ONE.** Every cluster's anchor is
+  placed in one pass BEFORE anything is displaced, so a cluster laid out early
+  cannot spend space a later cluster's anchor needs. Two anchors cannot conflict
+  by construction — if they did they would be one cluster. Do not go back to
+  finishing one cluster at a time.
 
 Three drawing rules go with it, each of which cost a screenshot to find:
 

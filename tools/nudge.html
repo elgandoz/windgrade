@@ -26,9 +26,10 @@ a{color:#54A6DC}
 <h1>Nudged markers over terrain</h1>
 <p>
   The overlay <b>moves</b> a marker that will not fit rather than dropping the
-  reading. It goes sideways by preference — the exclusion zone is wider than it
-  is tall, so lateral is the <b>cheapest</b> escape and the marker stays closest
-  to where it belongs. Clustering, ordering and placement are
+  reading, and moves it <b>as little as possible</b>. A marker is treated as two
+  boxes — the arrow, and the narrow column of text under it — so a neighbour can
+  sit diagonally close: the arrows overlap a little and the two text columns land
+  at different heights. Clustering, ordering and placement are
   <code>WG.marker.layout()</code>. This page exists because
   <b>a canvas drawn asynchronously does not survive a headless screenshot</b>,
   so the widget's own markers cannot be checked that way. Here the same
@@ -37,10 +38,11 @@ a{color:#54A6DC}
 </p>
 <p>
   What to judge: <b>the number and the altitude must stay fully legible on a
-  moved marker</b> — they are drawn at full strength on purpose, because the
-  number is the fallback for a colour scale many pilots cannot separate. Only
-  the arrow fades. Fading the whole marker to 0.6 was measured as marginal
-  against dark forest.
+  moved marker</b>. Arrows may overlap a little — that is deliberate, and it is
+  what keeps them close — but a text column is never covered, by another number
+  or by an arrow. Only the arrow fades; the text is drawn at full strength,
+  because the number is the fallback for a colour scale many pilots cannot
+  separate.
 </p>
 <p>
   Order within a cluster: a <b>stale</b> reading sinks to the bottom whatever
@@ -98,25 +100,28 @@ function render(cv, nudge){
   var wantAlt = document.getElementById("al").checked;
   var scale = 0.55 + (size/100)*0.75, fs = Math.round(9 + (size/100)*7);
   var box = WG.REACH * scale;
-  /* The one piece of arithmetic shared by hand with widget.html's draw(). The
-     CLUSTERING, ORDERING and PLACEMENT come from WG.marker.layout, so the part
-     with rules in it cannot drift. */
-  var vgap = box*1.9 + ((wantAlt || nudge) ? WG.marker.altSize(fs) + 2 : 0);
+  g.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
+  var labelW = g.measureText("00/00").width + 5;
+  var altH = WG.marker.altSize(fs) + 2;
 
   g.setTransform(1,0,0,1,0,0);
   g.clearRect(0,0,W,H);
   terrain(g, W, H);
 
+  var afs = WG.marker.altSize(fs);
   var items = CLUSTER.map(function(s){
     rate(s);
-    return { x:s.x, y:s.y, alt:s.alt, stale:s.stale || "fresh", st:s };
+    /* Measured per marker, exactly as widget.html measures it. */
+    g.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
+    var wLab = g.measureText(WG.marker.labelText(s)).width;
+    g.font = "600 " + afs + "px ui-monospace, 'Roboto Mono', monospace";
+    var wAlt = (wantAlt || nudge) ? g.measureText(WG.marker.altText(s)).width : 0;
+    return { x:s.x, y:s.y, alt:s.alt, stale:s.stale || "fresh", st:s,
+             tw:(Math.max(wLab, wAlt) + 5) / 2 };
   });
-  /* Measured exactly as widget.html measures it: the label is wider than the
-     arrow, and with lateral placement the label is what collides. */
-  g.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
-  var hgap = Math.max(box*1.5, g.measureText("00/00").width + 8);
   var lay = WG.marker.layout(items, {
-    hgap: hgap, vgap: vgap, box: box,
+    box: box, labelW: labelW,
+    textH: fs + ((wantAlt || nudge) ? altH : 0),
     nudge: nudge, maxPerCluster: 3,
     inBounds: function(x,y){
       return x > box*0.5 && x < W - box*0.5 && y > box*0.5 && y < H - box*0.6;

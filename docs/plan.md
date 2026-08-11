@@ -1135,6 +1135,57 @@ At the Zermatt URL: `12 stations ↓6` against `8 of 12 stations` with `nudge=0`
 dropped into the tightest pair so all three rules are exercised at once, and
 reports `8 of 8 drawn, 4 moved` beside `4 of 8 drawn, 4 lost`.
 
+## Phase 3q — as close as possible, and anchors first (2026-08-11)
+
+Owner: *"the nudge still positions the arrows way too far, keep them as close as
+possible. even if they overlap a tad is not an issue. A nudged arrow (which has
+a lower priority) should not force another arrow to be nudged."*
+
+#### Why it was far: one box round the whole marker
+
+A marker was modelled as a single rectangle — as wide as the label and as tall
+as arrow + label + altitude line. Every escape therefore cost about the same,
+~50 px, whichever way it went. But a marker is not a block: it is **an arrow
+with a narrow column of text hanging below it**, and the space between two of
+them is mostly empty.
+
+`WG.marker.layout()` now models two boxes per marker and checks all four
+crossings. A neighbour can sit **diagonally close** — the arrows overlap a
+little and the two text columns land at different heights, which is all the eye
+needs.
+
+| | before | after |
+|---|---|---|
+| Zermatt pair, displacement | 51 px | **34 px** |
+| markers moved at the Zermatt URL | 6 | **4** |
+
+Three things got it there:
+
+- **`ARROW_TOL` = 0.72** — arrows may overlap by about a quarter, which is the
+  owner's "a tad". **Text is never allowed to touch anything**: not another
+  number, not an arrow. The number is the fallback for a colour scale many
+  pilots cannot separate.
+- **Text width measured PER MARKER.** `3/7` is barely half the width of
+  `14/22`, and using the widest possible label for everyone was costing ~10 px
+  of needless displacement on every short one. The altitude line is measured
+  too — it is drawn smaller but `1648m` can still be the wider of the pair.
+- **Candidates are rings of increasing radius, generated rather than
+  hand-written**, so the first hit really is the closest placement available.
+
+#### Anchors first, globally
+
+The layout used to finish one cluster before starting the next, so a displaced
+marker could take the space a later cluster's anchor needed — and that anchor
+would then be displaced in turn. Exactly what the owner saw.
+
+Now **every cluster's anchor is placed in one pass before anything is moved**.
+Two anchors cannot conflict by construction: if they did, they would be one
+cluster. Asserted directly — a third station near a displaced marker keeps its
+true position and the displaced one gives way instead.
+
+`tools/nudge.html` drives the same layout and its prose was rewritten to
+describe the two-box model rather than the old "sideways is cheaper".
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,
