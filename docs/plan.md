@@ -684,6 +684,47 @@ about is exactly the class of thing that must announce itself.
 its drops in the sample were either 0–30 m co-locations or a twin hours out of
 date) and the `stale × 4` server-side age filter.
 
+## Phase 3h — the configurator was an inventory, not a configurator (2026-08-11)
+
+Nineteen flat rows, in SPEC order, with the two that decide whether the overlay
+works at all buried among fetch margins and pixel-density overrides.
+
+**Two rows up front: `Map scale` and `Show station altitude`.** Everything else
+went behind one collapsed `<details>`, grouped by heading:
+
+| Group | Rows |
+|---|---|
+| Which stations | `peaks` `max` `pad` |
+| How old is too old | `warn` `stale` `poll` |
+| Scale bar | `bar` `barY` |
+| Status line | `badge` `debug` |
+| Tapping and zoom | `popup` `hours` `zbtn` `zpos` `zrow` `ztap` |
+| Text and colour | `size` `theme` |
+| Calibration — you should not need these | `dpr` `cal` |
+
+Driven from SPEC by a new `grp` field, so this is still one renderer and still
+cannot drift. **A row with no `grp` is on the front page** — the default is
+that way round on purpose, so a new parameter has to argue for the front rather
+than be noticed and demoted later. `tools/test-core.js` asserts the ungrouped
+set is exactly `scale,alt`; adding a parameter without a group fails the suite.
+
+Groups are headings, not nested accordions. The second click buys nothing once
+the first has been paid, and a phone's find-in-page cannot see inside a closed
+`<details>`. Empty groups are dropped, which is what lets `app.html` reuse the
+same renderer with `skipWidgetOnly` and get four groups instead of seven
+without a heading left dangling.
+
+`adv:true` → **`hidden:true`**. It never meant "show under Advanced" — it means
+no control anywhere while the parameter keeps working in URLs — and with a real
+Advanced section on the page, the old name was a trap. Only `step` uses it.
+
+Found on the way: the enum `<select>` was a fixed 92 px, which clipped
+`bottom-right` to `bottom-` — a different setting, as far as a reader is
+concerned. Now `width:auto` with a floor and a 45% cap.
+
+`index.html#advanced` opens the accordion, so a note or a bug report can point
+straight at a setting.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

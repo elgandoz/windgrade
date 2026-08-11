@@ -140,10 +140,11 @@ a{color:var(--chart)}
 
   <h2>Interactive mode (optional)</h2>
   <p class="note">
-    Leave these at zero for normal use. They all need <b>Allow tapping on the web
-    page when locked</b> turned <b>ON</b> — and with that on, the overlay swallows
-    every tap over its area, so <b>your own zoom buttons must be moved outside the
-    widget rectangle</b> or they stop working. Measured, not assumed.
+    Under <b>Advanced settings → Tapping and zoom</b>. Leave these at zero for
+    normal use. They all need <b>Allow tapping on the web page when locked</b>
+    turned <b>ON</b> — and with that on, the overlay swallows every tap over its
+    area, so <b>your own zoom buttons must be moved outside the widget
+    rectangle</b> or they stop working. Measured, not assumed.
   </p>
   <ol>
     <li><b>Popup timeout</b> — tap a marker for its recent trend: the last few
@@ -166,7 +167,8 @@ a{color:var(--chart)}
     confirm you got it right: <b>same length means correctly paired.</b>
   </p>
   <p class="note">
-    <b>Scale bar height</b> nudges our bar up or down so it sits just above
+    <b>Advanced settings → Scale bar → Scale bar height</b> nudges our bar up or
+    down so it sits just above
     XCTrack's own. Our end ticks point <b>down</b> and XCTrack's point up, so the
     two close on each other like facing brackets — when the ends line up
     vertically, the scales match, and you never have to read either number. The
@@ -251,8 +253,13 @@ function refreshLinks(){
 }
 
 /* Generated from WG.SPEC — nothing is skipped here except URL-only rows,
-   because this is where overlay URLs get built. */
-var fields = WG.fields(document.getElementById("fields"), { onChange: refreshLinks });
+   because this is where overlay URLs get built. Two rows show up front and
+   the other seventeen sit in the accordion, grouped; #advanced opens it, so
+   a note or a bug report can point straight at a setting. */
+var fields = WG.fields(document.getElementById("fields"), {
+  onChange: refreshLinks,
+  advOpen: location.hash === "#advanced"
+});
 
 document.getElementById("reset").addEventListener("click", function(){
   WG.resetConfig();

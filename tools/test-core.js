@@ -26,6 +26,32 @@ eq("step is unset by default, so the scale decides", WG.cfg("").step, 0);
 eq("default stale", WG.cfg("").stale, 30);
 eq("default poll is the 10 min data cadence", WG.cfg("").poll, 600);
 
+/* The configurator's shape is a rule, not a layout accident: a row with no
+   `grp` is on the front page, and the front page has to stay short enough to
+   be read before a first flight. Adding a parameter without a group is how
+   that quietly stops being true, so it fails here instead. */
+head("SPEC grouping — what the configurator shows up front");
+var front = [], noGrp = [], gi, gs;
+for (gi = 0; gi < WG.SPEC.length; gi++) {
+  gs = WG.SPEC[gi];
+  if (gs.ui === false || gs.hidden) continue;
+  (gs.grp ? noGrp : front).push(gs.k);
+}
+eq("exactly two rows are shown before the accordion", front.join(","), "scale,alt");
+eq("every other UI row names a group", noGrp.indexOf(undefined), -1);
+eq("groups are few enough to scan", (function () {
+  var seen = {}, n = 0, i2;
+  for (i2 = 0; i2 < WG.SPEC.length; i2++)
+    if (WG.SPEC[i2].grp && !seen[WG.SPEC[i2].grp]) { seen[WG.SPEC[i2].grp] = 1; n++; }
+  return n;
+})() <= 8, true);
+/* `hidden` is NOT the accordion. It means no control anywhere, while the
+   parameter keeps working in URLs — unlike ui:false, which also strips it. */
+eq("the ladder-step override has no control at all",
+   WG.SPEC.filter(function (s) { return s.k === "step"; })[0].hidden, true);
+eq("but it still survives a URL round-trip",
+   WG.cfg("?step=27").step, 27);
+
 head("XCTrack placeholder trap (from hx-call)");
 eq("literal ${lat} is NaN, not 0", isNaN(WG.toNum("${lat}")), true);
 eq("cfg drops it to null so the chain falls through", WG.cfg("?lat=${lat}").lat, null);

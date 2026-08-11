@@ -219,13 +219,26 @@ var M_PER_DEG = EQ_CIRC / 360;              /* 111319.49 m per degree of lat */
 /* ── SPEC — single source of truth for URL params AND the settings UI ──
    Add a parameter here and it appears in both, already clamped. Never
    hand-write a settings field. `ui:false` means URL-only; `only` marks a
-   parameter that applies to one view. ─────────────────────────────── */
+   parameter that applies to one view.
+
+   `grp` decides where the row lands. **A row with NO `grp` is one of the very
+   few shown up front** — everything else goes behind the Advanced accordion,
+   under its group's heading. That default is the right way round: a new
+   parameter should have to argue for the front page, and the front page is
+   what a pilot sees before their first flight with this.
+
+   Only two rows are ungrouped today, and both because a wrong answer makes
+   the overlay useless rather than merely unpolished: `scale`, which has to
+   match XCTrack's own map, and `alt`, which is the one piece of context a
+   station name cannot carry. Groups are rendered in first-appearance order,
+   so SPEC order is the UI order. ──────────────────────────────────── */
 var SPEC = [
   { k:"lat",   t:"num", d:null, ui:false,
     lab:"Latitude",  help:"Overrides the position chain. XCTrack substitutes ${lat}." },
   { k:"lng",   t:"num", d:null, ui:false,
     lab:"Longitude", help:"Overrides the position chain. XCTrack substitutes ${lng}." },
 
+  /* ── shown up front: no `grp` ─────────────────────────────────────── */
   { k:"scale", t:"scale", d:8000, min:100, max:2000000,
     lab:"Map scale",
     help:"The ground scale you want, not a zoom number — the overlay picks the " +
@@ -233,94 +246,105 @@ var SPEC = [
          "scale at a different pixel density. Set XCTrack's XC map to the same " +
          "reading. If your phone has no such step the overlay takes the " +
          "nearest and its own bar says what it really is." },
-  /* Kept for old URLs and for anyone who knows exactly which step they want.
-     adv:true hides the row without hiding the parameter — unlike ui:false,
-     which would also drop it from every URL the launcher builds. */
-  { k:"step",  t:"int", d:0, min:0, max:34, adv:true,
-    lab:"Ladder step override",
-    help:"0 = derive from the scale above, which is what you want. A number " +
-         "12-34 pins XCTrack's ladder step directly and ignores the scale." },
-  { k:"pad",   t:"int", d:20, min:0, max:60,
-    lab:"Fetch margin (km)",
-    help:"Area fetched beyond the view. A cache radius, not a display radius." },
-  { k:"max",   t:"int", d:120, min:1, max:400,
-    lab:"Max stations",
-    help:"Cap AFTER the view cull, so on a map it limits what could be drawn, " +
-         "not what happens to be within a radius. 40 was cutting half the " +
-         "drawable markers at wide scales." },
-  { k:"peaks", t:"int", d:0, min:0, max:1,
-    lab:"Summits only",
-    help:"Provider-supplied fact, not a guess." },
-
-  { k:"warn",  t:"int", d:15, min:1, max:120,
-    lab:"Warn after (min)" },
-  { k:"stale", t:"int", d:30, min:5, max:180,
-    lab:"Stale after (min)",
-    help:"Older readings go visibly red. Never silently shown as current." },
-  { k:"poll",  t:"int", d:600, min:300, max:3600,
-    lab:"Fetch interval (s)",
-    help:"Readings update about every 10 min. Do not poll faster." },
-
-  { k:"cal",   t:"num", d:1, min:0.5, max:2, only:"widget",
-    lab:"Scale correction",
-    help:"Leave at 1. Pixel density is already corrected for automatically; this " +
-         "is only for a residual the automatic correction does not cover." },
-  { k:"dpr",   t:"num", d:0, min:0, max:6,
-    lab:"Pixel density override",
-    help:"0 = use this device's own. XCTrack draws its map in DEVICE pixels, so " +
-         "the ground scale of every step depends on density; the overlay reads " +
-         "its own and is always right. Set a number only to preview another " +
-         "phone's scale from here — probe.html and tools/ruler.html print it." },
-  { k:"size",  t:"int", d:50, min:0, max:100,
-    lab:"Size", help:"Scales text on the pages and markers in the overlay." },
-  { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto",
-    lab:"Theme", help:"Auto follows your phone." },
   { k:"alt",   t:"int", d:0, min:0, max:1, only:"widget",
     lab:"Show station altitude",
     help:"A second line under the speed. Whether a reading came from a valley " +
          "floor or a ridge is the thing a station name cannot tell you — but it " +
          "is one more number per marker, so it is off until you want it." },
-  { k:"badge", t:"int", d:0, min:0, max:1, only:"widget",
-    lab:"Show status line",
-    help:"How many stations are drawn, and how many are stale. Off by default — " +
-         "it costs screen the map wants. Leaving it off hides the routine count " +
-         "ONLY: no position, OFFLINE and ALL STALE appear either way, because " +
-         "those are the display admitting it cannot be trusted." },
-  { k:"debug", t:"int", d:0, min:0, max:1, only:"widget",
-    lab:"Debug in the status line",
-    help:"Adds the assumed scale and heading, and shows the status line whether " +
-         "or not it is switched on above. The scale bar already shows the scale " +
-         "against XCTrack's own, which is the comparison that matters, and " +
-         "north-up is required setup rather than news — hence off." },
-  { k:"bar",   t:"int", d:1, min:0, max:1, only:"widget",
+
+  /* ── behind Advanced, by group ────────────────────────────────────── */
+  { k:"peaks", t:"int", d:0, min:0, max:1, grp:"Which stations",
+    lab:"Summits only",
+    help:"Provider-supplied fact, not a guess." },
+  { k:"max",   t:"int", d:120, min:1, max:400, grp:"Which stations",
+    lab:"Max stations",
+    help:"Cap AFTER the view cull, so on a map it limits what could be drawn, " +
+         "not what happens to be within a radius. 40 was cutting half the " +
+         "drawable markers at wide scales." },
+  { k:"pad",   t:"int", d:20, min:0, max:60, grp:"Which stations",
+    lab:"Fetch margin (km)",
+    help:"Area fetched beyond the view. A cache radius, not a display radius." },
+
+  { k:"warn",  t:"int", d:15, min:1, max:120, grp:"How old is too old",
+    lab:"Warn after (min)" },
+  { k:"stale", t:"int", d:30, min:5, max:180, grp:"How old is too old",
+    lab:"Stale after (min)",
+    help:"Older readings go visibly red. Never silently shown as current." },
+  { k:"poll",  t:"int", d:600, min:300, max:3600, grp:"How old is too old",
+    lab:"Fetch interval (s)",
+    help:"Readings update about every 10 min. Do not poll faster." },
+
+  { k:"bar",   t:"int", d:1, min:0, max:1, only:"widget", grp:"Scale bar",
     lab:"Show scale bar",
     help:"Draws our scale bar above XCTrack's own. Equal lengths = correctly paired." },
-  { k:"barY",  t:"int", d:46, min:0, max:200, only:"widget",
+  { k:"barY",  t:"int", d:46, min:0, max:200, only:"widget", grp:"Scale bar",
     lab:"Scale bar height (px)",
     help:"Distance from the bottom. Tune so it sits just above XCTrack's own bar — " +
          "the closer the two are, the easier they are to compare." },
-  { k:"popup", t:"int", d:30, min:0, max:300, only:"widget",
+
+  { k:"badge", t:"int", d:0, min:0, max:1, only:"widget", grp:"Status line",
+    lab:"Show status line",
+    help:"How many stations are drawn, and how many are stale. Off by default — " +
+         "it costs screen the map wants. Leaving it off hides the routine count " +
+         "ONLY: no position, OFFLINE, ALL STALE and BOX FULL appear either way, " +
+         "because those are the display admitting it cannot be trusted." },
+  { k:"debug", t:"int", d:0, min:0, max:1, only:"widget", grp:"Status line",
+    lab:"Debug in the status line",
+    help:"Adds the assumed scale, the heading and the in-view/fetched counts, and " +
+         "shows the status line whether or not it is switched on above. The scale " +
+         "bar already shows the scale against XCTrack's own, which is the " +
+         "comparison that matters, and north-up is required setup rather than " +
+         "news — hence off." },
+
+  { k:"popup", t:"int", d:30, min:0, max:300, only:"widget", grp:"Tapping and zoom",
     lab:"Popup timeout (s)",
     help:"Tap a marker for its recent trend. 0 keeps it open until dismissed." },
-  { k:"hours", t:"int", d:3, min:1, max:12, only:"widget",
+  { k:"hours", t:"int", d:3, min:1, max:12, only:"widget", grp:"Tapping and zoom",
     lab:"Trend length (h)" },
-  { k:"zbtn",  t:"int", d:0, min:0, max:1, only:"widget",
+  { k:"zbtn",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
     lab:"Visible zoom buttons",
     help:"A dedicated +/- pair. Can be combined with the invisible halves." },
-  { k:"zpos",  t:"enum", only:"widget", d:"bottom-right",
+  { k:"zpos",  t:"enum", only:"widget", d:"bottom-right", grp:"Tapping and zoom",
     opts:["bottom-right", "bottom-left", "top-right", "top-left",
           "top-centre", "bottom-centre", "left-centre", "right-centre"],
     lab:"Zoom button position",
     help:"Bottom-left overlaps the scale bar and top-left the badge — pick a " +
          "corner you are not already using." },
-  { k:"zrow",  t:"int", d:0, min:0, max:1, only:"widget",
+  { k:"zrow",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
     lab:"Zoom buttons side by side",
     help:"Lays the pair horizontally instead of stacked, so a second pair for " +
          "XCTrack's own map can sit beside them." },
-  { k:"ztap",  t:"int", d:0, min:0, max:1, only:"widget",
+  { k:"ztap",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
     lab:"Tap zones to change scale",
-    help:"Advanced. Needs XCTrack's zoom buttons moved OUTSIDE the widget, and " +
-         "the map re-zoomed by hand to match. Off for normal use." }
+    help:"Needs XCTrack's zoom buttons moved OUTSIDE the widget, and the map " +
+         "re-zoomed by hand to match. Off for normal use." },
+
+  { k:"size",  t:"int", d:50, min:0, max:100, grp:"Text and colour",
+    lab:"Size", help:"Scales text on the pages and markers in the overlay." },
+  { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto", grp:"Text and colour",
+    lab:"Theme", help:"Auto follows your phone." },
+
+  { k:"dpr",   t:"num", d:0, min:0, max:6, grp:"Calibration — you should not need these",
+    lab:"Pixel density override",
+    help:"0 = use this device's own. XCTrack draws its map in DEVICE pixels, so " +
+         "the ground scale of every step depends on density; the overlay reads " +
+         "its own and is always right. Set a number only to preview another " +
+         "phone's scale from here — probe.html and tools/ruler.html print it." },
+  { k:"cal",   t:"num", d:1, min:0.5, max:2, only:"widget",
+    grp:"Calibration — you should not need these",
+    lab:"Scale correction",
+    help:"Leave at 1. Pixel density is already corrected for automatically; this " +
+         "is only for a residual the automatic correction does not cover." },
+
+  /* No row anywhere, but kept in URLs and in storage — which is what
+     separates `hidden` from `ui:false`, and it is NOT the same thing as the
+     Advanced accordion above. Kept for old URLs and for anyone who knows
+     exactly which ladder step they want. It stays out of the UI because a
+     pinned step silently outranks the scale a pilot just picked. */
+  { k:"step",  t:"int", d:0, min:0, max:34, hidden:true,
+    lab:"Ladder step override",
+    help:"0 = derive from the scale above, which is what you want. A number " +
+         "12-34 pins XCTrack's ladder step directly and ignores the scale." }
 ];
 
 /* ── config parsing ───────────────────────────────────────────────── */

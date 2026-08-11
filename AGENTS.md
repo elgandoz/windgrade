@@ -186,7 +186,21 @@ metres and `WG.resolveStep()` turns it into a step *on the device*, because the
 same step is a different scale at a different pixel density — that is exactly
 how the launcher came to offer step 25 as "8km" when a Pixel 9a prints 6km. The
 `step` parameter still exists as an explicit override (0 = derive) and is hidden
-from the settings UI by `adv:true`, which — unlike `ui:false` — keeps it in URLs.
+from the settings UI by `hidden:true`, which — unlike `ui:false` — keeps it in
+URLs.
+
+**The configurator shows two rows and hides the other seventeen.** A SPEC entry
+with no `grp` is on the front page; everything else lands in one collapsed
+`<details>` under its group's heading, rendered by `wg/fields.js` in SPEC order.
+Only `scale` and `alt` are ungrouped, because those are the two where a wrong
+answer makes the overlay useless rather than merely unpolished. **A new
+parameter has to argue for the front page, not be demoted off it** — and
+`tools/test-core.js` asserts the ungrouped set is exactly those two, so adding
+one without a group fails the suite rather than quietly lengthening the page.
+Groups are headings, not nested accordions: a second click to reach "Scale bar
+height" buys nothing once the first has been paid. Empty groups are dropped, so
+`skipWidgetOnly` on `app.html` cannot leave a heading with nothing under it.
+`index.html#advanced` opens the accordion, so a note can point at a setting.
 
 The overlay's furniture is opt-in and mostly off: `alt=1` puts the station
 altitude under the speed, `badge=1` shows the station count, `debug=1` adds the

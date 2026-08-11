@@ -13,8 +13,21 @@
      f.reload();     // pull values back out of WG.getConfig(), e.g. after reset
 
    Rows are skipped when SPEC says `ui:false` (URL-only, like lat/lng — the
-   launcher has no business offering a position field) and, optionally, when
-   `only:"widget"` marks a parameter that means nothing for a given view.
+   launcher has no business offering a position field), when `hidden:true`
+   marks a parameter that keeps working in URLs but gets no control at all,
+   and, optionally, when `only:"widget"` marks a parameter that means nothing
+   for a given view.
+
+   LAYOUT: a row with no `grp` goes straight into the container. Everything
+   else lands inside ONE collapsed <details>, under a heading per group, in
+   SPEC order. Nineteen rows in a flat list is not a configurator, it is an
+   inventory — and the two that decide whether the overlay works at all
+   (`scale`, `alt`) were the hardest to find in it. Groups are headings
+   rather than nested accordions on purpose: a second click to reach
+   "Scale bar height" buys nothing once the first one has already been paid.
+
+   Empty groups are dropped, so `skipWidgetOnly` cannot leave a heading with
+   nothing under it, and the whole accordion is dropped if it would be empty.
 
    Not loaded by widget.html: it has no settings.
    ═══════════════════════════════════════════════════════════════════ */
@@ -124,29 +137,60 @@ WG.applyTheme = function () {
 };
 
 WG.fields = function (container, opts) {
-  var o = opts || {}, built = [], i, sp;
+  var o = opts || {}, built = [], i, sp, row;
+  var groups = [], byName = {};             /* first-appearance order */
 
   function reload() { for (var k = 0; k < built.length; k++) built[k].load(); }
+
+  function make(spec) {
+    var r = buildRow(spec, function (value) {
+      var patch = {};
+      patch[spec.k] = value;
+      WG.setConfig(patch);
+      WG.applyTheme();               /* live: theme and scale, no reload */
+      reload();                      /* reflect clamping back into the fields */
+      if (o.onChange) o.onChange();
+    });
+    built.push(r);
+    r.load();
+    return r.el;
+  }
 
   for (i = 0; i < WG.SPEC.length; i++) {
     sp = WG.SPEC[i];
     if (sp.ui === false) continue;                          /* URL-only */
-    if (sp.adv) continue;                    /* still in URLs, not in the UI */
+    if (sp.hidden) continue;                 /* still in URLs, no control */
     if (o.skipWidgetOnly && sp.only === "widget") continue;
 
-    /* Closure per row, so the patch key is the row's own. */
-    built.push(buildRow(sp, (function (spec) {
-      return function (value) {
-        var patch = {};
-        patch[spec.k] = value;
-        WG.setConfig(patch);
-        WG.applyTheme();             /* live: theme and scale, no reload */
-        reload();                    /* reflect clamping back into the fields */
-        if (o.onChange) o.onChange();
-      };
-    })(sp)));
-    built[built.length - 1].load();
-    container.appendChild(built[built.length - 1].el);
+    row = make(sp);
+    if (!sp.grp) { container.appendChild(row); continue; }
+
+    if (!byName[sp.grp]) {
+      byName[sp.grp] = { name: sp.grp, rows: [] };
+      groups.push(byName[sp.grp]);
+    }
+    byName[sp.grp].rows.push(row);
+  }
+
+  if (groups.length) {
+    /* <details> rather than a class toggle: it collapses without script, it
+       is what a phone's find-in-page and a screen reader already understand,
+       and the arrow is the platform's own. */
+    var det = document.createElement("details");
+    det.className = "adv";
+    if (o.advOpen) det.open = true;
+    var sum = document.createElement("summary");
+    sum.textContent = o.advLabel || "Advanced settings";
+    det.appendChild(sum);
+
+    for (i = 0; i < groups.length; i++) {
+      var h = document.createElement("h3");
+      h.className = "grp";
+      h.textContent = groups[i].name;
+      det.appendChild(h);
+      for (var j = 0; j < groups[i].rows.length; j++) det.appendChild(groups[i].rows[j]);
+    }
+    container.appendChild(det);
   }
 
   return { reload: reload };

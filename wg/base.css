@@ -103,11 +103,35 @@ button,summary{cursor:pointer}
   border:1px solid var(--rule);border-radius:3px;
   font:600 1em var(--mono);text-align:right;
 }
-.field select{text-align:left}
+/* Enums size to their longest option — a fixed 92px clipped "bottom-right" to
+   "bottom-", which reads as a different setting. Capped so a long option can
+   never crowd the label off a narrow phone. */
+.field select{text-align:left;width:auto;min-width:calc(92px * var(--scale));max-width:45%}
 .field input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--chart)}
 /* the live XCTrack scale beside the zoom row: the pairing is the whole point */
 .field .pair{flex:none;font:600 .78em var(--mono);color:var(--chart);
   min-width:calc(104px * var(--scale));text-align:right}
+
+/* ── the Advanced accordion, also from wg/fields.js ─────────────────────
+   Everything a pilot does not need before their first flight lives in here,
+   grouped by heading. The summary is a full-width tap target because on a
+   phone in gloves a text-sized one is not one. */
+.adv{margin-top:14px;border:1px solid var(--rule);border-radius:3px;
+  background:var(--panel)}
+.adv > summary{list-style:none;display:flex;align-items:center;gap:8px;
+  padding:12px 13px;font:600 .88em var(--sans);color:var(--dim)}
+.adv > summary::-webkit-details-marker{display:none}
+.adv > summary::after{content:"▼";margin-left:auto;font-size:.72em}
+.adv[open] > summary::after{content:"▲"}
+.adv[open] > summary{border-bottom:1px solid var(--rule);color:var(--fg)}
+/* The rows keep their own rules; the padding lives here so a group heading
+   and its fields share one gutter. */
+.adv > .field,.adv > .grp{margin-left:13px;margin-right:13px}
+.adv > .field:last-child{border-bottom:0}
+.grp{margin:16px 0 0;font:600 .74em var(--sans);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--dim)}
+/* No double rule where a heading follows the last row of the group above. */
+.grp + .field{border-top:0}
 
 /* ── small primitives used by both pages ──────────────────────────── */
 .tag{padding:2px 5px;border:1px solid var(--rule);border-radius:2px;

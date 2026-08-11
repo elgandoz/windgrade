@@ -251,9 +251,11 @@ plausibly has** (`WG.scaleOptions`), 38 entries, generated from the ladder rathe
 than hand-written so it cannot drift from it. Tested: nothing either measured
 device prints is missing.
 
-`step` survives as an explicit override, hidden from the UI by a new `adv:true`
-marker. `ui:false` would have been wrong: it also strips the parameter from every
-URL the launcher builds.
+`step` survives as an explicit override, hidden from the UI by a new marker —
+`adv:true` at the time, renamed `hidden:true` on 2026-08-11 when a genuine
+Advanced accordion arrived and the two senses of "advanced" collided.
+`ui:false` would have been wrong either way: it also strips the parameter from
+every URL the launcher builds.
 
 **Setting `scale` clears `step`.** The step row is hidden, so a pilot arriving
 from an old `?step=NN` link could pick a new scale, watch the select change, and
