@@ -100,7 +100,18 @@ eq("zoom=11 maps to 8km", WG.XCT_LADDER[WG.cfg("?zoom=11").step], "8km");
 eq("an explicit step wins over a legacy zoom",
    WG.cfg("?zoom=10&step=27").step, 27);
 
-head("projection isotropy and round-trip");
+head("per-device scale correction");
+eq("defaults to no change", WG.getCal(), WG.CAL);
+WG.setCal(3 / 2.625);
+eq("cal makes the map finer by the dpr ratio",
+   WG.mppXct(47.361, 11), 54.96 * 2.625 / 3, 0.02);
+eq("a bad value is ignored rather than blanking the map", WG.setCal(0), 1);
+WG.setCal(1);
+eq("back to the measured constant", WG.getCal(), 0.942);
+/* Labels must NOT move with cal: they depend on bar width x resolution, and a
+   correction to one is compensated by the bar the pilot is comparing against. */
+eq("label at step 25 is still 8km on a 448 px screen",
+   WG.scaleLabel(25, 47.361, 448), "8km");
 var P = WG.projector({ lat:47.361, lon:8.578 }, 11, 448, 978);
 eq("centre x", P.x(8.578), 224, 1e-6);
 eq("centre y", P.y(47.361), 489, 1e-6);

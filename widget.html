@@ -132,6 +132,7 @@ var W = 0, H = 0, dpr = 1;
 /* The scale actually being drawn. Equals C.step until the pilot taps a zone;
    after that the widget CANNOT know whether the map followed, which is why the
    badge marks it and the scale bar exists. */
+WG.setCal(C.cal);
 var curStep = C.step;
 /* Right edge of the scale bar in css px, so the prompt can sit beside it. The
    bar's length changes with the scale, so this cannot be a constant. */
@@ -175,7 +176,7 @@ function draw(fix, ranked){
   if (fix){
     var scale = 0.55 + (C.size / 100) * 0.75;      /* 0.55 .. 1.30 */
     var fs = Math.round(9 + (C.size / 100) * 7);   /* 9 .. 16 px */
-    var P = WG.projector(fix, WG.zoomForStep(curStep), W, H, WG.CAL);
+    var P = WG.projector(fix, WG.zoomForStep(curStep), W, H, WG.getCal());
     var box = WG.REACH * scale, placed = [], i, st, x, y, k, hit;
 
     /* Rectangles a marker may not cover. The scale bar is the check that the
@@ -340,8 +341,8 @@ function tick(){
   var ranked = WG.prepare(stations, fix, C, now), i, nStale = 0;
 
   var z = WG.zoomForStep(curStep);
-  var key = Math.round(WG.lonToPx(fix.lon, z) * WG.CAL) + "/" +
-            Math.round(WG.latToPx(fix.lat, z) * WG.CAL) + "/" +
+  var key = Math.round(WG.lonToPx(fix.lon, z) * WG.getCal()) + "/" +
+            Math.round(WG.latToPx(fix.lat, z) * WG.getCal()) + "/" +
             W + "x" + H + "/" + curStep + "/" + lastFetch + "/" + Math.round(now / 60000);
   if (key !== drawKey){ drawKey = key; lastShown = draw(fix, ranked); }
 

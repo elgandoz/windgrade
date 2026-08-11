@@ -22,6 +22,14 @@ var WG = (function () {
    one zoom level apart. ────────────────────────────────────────────── */
 var CAL = 0.942;
 
+/* Per-device correction on top of CAL, default 1 = no change. CAL was measured
+   on one phone; whether it transfers is open. If the value that makes the two
+   scale bars agree turns out to be 3/devicePixelRatio, XCTrack works in device
+   pixels and this can be computed instead of set — see docs/findings.md. */
+var CAL_ADJ = 1;
+function setCal(v) { CAL_ADJ = (v > 0) ? v : 1; return CAL_ADJ; }
+function getCal() { return CAL * CAL_ADJ; }
+
 /* ── XCTrack's scale ladder ────────────────────────────────────────────
    Its map scale is an integer, mapWidget_scale.value, running 12 to 34, and
    ONE STEP IS sqrt(2) IN SCALE — half an OSM zoom level:
@@ -71,7 +79,13 @@ function stepForZoom(z) { return Math.round(z * 2 + 3); }
    inputs are knowable at runtime: the widget's own width, and the latitude
    from the position chain. So the widget can name the scale the way the
    pilot's own XCTrack does, instead of parroting one device's list. */
-var BAR_FRACTION = 0.325;                 /* measured on two devices */
+/* CAUTION — this is not established, only convenient. The label lists constrain
+   ONLY the product (bar width x resolution), never either factor. 0.325 x width
+   fits both devices; so does a constant ~150 css px combined with a resolution
+   that scales with pixel density. Labels come out right either way, because the
+   product is what they depend on — but the RESOLUTION does not, and that is what
+   places the markers. See docs/findings.md, "can it be density". */
+var BAR_FRACTION = 0.325;
 var NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
 function barMaxPx(widthPx) { return BAR_FRACTION * (widthPx || 448); }
@@ -143,6 +157,11 @@ var SPEC = [
     lab:"Fetch interval (s)",
     help:"Readings update about every 10 min. Do not poll faster." },
 
+  { k:"cal",   t:"num", d:1, min:0.5, max:2, only:"widget",
+    lab:"Scale correction",
+    help:"Leave at 1 unless the two scale bars disagree. Nudge until they match, " +
+         "then tell the developer the value — it decides whether this can be " +
+         "computed from pixel density instead of set by hand." },
   { k:"wpx",   t:"int", d:448, min:200, max:1400,
     lab:"Widget width (px)",
     help:"CSS pixels across the widget on YOUR device. XCTrack's printed scale " +
@@ -437,7 +456,7 @@ function position(c) {
 function mppOsm(lat, z) {
   return EQ_CIRC * Math.cos(lat * Math.PI / 180) / (256 * Math.pow(2, z));
 }
-function mppXct(lat, z) { return mppOsm(lat, z) / CAL; }
+function mppXct(lat, z) { return mppOsm(lat, z) / (CAL * CAL_ADJ); }
 
 /* World pixel coordinates at zoom z, 256px tiles, CSS pixels. */
 function lonToPx(lon, z) { return (lon + 180) / 360 * 256 * Math.pow(2, z); }
@@ -451,7 +470,7 @@ function latToPx(lat, z) {
 /* A projector centred on `fix`, for a W x H CSS-pixel canvas. `mul` folds
    in the calibration (pass CAL for an XCTrack overlay, 1 for our own map). */
 function projector(fix, z, W, H, mul) {
-  var m = (mul === undefined) ? CAL : mul;
+  var m = (mul === undefined) ? (CAL * CAL_ADJ) : mul;
   var cx = lonToPx(fix.lon, z), cy = latToPx(fix.lat, z);
   return {
     res: mppOsm(fix.lat, z) / m,
@@ -670,7 +689,8 @@ function attribution(list) {
 }
 
 return {
-  CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
+  CAL: CAL, setCal: setCal, getCal: getCal,
+  XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
   XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES,
   BAR_FRACTION: BAR_FRACTION, barMaxPx: barMaxPx, niceBelow: niceBelow,
   scaleMetres: scaleMetres, scaleLabel: scaleLabel, fmtScale: fmtScale,

@@ -50,18 +50,51 @@ the scale bar — downstream of the thing being measured.
   `2500m`. Cosmetic, but a mismatched label sends the pilot hunting for something
   their device never shows.
 
-#### Still unexplained, and it needs a fresh measurement
+#### Can it be pixel density? Probably — and the labels can never tell us
 
-Under the restored model, at `10km` on the Pixel both bars should be 128.6 px, yet
-the screenshot showed XCTrack's roughly 8% longer. Three candidates: the crop was
-measured badly (the same eyeballing that produced the wrong correction), the
-emulator's widget is not the width assumed, or **`CAL` is device-dependent** and
-0.942 does not transfer off the phone.
+Owner's question, and it exposes that the "0.325 × widget width" conclusion above
+is **also underdetermined**. Two models fit every label on both devices:
 
-Do not guess again. Re-shoot the two bars on the Pixel with this build, at a scale
-whose label both devices share. If they still differ, `CAL` needs to become a
-per-device setting, calibrated by matching the bars — which is what the bar was
-built for.
+| | resolution across devices | bar max width |
+|---|---|---|
+| **A** | identical in css px (XCTrack works in dp) | 0.325 × widget width |
+| **B** | scales with **devicePixelRatio** (XCTrack works in device px) | constant ~150 css px |
+
+```
+phone label list needs bar max   145.6 .. 154.4 css px
+pixel under model A              128.7 .. 136.4
+pixel under model B              147.0 .. 155.9   <- overlaps the phone's range
+```
+
+**The label lists constrain only the PRODUCT** — bar width × resolution — and never
+either factor alone. So they cannot distinguish A from B, and the labels come out
+right under both. That is why `scaleLabel()` is safe either way.
+
+The **resolution** is not safe either way, and that is what places the markers.
+
+**The scale bar discriminates**, because its length is `label ÷ our resolution`:
+
+| | our bar | XCTrack's | difference |
+|---|---|---|---|
+| model A | 128.6 px | 128.6 px | **0%** |
+| model B | 128.6 px | 147.0 px | **+14.3%** |
+| measured off the crop | | | about **+8%** |
+
+Leaning B, i.e. the owner is probably right that it is density — but +8% eyeballed
+off a cropped JPEG is exactly the evidence that produced the wrong ladder, so it
+settles nothing.
+
+**The decisive measurement**, one run of `tools/registration.html` on the Pixel with
+the map at its own step 25 (labelled `6km` there), nudged until the airspace edges
+line up:
+
+```
+model A  ->  zEff 10.914      model B  ->  zEff 11.106
+```
+
+If it lands on B, the correction is `3 / devicePixelRatio` and can be **computed**
+rather than configured — no per-device setting at all. Until then `cal` exists as
+a manual multiplier, defaulting to 1.
 
 ### 2026-08-11 — `${lat}` answers before a GPS fix; `getLocation()` does not
 
