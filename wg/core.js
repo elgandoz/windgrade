@@ -23,26 +23,26 @@ var WG = (function () {
 var CAL = 0.942;
 
 /* ── XCTrack's scale ladder ────────────────────────────────────────────
-   Its map scale is an integer, mapWidget_scale.value, running 12 to 34.
+   Its map scale is an integer, mapWidget_scale.value, running 12 to 34, and
+   ONE STEP IS sqrt(2) IN SCALE — half an OSM zoom level:
 
-   IT DOES NOT STEP BY sqrt(2). An earlier version assumed it did, because
-   every SECOND step doubles and all three points measured against airspace
-   edges were two steps apart — so they could not tell the two models apart.
-   The steps in between were never verified, and they were wrong by 12%,
-   which is what the owner's 2026-08-11 screenshot showed at "10km".
+       z = (value - 3) / 2
 
-   The ladder alternates x1.25 and x1.6, and 1.25 x 1.6 = 2.0 exactly, which
-   is why the two-step doubling held. Anchored on step 25 = 8000 m = z11, the
-   one point verified to the pixel, it reproduces ALL 23 printed labels to
-   within 8% — and the ones it misses are exactly the awkward numbers a UI
-   would round: 312.5 -> "300m", 625 -> "600m", 1250 -> "1200m",
-   16000 -> "15km", 32000 -> "30km", 128000 -> "120km".
+   THE PRINTED LABELS ARE NOT THE LADDER. They come from XCTrack's scale bar,
+   which shows the largest "nice" number (1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8 x
+   10^k) whose bar fits a maximum width of about 0.325 x the widget width. So
+   the label list is a property of the SCREEN, not of the scale ladder, and two
+   devices print different lists for identical resolutions.
 
-   So there are two different numbers per step and they must not be confused:
-     XCT_TRUE_M   the real ground scale — drives RESOLUTION
-     XCT_METRES   what the label says   — drives the length of the scale bar
-   They agree at 8km, 10km, 4km, 20km and the rest; they differ where the
-   label is rounded. ──────────────────────────────────────────────────── */
+   Verified against two devices, 46 labels, no misses: the owner's phone (448
+   css px wide, bar max 145.6) prints 8km where the Pixel 9a (411 css px, bar
+   max ~134) prints 6km, from the same step 25 at the same 54.96 m/px.
+
+   A previous version replaced this with an alternating x1.25 / x1.6 ladder,
+   fitted to the phone's label list alone. It reproduced that list by
+   construction and had no mechanism for the Pixel's — see docs/findings.md.
+   Do not re-derive a ladder from a label list; the labels are downstream of
+   the screen. ─────────────────────────────────────────────────────────── */
 var XCT_LADDER = {
   12:"600km", 13:"500km", 14:"300km", 15:"250km", 16:"150km", 17:"120km",
   18:"80km",  19:"60km",  20:"40km",  21:"30km",  22:"20km",  23:"15km",
@@ -50,15 +50,6 @@ var XCT_LADDER = {
   30:"1200m", 31:"1km",   32:"600m",  33:"500m",  34:"300m"
 };
 var XCT_STEP_MIN = 12, XCT_STEP_MAX = 34;
-
-/* The real ladder. Coarser (lower step): even x1.25, odd x1.6. */
-var XCT_TRUE_M = (function () {
-  var o = {}, v;
-  o[25] = 8000;                                   /* verified against airspace */
-  for (v = 24; v >= XCT_STEP_MIN; v--) o[v] = o[v + 1] * ((v % 2 === 0) ? 1.25 : 1.6);
-  for (v = 26; v <= XCT_STEP_MAX; v++) o[v] = o[v - 1] / ((v % 2 === 0) ? 1.6 : 1.25);
-  return o;
-})();
 
 /* Ground distance each label names, in metres. The scale bar draws exactly
    this, so it can be compared against XCTrack's own bar length rather than
@@ -72,21 +63,43 @@ var XCT_METRES = (function () {
   }
   return o;
 })();
-function zoomForStep(v) {
-  var m = XCT_TRUE_M[v];
-  if (!m) return 11;
-  return 11 - Math.log(m / 8000) / Math.LN2;
-}
-/* Inverse by search, not algebra: the ladder is not uniform, so there is no
-   closed form to invert. */
-function stepForZoom(z) {
-  var best = 25, bd = 1e9, v, d;
-  for (v = XCT_STEP_MIN; v <= XCT_STEP_MAX; v++) {
-    d = Math.abs(zoomForStep(v) - z);
-    if (d < bd) { bd = d; best = v; }
+function zoomForStep(v) { return (v - 3) / 2; }
+function stepForZoom(z) { return Math.round(z * 2 + 3); }
+
+/* ── what XCTrack will PRINT for a step, on this screen ────────────────
+   The bar shows the largest nice number that fits its maximum width. Both
+   inputs are knowable at runtime: the widget's own width, and the latitude
+   from the position chain. So the widget can name the scale the way the
+   pilot's own XCTrack does, instead of parroting one device's list. */
+var BAR_FRACTION = 0.325;                 /* measured on two devices */
+var NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
+
+function barMaxPx(widthPx) { return BAR_FRACTION * (widthPx || 448); }
+
+function niceBelow(x) {
+  var best = 0, k, i, v;
+  for (k = -1; k < 8; k++) {
+    for (i = 0; i < NICE.length; i++) {
+      v = NICE[i] * Math.pow(10, k);
+      if (v <= x && v > best) best = v;
+    }
   }
   return best;
 }
+
+/* metres the bar will show, and the text XCTrack prints for it */
+function scaleMetres(step, lat, widthPx) {
+  return niceBelow(barMaxPx(widthPx) * mppXct(lat === undefined ? 47 : lat, zoomForStep(step)));
+}
+/* XCTrack switches to km only for whole thousands: it prints 1km and 2km but
+   1200m and 2500m. Getting this wrong is cosmetic on our side but makes the
+   pilot hunt for a label their device never shows. */
+function fmtScale(m) {
+  if (!m) return "?";
+  m = Math.round(m);
+  return (m % 1000 === 0) ? ((m / 1000) + "km") : (m + "m");
+}
+function scaleLabel(step, lat, widthPx) { return fmtScale(scaleMetres(step, lat, widthPx)); }
 
 /* Integer-zoom labels, derived so the two cannot disagree. */
 var XCT_SCALE = (function () {
@@ -130,6 +143,11 @@ var SPEC = [
     lab:"Fetch interval (s)",
     help:"Readings update about every 10 min. Do not poll faster." },
 
+  { k:"wpx",   t:"int", d:448, min:200, max:1400,
+    lab:"Widget width (px)",
+    help:"CSS pixels across the widget on YOUR device. XCTrack's printed scale " +
+         "labels depend on it, so this makes the list above match what you see. " +
+         "The overlay reads its own width and ignores this." },
   { k:"size",  t:"int", d:50, min:0, max:100,
     lab:"Size", help:"Scales text on the pages and markers in the overlay." },
   { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto",
@@ -653,7 +671,9 @@ function attribution(list) {
 
 return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
-  XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES, XCT_TRUE_M: XCT_TRUE_M,
+  XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES,
+  BAR_FRACTION: BAR_FRACTION, barMaxPx: barMaxPx, niceBelow: niceBelow,
+  scaleMetres: scaleMetres, scaleLabel: scaleLabel, fmtScale: fmtScale,
   XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
   zoomOf: zoomOf,

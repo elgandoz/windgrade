@@ -42,36 +42,41 @@ eq("zEff z11 = 10.914", zEff(11), 10.914, 0.002);
 eq("zEff spacing z10->z11 is exactly 1", zEff(11) - zEff(10), 1, 1e-9);
 eq("zEff spacing z11->z12 is exactly 1", zEff(12) - zEff(11), 1, 1e-9);
 
-head("XCTrack scale ladder — alternating x1.25 / x1.6, NOT sqrt2");
+head("XCTrack scale ladder — sqrt2 per step");
 eq("z from step 25 (8km)", WG.zoomForStep(25), 11);
 eq("z from step 23 (15km)", WG.zoomForStep(23), 10);
 eq("z from step 27 (4km)", WG.zoomForStep(27), 12);
-/* The bug the owner caught: a half-step is NOT half a zoom level. Assuming so
-   made the 10km scale 12% too coarse, which showed as a short scale bar. */
-eq("step 24 is NOT a half zoom level", WG.zoomForStep(24) === 10.5, false);
-eq("step 24 (10km) is x1.25 coarser than 8km",
-   WG.mppXct(47.361, WG.zoomForStep(24)) / WG.mppXct(47.361, WG.zoomForStep(25)), 1.25, 1e-9);
-eq("step 23 (15km) is x1.6 coarser than 10km",
-   WG.mppXct(47.361, WG.zoomForStep(23)) / WG.mppXct(47.361, WG.zoomForStep(24)), 1.6, 1e-9);
-eq("but two steps still double exactly, which is why this hid",
+eq("a step is half a zoom level", WG.zoomForStep(24), 10.5);
+eq("one step is sqrt2 in scale",
+   WG.mppXct(47.361, WG.zoomForStep(24)) / WG.mppXct(47.361, WG.zoomForStep(25)),
+   Math.SQRT2, 1e-9);
+eq("two steps double",
    WG.mppXct(47.361, WG.zoomForStep(23)) / WG.mppXct(47.361, WG.zoomForStep(25)), 2, 1e-9);
 eq("step<->zoom round trips", WG.stepForZoom(WG.zoomForStep(25)), 25);
 eq("and at a half step too", WG.stepForZoom(WG.zoomForStep(24)), 24);
 
-/* The true ladder must explain the printed labels — that is the evidence it
-   rests on, since only three steps were ever measured directly. */
+/* THE EVIDENCE THAT SETTLED IT. The printed labels come from the scale bar,
+   not the ladder: the bar shows the largest nice number that fits ~0.325 of
+   the widget width. One sqrt2 ladder plus two different widths reproduces two
+   different devices' label lists exactly — 46 labels, no misses. An
+   alternating ladder fitted to one list cannot explain the other. */
 (function () {
-  var v, worst = 0, d;
-  for (v = WG.XCT_STEP_MIN; v <= WG.XCT_STEP_MAX; v++) {
-    d = Math.abs(WG.XCT_TRUE_M[v] - WG.XCT_METRES[v]) / WG.XCT_TRUE_M[v];
-    if (d > worst) worst = d;
+  var phone = "300m,500m,600m,1km,1200m,2km,2500m,4km,5km,8km,10km,15km,20km,30km,40km,60km,80km,120km,150km,250km,300km,500km,600km".split(","),
+      pixel = "300m,400m,600m,800m,1200m,1500m,2500m,3km,5km,6km,10km,12km,20km,25km,40km,50km,80km,100km,150km,200km,300km,400km,600km".split(","),
+      v, i = 0, okP = 0, okX = 0;
+  for (v = 34; v >= 12; v--, i++) {
+    if (WG.scaleLabel(v, 47.361, 448) === phone[i]) okP++;
+    if (WG.scaleLabel(v, 47.361, 411) === pixel[i]) okX++;
   }
-  eq("every printed label is within 8% of the true scale", worst < 0.08, true);
+  eq("reproduces all 23 labels on the owner's phone (448 css px)", okP, 23);
+  eq("reproduces all 23 labels on a Pixel 9a (411 css px)", okX, 23);
 })();
-eq("8km is exact", WG.XCT_TRUE_M[25], 8000);
-eq("10km is exact", WG.XCT_TRUE_M[24], 10000);
-eq("\"15km\" is really 16000, rounded for display", WG.XCT_TRUE_M[23], 16000);
-eq("\"300m\" is really 312.5", Math.round(WG.XCT_TRUE_M[34] * 10) / 10, 312.5);
+eq("same step, different screens, different printed label",
+   WG.scaleLabel(25, 47.361, 448) !== WG.scaleLabel(25, 47.361, 411), true);
+eq("  phone prints 8km", WG.scaleLabel(25, 47.361, 448), "8km");
+eq("  pixel prints 6km", WG.scaleLabel(25, 47.361, 411), "6km");
+eq("...at exactly the same resolution",
+   WG.mppXct(47.361, WG.zoomForStep(25)), 54.96, 0.02);
 eq("labels derive from the ladder, so they cannot disagree",
    WG.XCT_SCALE[11], WG.XCT_LADDER[WG.stepForZoom(11)]);
 eq("8km is z11 in this build", WG.XCT_SCALE[11], "8km");
@@ -86,7 +91,7 @@ eq("every step has a parsed distance",
 /* The bar is only a valid check if its pixel length equals the label distance
    divided by the resolution we are actually drawing at. */
 eq("8km bar at z11 is ~146 css px", 8000 / WG.mppXct(47.361, 11), 145.6, 0.5);
-eq("step 24 resolution", WG.mppXct(47.361, WG.zoomForStep(24)), 68.71, 0.02);
+eq("step 24 resolution", WG.mppXct(47.361, WG.zoomForStep(24)), 77.73, 0.02);
 
 
 head("legacy ?zoom= keeps working");

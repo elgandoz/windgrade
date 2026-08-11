@@ -135,7 +135,7 @@ var W = 0, H = 0, dpr = 1;
 var curStep = C.step;
 /* Right edge of the scale bar in css px, so the prompt can sit beside it. The
    bar's length changes with the scale, so this cannot be a constant. */
-var barRight = 15;
+var barRight = 15, barLat = 47;
 /* Screen positions of the markers actually drawn, so a tap can be matched to a
    station. Rebuilt on every draw. */
 var hits = [];
@@ -183,7 +183,7 @@ function draw(fix, ranked){
        a marker drawn over either removes the thing it was there to reveal. */
     var keepOut = [];
     if (C.bar){
-      var barPx = WG.XCT_METRES[curStep] / P.res;
+      var barPx = WG.scaleMetres(curStep, fix.lat, W) / P.res;
       keepOut.push([0, H - C.barY - 26, 25 + (barPx > 0 ? barPx : 0), H]);
     }
     if (C.badge) keepOut.push([0, 0, 190, 26]);
@@ -215,7 +215,7 @@ function draw(fix, ranked){
       WG.marker.label(bctx, st, x, y, scale, fs);
     }
     shown = placed.length;
-    if (C.bar) drawScaleBar(bctx, P.res);
+    if (C.bar) { barLat = fix.lat; drawScaleBar(bctx, P.res); }
   }
   /* one atomic replace of the visible canvas */
   ctx.save();
@@ -236,7 +236,9 @@ function draw(fix, ranked){
    Bottom-left, mirroring XCTrack's placement. Ours sits higher so both stay
    visible — the body is transparent, so theirs shows through. ───────── */
 function drawScaleBar(g, res){
-  var m = WG.XCT_METRES[curStep];
+  /* The bar names what the pilot's own XCTrack names, computed from THIS
+     widget's width and latitude — not from a table copied off one device. */
+  var m = WG.scaleMetres(curStep, barLat, W);
   if (!m || !res) return;
   var px = m / res;
   if (px < 24 || px > W - 20) return;          /* would not be comparable */
@@ -247,7 +249,7 @@ function drawScaleBar(g, res){
      eye, so the closer together the better, but XCTrack's own label sits above
      its bar and the exact height is device-specific — hence a parameter rather
      than a guess baked in. */
-  var x = 15, y = H - C.barY, t = WG.XCT_LADDER[curStep];
+  var x = 15, y = H - C.barY, t = WG.fmtScale(m);
   barRight = x + px;
   g.lineCap = "butt"; g.lineJoin = "miter";
 
@@ -301,7 +303,7 @@ function paintBadge(fix, shown, nStale){
   if (!fix){
     s = "no position"; bad = true;
   } else {
-    s = (WG.XCT_LADDER[curStep] || "?") + " N↑";
+    s = WG.scaleLabel(curStep, fix.lat, W) + " N↑";
     if (!lastFetch){
       s += fetchErr ? ("  no data: " + fetchErr) : "  loading…";
       bad = !!fetchErr;

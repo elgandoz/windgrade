@@ -4,70 +4,64 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
-### 2026-08-11 — the ladder does NOT step by √2. Half-steps were 12% wrong.
+### 2026-08-11 — the label list belongs to the SCREEN, not to the ladder
 
-**Verdict: `z = (value − 3) / 2` is withdrawn.** It was right at every step we had
-measured and wrong at every step in between. Caught by the owner from a screenshot
-at `10km` where our scale bar was visibly shorter than XCTrack's.
+**Verdict: the √2 ladder was right all along. A correction made earlier today was
+wrong and has been reverted.** The printed scale labels are produced by XCTrack's
+scale bar, which shows the largest "nice" number that fits a maximum width of
+about **0.325 × the widget width** — so two devices print different lists for
+identical resolutions.
 
-**Why three correct measurements were not enough.** All three points verified
-against airspace edges — `15km`, `8km`, `4km` — are **two steps apart**, and two
-steps double under both models. Any model with a two-step doubling fits them. The
-steps in between were never checked, and the closed form quietly assumed the
-ladder was geometric.
+#### How the mistake happened, because it is the instructive part
 
-It is not. The ratios alternate, and **1.25 × 1.6 = 2.0 exactly**, which is
-precisely why the doubling held and the error hid:
+The owner reported our scale bar short at `10km`. Working from their phone's label
+list, the ratios between consecutive labels were 1.25 and 1.6 rather than √2, so
+the ladder was "corrected" to alternate. That model reproduced the phone's 23
+labels — **because it had been fitted to them** — and the three measured
+calibration points, which are two steps apart and therefore doubling under either
+model.
 
-```
-… 4km ×1.25→ 5km ×1.6→ 8km ×1.25→ 10km ×1.6→ 16km ×1.25→ 20km …
-```
+Then the owner mentioned the screenshot came from a **Pixel 9a emulator**, whose
+slider offers a *different* list. The alternating model has no mechanism for a
+second list. The bar-width model explains both:
 
-**The evidence is the label list itself.** Anchored on step 25 = 8000 m = z11 — the
-one step verified to the pixel — the alternating ladder reproduces **all 23 printed
-labels within 8%**, and every label it misses is exactly the number a UI would
-round:
+| | owner's phone | Pixel 9a |
+|---|---|---|
+| widget width | 448 css px | ~411 css px |
+| bar max | 145.6 (measured at 8 km) | ~134 |
+| step 25 prints | **8km** | **6km** |
+| step 25 resolution | 54.96 m/px | 54.96 m/px |
 
-| true | printed |
-|---|---|
-| 312.5 | `300m` |
-| 625 | `600m` |
-| 1250 | `1200m` |
-| 16000 | `15km` |
-| 32000 | `30km` |
-| 64000 | `60km` |
-| 128000 | `120km` |
-| 512000 | `500km` |
+One √2 ladder plus two widths reproduces **46 of 46 labels with no misses**. That
+is now a test.
 
-No √2 ladder can produce that list: it would want `11.3km` where XCTrack prints
-`10km`, and `5.7km` where it prints `5km`.
+The mistake was fitting a model to the one dataset that could not falsify it. The
+label list *looked* like evidence about the ladder and was actually evidence about
+the scale bar — downstream of the thing being measured.
 
-**So there are now two numbers per step and they must not be confused:**
+#### What this changes
 
-| | |
-|---|---|
-| `XCT_TRUE_M` | the real ground scale — drives **resolution** |
-| `XCT_METRES` | what the label says — drives the **scale bar length** |
+- `zoomForStep` is back to `z = (value − 3) / 2`. `XCT_TRUE_M` is gone.
+- **Labels are computed, not tabled.** `WG.scaleLabel(step, lat, widthPx)` returns
+  what XCTrack will print, from the widget's own width and the live latitude. The
+  overlay uses its real width, so it names the scale the pilot's own device names.
+- `wpx` lets the launcher's dropdown match a target device, defaulting to 448.
+- `XCTrack` prints km only for whole thousands — `1km`, `2km`, but `1200m` and
+  `2500m`. Cosmetic, but a mismatched label sends the pilot hunting for something
+  their device never shows.
 
-They agree at `8km`, `10km`, `4km`, `20km` and most others; they differ only where
-the label is rounded.
+#### Still unexplained, and it needs a fresh measurement
 
-**Effect of the fix.** At `10km` the resolution goes 77.7 → 68.7 m/px and the bar
-128.6 → 145.5 px, +13% — matching the screenshot. The three measured points are
-unchanged (109.93 / 54.96 / 27.48 against 109.89 / 54.95 / 27.47).
+Under the restored model, at `10km` on the Pixel both bars should be 128.6 px, yet
+the screenshot showed XCTrack's roughly 8% longer. Three candidates: the crop was
+measured badly (the same eyeballing that produced the wrong correction), the
+emulator's widget is not the width assumed, or **`CAL` is device-dependent** and
+0.942 does not transfer off the phone.
 
-**Still open, and it needs one screenshot.** At a *rounded* step such as `15km`, is
-XCTrack's bar drawn at the labelled 15 km or at the true 16 km? We draw the label,
-so if XCTrack draws the true value our bar will read ~6% short there and it would
-be a false alarm rather than a real mismatch. Every step where the label is exact
-is unaffected. Compare the two bars at `15km` to settle it.
-
-**The lesson worth keeping:** a model that fits every measurement can still be
-wrong everywhere the measurements did not land. The three points were two steps
-apart *because that is where the integer OSM zooms were* — the sampling was chosen
-by the hypothesis it was meant to test.
-
----
+Do not guess again. Re-shoot the two bars on the Pixel with this build, at a scale
+whose label both devices share. If they still differ, `CAL` needs to become a
+per-device setting, calibrated by matching the bars — which is what the bar was
+built for.
 
 ### 2026-08-11 — `${lat}` answers before a GPS fix; `getLocation()` does not
 
