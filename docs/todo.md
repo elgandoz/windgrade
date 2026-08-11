@@ -77,7 +77,20 @@ Things believed but not measured. Each says how to settle it.
   Switzerland spans 3.7% of cos variation. The scale bar now makes this passive —
   fly to Valais or Ticino and see whether the two bars still agree.
 - **Widget-size independence.** Inferred from the zoom spacing being exactly 1.000,
-  not measured. One run at a different widget size settles it.
+  not measured. One run at a different widget size settles it. *Note it is now a
+  much weaker claim than it was: the scale bar's max length is a constant in dp
+  and the labels no longer depend on widget width at all, so only the projection
+  itself is still unverified across sizes.*
+- **`Check scale!` sitting in the gap.** Verified numerically (chip centre 731.1
+  against a gap centre of 731) but never seen on a phone. `XCT_BAR_Y = 10` came
+  from the two ruler runs on one emulator; if XCTrack's own bar sits at a
+  different height on another device the prompt will be off-centre, which is
+  cosmetic — nothing measures against it.
+- **The altitude line over real terrain.** Checked headlessly over synthetic
+  snow/grass/rock bands with an airspace line and a river. `#3A4A56` at 78% of
+  the speed size is the smallest text this tool draws, so it is where the white
+  casing fails first — worth a look in bright sunlight, which is the condition
+  no screenshot reproduces.
 - **`.pmtiles` byte ranges.** Cannot be tested until a real pack exists. Pass = 206,
   **no** `content-encoding`, and a `content-range` total equal to the real file
   size. If it fails, packs go to R2 — which is why Phase 3 keeps absolute pack URLs.

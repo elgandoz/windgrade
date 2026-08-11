@@ -82,7 +82,10 @@ station on terrain is the whole point.
 - **The widget's `<body>` stays unpainted.** XCTrack renders white or absent
   backgrounds as transparent so the widget floats over its map. That is also why
   `widget.html` cannot load `wg/base.css` — so any guard living there has to be
-  repeated in the widget's own `<style>`. The one that has already bitten:
+  repeated in the widget's own `<style>`, including the theme tokens: the popup
+  honours `?theme=` through a local copy of base.css's `<html data-theme>` block.
+  Only the popup is themed; the status line, the prompt and the scale bar sit on
+  the map, where they need contrast against terrain rather than against a page. The one that has already bitten:
   `[hidden]{display:none !important}`. The browser applies `hidden` as a
   low-priority `[hidden]{display:none}`, and any author rule setting `display`
   (an ID selector with `display:flex`, say) silently outranks it, leaving a
@@ -184,6 +187,11 @@ same step is a different scale at a different pixel density — that is exactly
 how the launcher came to offer step 25 as "8km" when a Pixel 9a prints 6km. The
 `step` parameter still exists as an explicit override (0 = derive) and is hidden
 from the settings UI by `adv:true`, which — unlike `ui:false` — keeps it in URLs.
+
+The overlay's furniture is opt-in and mostly off: `alt=1` puts the station
+altitude under the speed, `badge=1` shows the station count, `debug=1` adds the
+assumed scale and forces the line on. Nothing switches off `no position`,
+`OFFLINE` or `ALL STALE` — those are the display admitting it cannot be trusted.
 
 Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC`
 works the same way, e.g. `?scale=15000&peaks=1&stale=45` — or just use the

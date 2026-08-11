@@ -136,10 +136,22 @@ device prints is missing.
 marker. `ui:false` would have been wrong: it also strips the parameter from every
 URL the launcher builds.
 
-One trap worth recording. The scale `<select>` originally walked `sp.min..sp.max`,
-which for a metres-valued field is 100..2,000,000 — two million iterations
-producing an empty list. It walks the ladder now, via `WG.STEP_MIN/STEP_MAX`.
-The headless screenshot is what caught it; the unit tests were all green.
+**Setting `scale` clears `step`.** The step row is hidden, so a pilot arriving
+from an old `?step=NN` link could pick a new scale, watch the select change, and
+get a URL carrying both — with the pinned step winning and nothing on screen
+explaining why the overlay ignored them. Done in `setConfig1`, not in the UI, so
+it holds for any caller. A URL that *only* pins a step still works untouched,
+which is the entire reason the parameter still exists.
+
+Two traps worth recording, both from the same round:
+
+- The scale `<select>` originally walked `sp.min..sp.max`, which for a
+  metres-valued field is 100..2,000,000 — two million iterations producing an
+  empty list. It walks the ladder now, via `XCT_STEP_MIN/MAX`. **The headless
+  screenshot caught it; every unit test was green.**
+- The first version of the fix added its own `STEP_MIN`/`STEP_MAX` beside the
+  `XCT_STEP_MIN`/`XCT_STEP_MAX` that already existed and were already exported.
+  Removed. Grep before adding a constant that sounds obvious.
 
 #### Kept
 

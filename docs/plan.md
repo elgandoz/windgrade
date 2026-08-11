@@ -540,10 +540,101 @@ over the widget area.
   its rectangle with XCTrack's own controls and only the pilot knows what is
   already there — the row layout exists so a second pair, driving XCTrack's map,
   can sit beside ours.
-- **The prompt sits beside the bar, not above it**, with the arrow pointing back:
-  `← match scale`. It says *where* to look as well as what to do, and it is the
-  one place that neither stacks into a corner nor covers XCTrack's own bar. Its
-  left edge follows the bar's right end, which moves with the scale.
+- **The prompt sits beside the bar, not above it**, with the arrow pointing back.
+  It says *where* to look as well as what to do, and it is the one place that
+  neither stacks into a corner nor covers XCTrack's own bar. *(Superseded by
+  Phase 3f: the wording and both coordinates changed.)*
+
+## Phase 3f — the overlay's furniture (2026-08-11)
+
+Owner review on device, after the pixel-density work landed. Four changes and
+two bugs found while making them.
+
+### The popup follows the theme
+
+It was hardcoded dark. It now honours `?theme=` by the same
+`<html data-theme="dark|light">` convention `base.css` uses — **restated inside
+`widget.html`**, because that page cannot load `base.css`: its `<body>` must stay
+unpainted or it stops floating over XCTrack's map. Same token names and values,
+so the two cannot drift in meaning even though they must be maintained twice.
+
+**Only the popup is themed.** The status line, the prompt and the scale bar sit
+on XCTrack's map, where they need contrast against *terrain* — snow, grass,
+rock — not against a page. They stay dark-on-light at every setting. The peak
+triangle's hardcoded `#54A6DC` moved to `var(--chart)` with the rest.
+
+### The prompt: `← Check scale!`, and it stopped sliding
+
+Its left edge used to follow the bar's right end, which moves with the scale —
+so the prompt slid sideways every time the pilot zoomed. Movement reads as a
+fault, not as a pointer.
+
+It is now fixed at `BAR_X + WG.BAR_MAX_DP + 8`. `BAR_MAX_DP` is the bar's ceiling
+*by construction*, so this clears the bar at every scale — ours and XCTrack's
+alike — without ever covering either, and it clamps to the viewport on a widget
+too narrow to hold both, because a prompt hanging off the edge says nothing.
+
+Vertically it is centred on the **gap between the two bars**, so the arrow points
+at the pair rather than at ours: the instruction is to *compare*, not to look.
+Measured from the element rather than assumed, so it stays centred if the text
+changes. Verified at chip centre 731.1 against a gap centre of 731, and it tracks
+`barY` (at `barY=70`: 719.1 against 719).
+
+`XCT_BAR_Y = 10` css px, XCTrack's own bar height off the bottom, taken from the
+two ruler runs. Nothing about the geometry depends on it — only this centring.
+
+### The status line, cut back and off by default
+
+It led with the assumed scale and `N↑` permanently. Both are redundant: the bar
+shows the scale against XCTrack's **own**, which is the comparison that actually
+catches a mis-pairing, and north-up is required setup rather than news. They are
+behind `?debug=1` now, which also forces the line on whatever `badge` says.
+
+    default            hidden
+    ?badge=1           26 stations (3 stale)
+    ?debug=1           10km N↑  26 stations (3 stale)
+
+**The alarms are not switchable.** `no position`, `OFFLINE` and `ALL STALE` show
+with `badge=0` — they are the display admitting it cannot be trusted, and no
+cosmetic setting may turn that off. Verified.
+
+### FOUND: `badge=0` was inert
+
+It suppressed nothing. It only shrank the marker keep-out rectangle, so the
+setting appeared to do something while the line stayed on screen. Fixed with the
+above. The keep-out rectangle is now measured off the element for the same
+reason: the line can appear *despite* `badge=0`, and the old `190x26` constant
+never described the shortened text anyway.
+
+### Optional station altitude, `?alt=1`
+
+A second line under the speed. Offerable at all only because it is a **fact the
+provider supplies** — no inference, no interpolation. And it is the fact this
+tool exists for: a station *name* cannot tell a pilot who does not fly the area
+whether a reading came from a valley floor or a 2900 m ridge.
+
+| | speed | altitude |
+|---|---|---|
+| size | `fs` | 78% of `fs` |
+| weight | 700 | 600 |
+| colour | `#0A1116` | `#3A4A56` slate |
+| casing | white | white |
+
+- **The speed stays dominant.** Not cosmetic: the speed is the mandatory fallback
+  for the rating scale's hue-only middle, so nothing may compete with it.
+- **The unit is included** — `2870m`. A bare number under another bare number
+  invites being read as more wind, and 2900 would be a spectacular misreading.
+- **A missing altitude draws nothing** — not a dash, not a zero. The provider not
+  knowing is different from the station being at sea level.
+- **Staleness stays on the speed only.** Red means *this reading is old*; an
+  altitude cannot be.
+- Off by default, and the collision box grows by exactly the line height, taken
+  from the renderer rather than guessed — so fewer markers fit with it on. That
+  is the honest trade.
+
+Checked over snow, grass, rock and dark rock with an airspace line and a river
+crossing the markers, at sizes 0 and 100: the smaller text is where legibility
+over an arbitrary basemap fails first.
 
 ## Phase 4 — polish
 
