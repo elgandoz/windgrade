@@ -9,6 +9,14 @@
    which is what lets this float over its map. Never add a background. */
 html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* The browser applies `hidden` as a low-priority [hidden]{display:none}. Any
+   author rule that sets display — #zbtns{display:flex} did — silently outranks
+   it and the element stays on screen. base.css restates this for the other
+   pages; this one cannot load base.css, because its body must stay unpainted,
+   so it needs its own copy. Without it the zoom buttons rendered with zbtn=0,
+   landed top-left for want of a position class, and did nothing because their
+   handlers are only bound when the feature is on. */
+[hidden]{display:none !important}
 #cv{position:absolute;left:0;top:0;width:100%;height:100%}
 /* The badge carries its own background; nothing else does. */
 #badge{position:absolute;left:0;top:0;z-index:10;padding:2px 5px;

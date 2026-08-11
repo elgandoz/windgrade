@@ -79,7 +79,14 @@ station on terrain is the whole point.
   actually changes. Wind readings update on a ~10 minute cadence; don't fetch
   faster than that.
 - **The widget's `<body>` stays unpainted.** XCTrack renders white or absent
-  backgrounds as transparent so the widget floats over its map.
+  backgrounds as transparent so the widget floats over its map. That is also why
+  `widget.html` cannot load `wg/base.css` — so any guard living there has to be
+  repeated in the widget's own `<style>`. The one that has already bitten:
+  `[hidden]{display:none !important}`. The browser applies `hidden` as a
+  low-priority `[hidden]{display:none}`, and any author rule setting `display`
+  (an ID selector with `display:flex`, say) silently outranks it, leaving a
+  supposedly hidden control on screen — mispositioned and inert, because its
+  handlers are bound only when the feature is enabled.
 
 ## Reused from `hx-call`
 
