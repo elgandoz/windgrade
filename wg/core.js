@@ -334,11 +334,6 @@ var SPEC = [
     lab:"Show station count",
     help:"A line at the top: how many stations are drawn and how many are old. " +
          "Warnings still appear when this is off." },
-  { k:"debug", t:"int", d:0, min:0, max:1, only:"widget", grp:"Status line",
-    lab:"Extra detail in that line",
-    help:"Adds the scale the overlay assumed and how many stations it received. " +
-         "For reporting a problem." },
-
   { k:"popup", t:"int", d:30, min:0, max:300, only:"widget", grp:"Interactive mode",
     lab:"Popup timeout (s)",
     help:"Tap a marker to see its last few hours. 0 keeps it open until you " +
@@ -382,6 +377,14 @@ var SPEC = [
     grp:"Calibration — you should not need these",
     lab:"Scale correction",
     help:"Leave at 1. A last-resort nudge if the two scale bars still disagree." },
+
+  /* NOT widget-only: both pages hide their technical line behind it, and a bug
+     report from either one is worth the same. On the overlay it also forces the
+     status line to appear whatever `badge` says. */
+  { k:"debug", t:"int", d:0, min:0, max:1, grp:"Troubleshooting",
+    lab:"Show technical details",
+    help:"Adds a line with the position, the scale and what the last download " +
+         "returned. Useful when reporting a problem." },
 
   /* No row anywhere, but kept in URLs and in storage — which is what
      separates `hidden` from `ui:false`, and it is NOT the same thing as the

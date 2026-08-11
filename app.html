@@ -13,14 +13,27 @@
 /* Data first. Settings live in a collapsed sheet pinned to the bottom, so a
    pilot scanning readings never scrolls past a form to reach them. */
 body{padding:8px 8px calc(58px * var(--scale))}
-h1{font-size:.86em;letter-spacing:.1em;text-transform:uppercase;margin:0 0 2px;color:var(--dim)}
-#hdr{font-family:var(--mono);font-size:.78em;color:var(--dim);margin:0 0 8px;white-space:pre-wrap}
+/* Title and the freshness control on one line. The control IS the age, because
+   "3 min ago" next to a refresh arrow says what tapping it does — a separate
+   Refresh button said nothing about what was being refreshed, and took a whole
+   row of a screen that exists to show readings. */
+#top{display:flex;align-items:center;gap:8px;margin:0 0 6px}
+h1{flex:1;font-size:.86em;letter-spacing:.1em;text-transform:uppercase;margin:0;color:var(--dim)}
+#bRef{flex:none;display:flex;align-items:center;gap:5px;padding:6px 10px;
+  background:var(--panel-hi);border:1px solid var(--rule);border-radius:14px;
+  color:var(--fg);font:600 .78em var(--sans)}
+#bRef i{font-style:normal;font-size:1.05em;line-height:1}
+#bRef.old{border-color:var(--amber);color:var(--amber)}
+#bRef.busy{opacity:.55}
+/* One plain sentence. What the list is, and anything about it that is not
+   obvious from looking — never coordinates, never kilobytes. */
+#say{margin:0 0 8px;font-size:.86em;line-height:1.45;color:var(--dim)}
+#say b{color:var(--fg)}
+#dbg{font-family:var(--mono);font-size:.72em;color:var(--dim);margin:0 0 8px;
+  white-space:pre-wrap;overflow-wrap:anywhere}
 #err{margin:6px 0;padding:8px;border-radius:3px;font-size:.84em;
   background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber)}
-.bar{display:flex;gap:6px;margin:0 0 8px}
-.bar button,.bar a{flex:1;padding:9px;background:var(--panel-hi);border:1px solid var(--rule);
-  border-radius:3px;color:var(--fg);font:600 .84em var(--sans);text-align:center;
-  text-decoration:none}
+#err b{color:var(--amber-str)}
 
 /* chip: marker, then numbers, then facts. The number is never optional. */
 .chip{display:flex;align-items:center;gap:9px;padding:7px 8px;margin:0 0 5px;
@@ -42,6 +55,9 @@ h1{font-size:.86em;letter-spacing:.1em;text-transform:uppercase;margin:0 0 2px;c
 
 footer{margin-top:14px;padding-top:8px;border-top:1px solid var(--rule);
   font-size:.72em;line-height:1.55;color:var(--dim)}
+/* Before the first render there is nothing to attribute, and a lone rule
+   across an otherwise empty page reads as a broken layout. */
+footer:empty{display:none}
 
 /* ── settings sheet ─────────────────────────────────────────────── */
 #sheet{position:fixed;left:0;right:0;bottom:0;max-height:82vh;overflow:auto;
@@ -58,25 +74,24 @@ footer{margin-top:14px;padding-top:8px;border-top:1px solid var(--rule);
   border:1px solid var(--rule);border-radius:3px;color:var(--fg);
   font:600 .84em var(--sans);text-align:center;text-decoration:none}
 
-.bar button:active,.bar a:active,.sheetfoot button:active,.sheetfoot a:active{
-  background:var(--rule)}
+#bRef:active,.sheetfoot button:active,.sheetfoot a:active{background:var(--rule)}
 @media (hover:hover) and (pointer:fine){
-  .bar button,.bar a,.sheetfoot button,.sheetfoot a{transition:border-color .12s}
-  .bar button:hover,.bar a:hover,.sheetfoot button:hover,.sheetfoot a:hover{
-    border-color:var(--chart)}
+  #bRef,.sheetfoot button,.sheetfoot a{transition:border-color .12s}
+  #bRef:hover,.sheetfoot button:hover,.sheetfoot a:hover{border-color:var(--chart)}
   #sheet > summary:hover{color:var(--fg)}
 }
 </style>
 </head>
 <body>
 
-<h1>Windgrade</h1>
-<div id="hdr">starting…</div>
-<div id="err" hidden></div>
-<div class="bar">
-  <button id="bRef" type="button">Refresh</button>
-  <a href="index.html">Setup &amp; widget</a>
+<div id="top">
+  <h1>Windgrade</h1>
+  <button id="bRef" type="button" title="Check for new readings">
+    <i aria-hidden="true">↻</i><span id="age">…</span></button>
 </div>
+<p id="say">Starting…</p>
+<div id="dbg" hidden></div>
+<div id="err" hidden></div>
 <div id="list"></div>
 
 <footer id="foot"></footer>
@@ -86,7 +101,15 @@ footer{margin-top:14px;padding-top:8px;border-top:1px solid var(--rule);
   <div class="inner" id="fields"></div>
   <div class="sheetfoot">
     <button id="reset" type="button">Reset</button>
-    <a href="index.html">Build a widget URL</a>
+    <!-- target=_blank ON PURPOSE. Installed as a PWA this page runs in a
+         standalone window whose manifest scope is "./", so a plain link to
+         index.html navigates INSIDE the app and strands the pilot in a setup
+         guide with no way back. There is no API for "open in the default
+         browser"; _blank is what hands it to one — a Custom Tab on Android,
+         Safari on iOS, a normal tab on desktop. The other lever would be
+         narrowing the manifest scope so index.html falls outside it, which
+         would also push every future page out. Not worth it for one link. -->
+    <a href="index.html" target="_blank" rel="noopener">Set up the XCTrack overlay ↗</a>
   </div>
 </details>
 
@@ -116,6 +139,7 @@ var C = WG.initConfig(location.search, { store: true });
 var PROV = WG.providers.windsmobi;
 var VIEW_W = 448, VIEW_H = 978;      /* nominal widget, for the fetch bbox */
 var stations = [], lastFetch = 0, lastErr = "", fetching = false, meta1 = "";
+var capped = false;                   /* the API truncated at its own limit */
 var rows = {};                        /* id -> {el, cache} */
 
 function el(id){ return document.getElementById(id); }
@@ -131,8 +155,9 @@ if (navigator.geolocation){
     WG.setGeoFix({ lat:p.coords.latitude, lon:p.coords.longitude,
                    alt:p.coords.altitude, src:"geo", valid:true });
     tick();
-  }, function(e){ note("Location unavailable: " + e.message +
-                       " — or open with ?lat=47.05&lng=8.64"); },
+  /* Short, and it does NOT repeat the hint the sentence above already gives —
+     two boxes saying the same thing reads as two problems. */
+  }, function(){ note("Location access is blocked for this page."); },
      { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
 }
 
@@ -141,6 +166,26 @@ function paintErr(){
   var e = el("err");
   e.hidden = !lastErr;
   if (lastErr) e.textContent = lastErr;
+}
+
+/* ── the freshness control ─────────────────────────────────────────────
+   Readings move on a ~10 min cadence and tick() refetches on its own, so this
+   is not load-bearing — but "how old is this" is the one question a pilot must
+   always be able to answer, and putting the refresh on the answer costs no
+   extra screen. Goes amber past two poll intervals, the same threshold the
+   overlay's status line uses, so the two pages never disagree about when data
+   has gone quietly old. */
+function paintAge(){
+  var b = el("bRef"), t;
+  if (fetching) t = "checking…";
+  else if (!lastFetch) t = "no data";
+  else {
+    var min = Math.round((Date.now() - lastFetch) / 60000);
+    t = (min < 1) ? "just now" : (min + " min ago");
+  }
+  if (el("age").textContent !== t) el("age").textContent = t;
+  var old = !!lastFetch && (Date.now() - lastFetch) > C.poll * 2000;
+  b.className = (fetching ? "busy" : "") + (old ? " old" : "");
 }
 
 /* Shared with the overlay widget, so the two renderings cannot drift. */
@@ -186,24 +231,29 @@ function paintRow(r, st){
     c.nm = nm;
   }
 
-  /* The geocoded municipality first when it differs from the owner's name —
-     the one word a pilot who does not know the site can place on a map. */
-  var head = (st.place ? st.place + " · " : "") +
-             (isFinite(st.alt) ? Math.round(st.alt) + " m · " : "") +
-             (Math.round(st.dist / 100) / 10) + " km " + compass(st.brg) + " · ";
-  var sk = head + "|" + st.stale.cls + "|" + Math.round(st.stale.age) + "|" + st.status;
+  /* Order is by usefulness, and it decides what falls off the end when the line
+     wraps: how far and which way (which is also how the list is sorted), then
+     how high, then how old. THE AGE MUST COME BEFORE THE ATTRIBUTION — it is
+     the field that decides whether the reading can be trusted at all, and it
+     must never be the thing that wraps out of sight. The geocoded municipality
+     sits after it, still present because it is the one word a pilot who does
+     not know the site can place on a map, but no longer ahead of the facts. */
+  var head = (Math.round(st.dist / 100) / 10) + " km " + compass(st.brg) + " · " +
+             (isFinite(st.alt) ? Math.round(st.alt) + " m · " : "");
+  var tail = (st.place ? " · " + st.place : "") + " · " + st.provider;
+  var sk = head + "|" + tail + "|" + st.stale.cls + "|" +
+           Math.round(st.stale.age) + "|" + st.status;
   if (c.sub !== sk){
     var subEl = r.el.querySelector(".sub");
     subEl.textContent = "";
     subEl.appendChild(document.createTextNode(head));
-    /* Age before the attribution: it is the field that decides whether the
-       reading can be trusted, and it must not be what wraps off the line. */
+    /* "13 min" alone does not say what the number measures. "ago" does. */
     var ag = document.createElement("span");
     ag.className = "age " + st.stale.cls;
     ag.textContent = (st.stale.age === st.stale.age)
-      ? Math.round(st.stale.age) + " min" : "no timestamp";
+      ? Math.round(st.stale.age) + " min ago" : "no time given";
     subEl.appendChild(ag);
-    subEl.appendChild(document.createTextNode(" · " + st.provider));
+    subEl.appendChild(document.createTextNode(tail));
     if (st.status === "orange" || st.status === "red"){
       var s2 = document.createElement("span");
       s2.className = "st-" + st.status;
@@ -241,14 +291,52 @@ function render(fix){
     }
   }
 
+  /* ONE plain sentence, then the exceptions. Anything with a number in it that
+     a pilot cannot act on belongs in the debug line, not here. */
+  say(ranked);
+
+  /* Attribution is owed to the networks that own the readings, not only to the
+     aggregator, so the list is rebuilt from what is actually on screen. The
+     safety wording stays — it is the shortest it can be and still say what it
+     has to. */
   var nets = WG.attribution(ranked), f = el("foot");
   f.textContent =
-    "Sources: " + (nets.length ? nets.join(", ") : "—") + ", aggregated by winds.mobi. " +
-    "Measured values only — station altitude, speed, gust, direction. No " +
-    "interpolation between stations and no lee-side inference. The colour scale " +
-    "is a rough aid, NOT an assessment of whether a flight is safe. Readings " +
-    "cannot work offline; anything marked stale is old and must be treated as " +
-    "unknown.";
+    "Readings from " + (nets.length ? nets.join(", ") : "—") + ", via winds.mobi. " +
+    "Measured values only: altitude, speed, gust, direction. Nothing is " +
+    "interpolated or guessed between stations. The colours are a rough aid, " +
+    "NOT an assessment of whether a flight is safe. Readings cannot work " +
+    "offline — treat anything marked old as unknown.";
+}
+
+/* ── the sentence ──────────────────────────────────────────────────────
+   Replaces a mono line that read
+     src=url 44.88000,7.33000 / scale 8km ≙ z9.0 · 1.8 KB · 15 ms · 7 stations
+   which is four facts a pilot cannot use and one they can. All of it moved
+   behind ?debug=1, the same switch the overlay uses. */
+function say(ranked){
+  var n = ranked.length, i, nStale = 0, parts;
+  for (i = 0; i < n; i++) if (ranked[i].stale.cls === "stale") nStale++;
+
+  if (!n){
+    setSay("No stations found nearby. Try a wider <b>Map scale</b> in Settings.");
+    return;
+  }
+  parts = "<b>" + n + (n === 1 ? " station</b> near you" : " stations</b> near you") +
+          ", closest first.";
+  /* Old readings are already red on their own row; this says how many, so a
+     list that is mostly red is obvious before scrolling it. */
+  if (nStale === n) parts += " <b>Every one is out of date</b> — treat them all as unknown.";
+  else if (nStale) parts += " <b>" + nStale + "</b> " +
+       (nStale === 1 ? "is too old to trust" : "are too old to trust") + ".";
+  /* The provider truncates at its own limit with no documented ordering, so
+     stations exist that we were never sent. Never silent. */
+  if (capped) parts += " There are more stations around you than can be " +
+                       "downloaded at once — narrow the <b>Map scale</b>.";
+  setSay(parts);
+}
+function setSay(html){
+  var s = el("say");
+  if (s.getAttribute("data-h") !== html){ s.innerHTML = html; s.setAttribute("data-h", html); }
 }
 
 /* ── fetch ────────────────────────────────────────────────────────── */
@@ -256,16 +344,20 @@ function refresh(fix){
   if (fetching || !fix) return;
   fetching = true;
   var bbox = WG.bboxAround(fix, WG.zoomOf(C, fix.lat), VIEW_W, VIEW_H, C.pad);
+  paintAge();                                   /* show "checking…" at once */
   PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list, meta){
     fetching = false;
-    if (err) note("Fetch failed: " + err + " — showing the last good data, if any.");
+    /* Keep whatever is on screen and say the download failed. Wording matters:
+       a pilot has to know the numbers below are the OLD ones. */
+    if (err) note(lastFetch
+      ? "No connection — these readings are from the last time it worked."
+      : "No connection, and nothing downloaded yet.");
     else {
       lastErr = ""; paintErr();
       stations = list; lastFetch = Date.now();
-      meta1 = (meta.bytes / 1024).toFixed(1) + " KB · " + meta.ms + " ms" +
-              /* The API truncates at 500 with no documented ordering, so a
-                 full answer means stations exist that we never received. */
-              (meta.capped ? " · TRUNCATED at " + meta.count : "");
+      capped = !!meta.capped;
+      meta1 = (meta.bytes / 1024).toFixed(1) + " KB · " + meta.ms + " ms · " +
+              meta.count + " received" + (meta.capped ? " (TRUNCATED)" : "");
     }
     tick();
   });
@@ -274,23 +366,34 @@ function refresh(fix){
 /* ── tick ─────────────────────────────────────────────────────────── */
 function tick(){
   var p = WG.position(C), fix = p.fix;
+  paintAge();
   if (!fix){
-    el("hdr").textContent = "No position yet. Allow location, or open with " +
-                            "?lat=47.05&lng=8.64\nXCTrack: " + p.note;
+    setSay("<b>Waiting for your location.</b> Allow this page to use it, or " +
+           "add <code>?lat=47.05&amp;lng=8.64</code> to the address to try a " +
+           "fixed spot.");
+    paintDbg(null, p);
     return;
   }
   if (!lastFetch || Date.now() - lastFetch > C.poll * 1000) refresh(fix);
+  render(fix);                     /* render() writes the sentence too */
+  paintDbg(fix, p);
+}
 
-  el("hdr").textContent =
-    "src=" + fix.src + "  " + fix.lat.toFixed(5) + "," + fix.lon.toFixed(5) +
-    (isFinite(fix.alt) ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
-    "scale " + WG.scaleLabel(WG.resolveStep(C, fix.lat), fix.lat) +
-    " ≙ z" + WG.zoomOf(C, fix.lat).toFixed(1) +
-    (meta1 ? "  ·  " + meta1 : "") +
-    (lastFetch ? "  ·  " + Math.round((Date.now() - lastFetch) / 1000) + " s ago" : "") +
-    "  ·  " + stations.length + " stations";
-
-  render(fix);
+/* Everything that used to be in the header, unchanged in content and now
+   behind one switch — same `debug` the overlay uses, so a bug report from
+   either page shows the same fields. */
+function paintDbg(fix, p){
+  var d = el("dbg");
+  if (!C.debug){ if (!d.hidden) d.hidden = true; return; }
+  d.hidden = false;
+  var t = fix
+    ? ("src=" + fix.src + "  " + fix.lat.toFixed(5) + "," + fix.lon.toFixed(5) +
+       (isFinite(fix.alt) ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
+       "scale " + WG.scaleLabel(WG.resolveStep(C, fix.lat), fix.lat) +
+       " = z" + WG.zoomOf(C, fix.lat).toFixed(1) + "  dpr " + (window.devicePixelRatio || 1) +
+       (meta1 ? "\n" + meta1 : ""))
+    : ("no fix — " + p.note);
+  if (d.textContent !== t) d.textContent = t;
 }
 
 /* ── settings sheet, generated from WG.SPEC so it can never drift ──

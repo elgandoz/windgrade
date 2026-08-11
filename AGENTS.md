@@ -256,6 +256,29 @@ calibration — the instrument that settled pixel density, keep it),
 from the launcher** — six diagnostic pages were six things a pilot had to
 scroll past. Add a new one there and to `sw.js`.
 
+**`app.html` says one sentence and hides the rest behind `?debug=1`.** Its
+header used to print `src=url 44.88000,7.33000 / scale 8km ≙ z9.0 · 1.8 KB ·
+15 ms`; it now says *"96 stations near you, closest first. 9 are too old to
+trust."* `debug` is deliberately NOT `only:"widget"` — both pages hide their
+technical line behind the same switch so a bug report from either shows the
+same fields. The sentence also carries the two things invisible by looking:
+all-stale, and the provider's 500-station truncation.
+
+**Refresh is the age.** A pill in the header reads `↻ 12 min ago` and tapping it
+refetches; it goes amber past two poll intervals, the same threshold the
+overlay's status line uses. Do not add a separate Refresh button back — it cost
+a whole row of a screen that exists to show readings, and said nothing about
+what was being refreshed or whether it needed to be.
+
+**An installed PWA cannot be told to "open in the default browser" — there is
+no such API.** The link out of `app.html` uses `target="_blank" rel="noopener"`,
+which hands the navigation to a browser surface (Custom Tab on Android, Safari
+on iOS, a tab on desktop). Without it, a plain same-origin link navigates
+*inside* the standalone window and strands the pilot in the setup guide with no
+back button. The only other lever is the manifest `scope`, and since
+`index.html` sits beside `app.html` narrowing it would push every future page
+out of scope too. Keep the `_blank`.
+
 **`index.html` is written for a pilot, not for us.** Three numbered steps
 (choose a scale → get the link onto your phone → set it up in XCTrack), one
 primary action at the top, and the measured reasons behind each XCTrack setting

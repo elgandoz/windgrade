@@ -807,6 +807,72 @@ XCTrack, the marker itself, what a device can do — with a sentence each saying
 when you would want it, and the launcher links to it from the footer. `sw.js`
 `CACHE` bumped to `v3` for the new file.
 
+## Phase 3k — the list page, brought up to the same standard (2026-08-11)
+
+`app.html` had had none of 3f–3j applied to it. Its header read
+
+    src=url  44.88000,7.33000
+    scale 8km ≙ z9.0  ·  1.8 KB · 15 ms  ·  5 s ago  ·  7 stations
+
+which is four facts a pilot cannot act on and one they can.
+
+**One plain sentence instead.** *"96 stations near you, closest first. 9 are too
+old to trust."* Everything else moved behind `?debug=1` — the same switch the
+overlay uses, so a bug report from either page shows the same fields. That
+required dropping `only:"widget"` from `debug` and giving it its own group,
+**Troubleshooting**, at the end of the list; its label is now *Show technical
+details* rather than *Debug in the status line*.
+
+The sentence also carries the two things that are not visible by looking:
+every-reading-stale, and `capped` — *"There are more stations around you than
+can be downloaded at once"*. The provider truncates at 500 with no documented
+ordering, and `app.html` had been reporting that as `TRUNCATED at 503` inside a
+diagnostic string that is now hidden.
+
+**Refresh and "Setup & widget" are gone from the top.** The bar cost a full row
+of a screen whose entire purpose is showing readings.
+
+- **Refresh became the age.** A pill in the header reads `↻ just now` /
+  `↻ 12 min ago`, and tapping it refetches. A button labelled "Refresh" said
+  nothing about what was being refreshed or whether it needed to be; this says
+  both. It goes amber past two poll intervals — the same threshold the
+  overlay's status line uses, so the two pages cannot disagree about when data
+  has quietly gone old. It is not load-bearing: `tick()` already refetches on
+  the poll timer, so this exists to answer *how old is this* and to let a pilot
+  who has just moved force the issue.
+- **"Setup & widget" moved into the settings sheet**, where the same link
+  already lived, and is now worded *Set up the XCTrack overlay ↗*.
+
+**The PWA question: can a link open outside the installed app?** There is no
+API for "open in the default browser". Two levers exist:
+
+1. `target="_blank" rel="noopener"` — hands the navigation to a browser
+   surface: a Custom Tab on Android, Safari on iOS, a normal tab on desktop.
+2. The manifest `scope`. Navigations outside it leave the app. `scope` is
+   `"./"`, and since `index.html` sits beside `app.html` the only way to
+   exclude it would be narrowing scope to a single file, which would push every
+   future page out too.
+
+Took (1). Recorded because the failure it fixes is not obvious: installed, a
+plain same-origin link navigated *inside* the standalone window and stranded
+the pilot in a setup guide with no back button.
+
+**Row subtitles reordered by usefulness**, which is also what decides where the
+line wraps: distance and direction (which is how the list is sorted), then
+altitude, then age, then the municipality and the network. The age still comes
+before the attribution — that rule predates this and is why it survived the
+reshuffle. `13 min` became `13 min ago`, because the bare number does not say
+what it measures.
+
+Also: `footer:empty{display:none}`, since before the first render a lone rule
+across an empty page reads as broken layout; and the geolocation failure note
+no longer repeats the hint the sentence above it already gives.
+
+**Not done, and worth doing:** the overlay lets you tap a marker for its last
+few hours, and the list does not. `fetchHistoric` / `normaliseHistoric` already
+exist and are already used by `widget.html`; the missing part is a detail sheet
+and a shared trend renderer.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,
