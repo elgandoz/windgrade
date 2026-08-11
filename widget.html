@@ -228,6 +228,11 @@ function draw(fix, ranked){
     var fs = Math.round(9 + (C.size / 100) * 7);   /* 9 .. 16 px */
     var P = WG.projector(fix, WG.zoomForStep(curStep), W, H, WG.getCal());
     var box = WG.REACH * scale, placed = [], i, st, x, y, k, hit;
+    /* The altitude line grows each marker downwards, so the vertical spacing
+       has to grow with it — by exactly the line's height, taken from the
+       renderer rather than guessed, or one marker's altitude lands on the
+       arrow of the station below it. */
+    var vgap = box * 1.9 + (C.alt ? WG.marker.altSize(fs) + 2 : 0);
 
     /* Rectangles a marker may not cover. The scale bar is the check that the
        pairing is right, and the badge is how a mis-pairing announces itself;
@@ -262,13 +267,14 @@ function draw(fix, ranked){
       hit = false;
       for (k = 0; k < placed.length; k++){
         if (Math.abs(x - placed[k][0]) < box * 1.5 &&
-            Math.abs(y - placed[k][1]) < box * 1.9){ hit = true; break; }
+            Math.abs(y - placed[k][1]) < vgap){ hit = true; break; }
       }
       if (hit) continue;
       placed.push([x, y]);
       hits.push({ st: st, x: x, y: y, r: box });
       WG.marker.canvas(bctx, st, x, y, scale);
-      WG.marker.label(bctx, st, x, y, scale, fs);
+      var ly = WG.marker.label(bctx, st, x, y, scale, fs);
+      if (C.alt) WG.marker.alt(bctx, st, x, ly, fs);
     }
     shown = placed.length;
     if (C.bar) { barLat = fix.lat; drawScaleBar(bctx, P.res); }

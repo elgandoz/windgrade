@@ -333,6 +333,22 @@ eq("0.5/0.4 rounds to 1/0, so it is NOT calm",
 eq("no direction is always calm", MK.isCalm({ avg:9, gust:12, dir:NaN }), true);
 eq("a real reading is not calm", MK.isCalm({ avg:9, gust:12, dir:200 }), false);
 
+head("station altitude line");
+/* A missing altitude must draw NOTHING — not a dash, not a zero. The provider
+   not knowing is different from the station being at sea level, and this tool
+   shows facts, so it stays silent rather than inventing either. */
+eq("a real altitude carries its unit", MK.altText({ alt:3020 }), "3020m");
+eq("rounded to the metre", MK.altText({ alt:412.6 }), "413m");
+eq("sea level is a real reading, not an absent one", MK.altText({ alt:0 }), "0m");
+eq("null draws nothing", MK.altText({ alt:null }), "");
+eq("undefined draws nothing", MK.altText({}), "");
+eq("NaN draws nothing", MK.altText({ alt:NaN }), "");
+eq("Infinity draws nothing", MK.altText({ alt:Infinity }), "");
+/* The widget widens its collision box by exactly this, so the two must agree
+   or an altitude lands on the arrow of the station below it. */
+eq("the line is smaller than the speed it sits under", MK.altSize(13) < 13, true);
+eq("but never microscopic at the smallest marker size", MK.altSize(9), 8);
+
 head("geo (equirectangular, ranking only)");
 eq("10 km east", WG.dist(47, 8, 47, 8 + 10000 / (111319.49 * Math.cos(47 * Math.PI / 180))), 10000, 12);
 eq("10 km north", WG.dist(47, 8, 47 + 10000 / 111319.49, 8), 10000, 12);

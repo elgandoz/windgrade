@@ -272,6 +272,11 @@ var SPEC = [
     lab:"Size", help:"Scales text on the pages and markers in the overlay." },
   { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto",
     lab:"Theme", help:"Auto follows your phone." },
+  { k:"alt",   t:"int", d:0, min:0, max:1, only:"widget",
+    lab:"Show station altitude",
+    help:"A second line under the speed. Whether a reading came from a valley " +
+         "floor or a ridge is the thing a station name cannot tell you — but it " +
+         "is one more number per marker, so it is off until you want it." },
   { k:"badge", t:"int", d:0, min:0, max:1, only:"widget",
     lab:"Show status line",
     help:"How many stations are drawn, and how many are stale. Off by default — " +

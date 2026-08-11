@@ -105,6 +105,44 @@ function labelCanvas(g, st, x, y, scale, fs) {
   return ly;
 }
 
+/* Station altitude, a second line under the speed.
+
+   Offerable at all only because it is a FACT the provider supplies — no
+   inference, no interpolation. And it is the fact this whole tool exists for:
+   a station NAME cannot tell a pilot who does not fly the area whether a
+   reading came from a valley floor or a 2900 m ridge, which is precisely the
+   gap on-terrain markers fill.
+
+   Smaller, lighter in weight and slate rather than near-black, so the hierarchy
+   reads at a glance: the speed is still the thing you see first. That ordering
+   is not cosmetic — the speed is the mandatory fallback for the rating scale's
+   hue-only middle, and nothing may compete with it.
+
+   The unit is included. A bare number sitting under another bare number invites
+   being read as more wind, and 2900 would be a spectacular misreading. */
+function altText(st) {
+  var a = st ? st.alt : null;
+  return (typeof a === "number" && isFinite(a)) ? (Math.round(a) + "m") : "";
+}
+
+/* Height it adds below the label, so the caller can widen its collision box by
+   exactly this and no more. Same arithmetic as the draw, in one place. */
+function altSize(fs) { return Math.max(8, Math.round(fs * 0.78)); }
+
+function altCanvas(g, st, x, labelY, fs) {
+  var t = altText(st);
+  if (!t) return labelY;
+  var af = altSize(fs), ay = labelY + fs + 1;
+  g.font = "600 " + af + "px ui-monospace, 'Roboto Mono', monospace";
+  g.textAlign = "center"; g.textBaseline = "top";
+  g.lineJoin = "round";
+  g.strokeStyle = "#FFFFFF"; g.lineWidth = Math.max(3, af * 0.34);
+  g.strokeText(t, x, ay);
+  g.fillStyle = "#3A4A56";
+  g.fillText(t, x, ay);
+  return ay + af;
+}
+
 /* ── svg ──────────────────────────────────────────────────────────────
    Same layers, same order. Used by app.html's chips, where a handful of
    static markers are cheaper as elements than as canvases. */
@@ -126,6 +164,7 @@ WG.marker = {
   isCalm: isCalm, pts: ptsFor, rot: rotFor, layers: layers,
   canvas: drawCanvas, trace: trace,
   label: labelCanvas, labelText: labelText, fmt: fmt,
+  alt: altCanvas, altText: altText, altSize: altSize,
   svg: svg
 };
 
