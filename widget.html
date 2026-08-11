@@ -129,10 +129,15 @@ var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 var buf = document.createElement("canvas"), bctx = buf.getContext("2d");
 
 var W = 0, H = 0, dpr = 1;
+/* Density FIRST, before anything projects. XCTrack draws its map in device
+   pixels, so this is what makes the overlay agree with it on any screen; cal is
+   only a residual on top. Measured — see docs/findings.md. */
+WG.setDpr(window.devicePixelRatio || WG.DPR_REF);
+WG.setCal(C.cal);
+
 /* The scale actually being drawn. Equals C.step until the pilot taps a zone;
    after that the widget CANNOT know whether the map followed, which is why the
    badge marks it and the scale bar exists. */
-WG.setCal(C.cal);
 var curStep = C.step;
 /* Right edge of the scale bar in css px, so the prompt can sit beside it. The
    bar's length changes with the scale, so this cannot be a constant. */

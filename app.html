@@ -120,6 +120,9 @@ var rows = {};                        /* id -> {el, cache} */
 
 function el(id){ return document.getElementById(id); }
 
+/* Only the scale labels need this here, but the engine is shared and one page
+   silently disagreeing with the other is exactly what drifts. */
+WG.setDpr(window.devicePixelRatio || WG.DPR_REF);
 WG.applyTheme();
 
 /* ── position: browser geolocation on a laptop, XCTrack on the phone ── */

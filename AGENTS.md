@@ -18,7 +18,8 @@ phases and `docs/handover.md` for why each decision was made the way it was.
 
 Still open: sync the widget zoom to the map automatically (owner has a plan),
 the `User-Agent` question for winds.mobi, and a latitude check on the 0.942
-calibration constant.
+calibration constant. **Pixel density is settled** — the map works in device
+pixels and the correction is computed, see `docs/findings.md`.
 
 `windgrade` is a placeholder name — renaming is a folder move and three lines
 of docs.
@@ -124,14 +125,25 @@ does not need rediscovering. The load-bearing ones:
 widget that sits over XCTrack's own map:
 
 ```
-m/px = 156543.034 · cos(lat) / 2^z / 0.942     4km=z12  8km=z11  15km=z10  30km=z9
+m/css px = 156543.034 · cos(lat) / 2^z / CAL      CAL = 0.942 · 3 / devicePixelRatio
 ```
 
 XCTrack's map scale is a *resolution* on an exact power-of-two ladder, but it is
 **not** on integer OSM zoom levels — it runs 1.062× coarser, hence the 0.942.
-Verified at three ladder steps against airspace edges; `docs/findings.md` has the
-numbers and `tools/registration.html` reproduces it. The printed km labels are
-rounded and must never be used to compute geometry.
+Verified at three ladder steps against airspace edges; `tools/registration.html`
+reproduces it.
+
+**XCTrack's map is drawn in DEVICE pixels, not CSS pixels** — measured
+2026-08-11 with `tools/ruler.html`, one emulator at two densities: 51.5 and 52.9
+m per *device* pixel (2.8% apart) against 135.1 and 105.9 m per *css* pixel (28%
+apart). So `0.942`, measured on a phone at dpr 3, has to be scaled by
+`3 / devicePixelRatio`. `WG.setDpr()` does it; the pages pass
+`window.devicePixelRatio`. **Computed, never configured** — do not add a
+per-device setting for this. The `cal` parameter is a residual override only.
+
+Two things that must not be used to compute geometry: the printed km labels
+(rounded, and a property of the *screen* — see below), and any bar-matching done
+before `setDpr` has been called.
 
 ## Running it locally
 
@@ -173,7 +185,9 @@ configurator on `index.html`, which builds the URL and a QR code for it.
 Pages: `index.html` launcher/configurator, `app.html` list, `widget.html` overlay.
 Engine: `wg/core.js` (no DOM), `wg/marker.js` (both renderers), `wg/windsmobi.js`
 (provider), `wg/fields.js` (SPEC-driven controls), `wg/qr.js` (launcher only).
-Tools: `tools/registration.html`, `tools/arrow.html`, `tools/arrow.svg`,
+Tools: `tools/ruler.html` (measures XCTrack's resolution *without* our
+calibration — the instrument that settled pixel density, keep it),
+`tools/registration.html`, `tools/arrow.html`, `tools/arrow.svg`,
 `tools/test-core.js`, `probe.html`.
 
 A headless browser is available for visual checks, which beats shipping UI blind:

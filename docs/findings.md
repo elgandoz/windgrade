@@ -4,6 +4,88 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — SETTLED: XCTrack's map works in DEVICE pixels, not CSS pixels
+
+**The question the last three findings kept circling is now measured, and the
+answer is yes — it was pixel density all along.** The correction is computed
+from `devicePixelRatio` and needs nothing from the pilot.
+
+#### Method — the point is that it does not use our calibration
+
+Every earlier attempt routed through `CAL`, which is circular for this exact
+question: nudging our bar until airspace aligns just inherits whatever `CAL`
+already is. `tools/ruler.html` draws a ruler in **CSS pixels** over XCTrack's
+map. XCTrack's own scale bar is labelled with a ground distance, so
+
+    metres per css pixel  =  the bar's label  /  the bar's length
+
+with no model of ours anywhere in it. **One device at two densities** — a Pixel
+9a emulator, stock and `adb shell wm density 320` — changing nothing else.
+
+#### Raw
+
+```
+run A   dpr 2.625   widget 411 x 846 css px   device px 1079 x 2221
+        XCTrack bar "15km"   spans css x 13.8 .. 124.8   length 111.0 px
+run B   dpr 2.000   widget 540 x 1097 css px  device px 1080 x 2194
+        XCTrack bar "15km"   spans css x 18.1 .. 159.8   length 141.7 px
+```
+
+| run | dpr | m per **css** px | m per **device** px |
+|---|---|---|---|
+| A | 2.625 | 135.1 | 51.5 |
+| B | 2.000 | 105.9 | 52.9 |
+
+#### Verdict
+
+| model | predicts res_A/res_B | measured 1.277 | error |
+|---|---|---|---|
+| resolution fixed in **css** px | 1.000 | | **28% — falsified** |
+| resolution fixed in **device** px | 1.312 | | **2.7% — holds** |
+
+In device pixels the two runs agree to **2.8%**. The identical screen (~1080 px
+wide in both runs) shows the same ground width at both densities — which is what
+"the map is drawn in device pixels" means, and it is visible directly in the two
+screenshots without any arithmetic.
+
+#### The fix
+
+`CAL = 0.942` was measured on a phone at **dpr 3**. Since resolution is fixed in
+device pixels, metres-per-css-pixel scales with dpr, so:
+
+    effective CAL  =  0.942 x 3 / devicePixelRatio
+
+Reproduces both runs at step 22, 46.3°N: predicted 138.7 vs measured 135.1
+(2.7%), and 105.7 vs 105.9 (**0.1%**). At dpr 3 it is exactly 0.942, so the
+owner's phone — where the airspace-edge registration was verified — does not
+move at all. In `wg/core.js` as `WG.setDpr()`, called by `widget.html` and
+`app.html` from `window.devicePixelRatio`. **Computed, never configured**: every
+future device is right without the pilot doing anything.
+
+The `cal` URL parameter survives only as a manual override for a residual, and
+its help text now says so.
+
+#### What this explains, retrospectively
+
+- **The Pixel 9a's different label list.** Two independent causes were stacked:
+  a narrower widget (411 vs 448 css px) *and* a coarser dpr. The bar-width model
+  alone reproduced the labels — because labels only ever constrain the *product*
+  of bar width and resolution — which is exactly why they could never have
+  settled this and why a ruler was needed.
+- **The ~8% crop mismatch** measured earlier from the screenshot: at dpr 2.625
+  the uncorrected model was 158.6 against a true 135.1, and the residual after
+  the density correction is 2.7%.
+- **Why the alternating-ladder hypothesis fit one device and nothing else.** It
+  was absorbing a density effect into the ladder. The √2 ladder is intact.
+
+#### Kept
+
+`tools/ruler.html` stays in the repo. It is the only instrument that measures
+XCTrack independently of our own model, and any future doubt about scale is one
+screenshot away from settled.
+
+---
+
 ### 2026-08-11 — configurator was labelling at the equator; pair by BARS not labels
 
 **A real defect, and it sent the owner to the wrong map scale.** `wg/fields.js`

@@ -51,11 +51,16 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
             adb shell wm density reset      (back to default)
      4. Send both screenshots.
 
-   WHAT IT DECIDES
-     resolution the same in css px at both densities  -> density-independent
-     resolution scaling with dpr                      -> XCTrack works in
-       device pixels, and our correction is 3/devicePixelRatio — computed,
-       never configured, and right on every future device.
+   ANSWERED 2026-08-11 — Pixel 9a emulator, stock density and 320:
+
+       dpr 2.625   15km over 111.0 css px   135.1 m/css px   51.5 m/device px
+       dpr 2.000   15km over 141.7 css px   105.9 m/css px   52.9 m/device px
+
+     Constant in DEVICE pixels to 2.8%. Fixed-in-css-px was out by 28%. So
+     XCTrack works in device pixels, and the correction is 3/devicePixelRatio
+     — computed in core.js, never configured. Keep this page: it is the only
+     instrument that measures XCTrack without going through our own model,
+     and re-running it is how any future doubt gets settled.
    ═══════════════════════════════════════════════════════════════════ */
 
 var cv = document.getElementById("cv"), g = cv.getContext("2d");

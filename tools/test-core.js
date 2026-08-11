@@ -110,13 +110,46 @@ eq("a real latitude is still used", WG.scaleLabel(24, 47, 448), "10km");
 eq("and it genuinely varies with latitude",
    WG.scaleLabel(24, 0, 448) !== WG.scaleLabel(24, 60, 448), true);
 
-head("per-device scale correction");
-eq("defaults to no change", WG.getCal(), WG.CAL);
-WG.setCal(3 / 2.625);
-eq("cal makes the map finer by the dpr ratio",
-   WG.mppXct(47.361, 11), 54.96 * 2.625 / 3, 0.02);
+head("pixel density");
+/* MEASURED 2026-08-11, tools/ruler.html, one emulator at two densities, reading
+   XCTrack's own scale bar against a css-pixel ruler — so nothing here depends
+   on our calibration being right in the first place. Step 22, near 46.3 N:
+
+       dpr 2.625  ->  bar 15km over 111.0 css px  ->  135.1 m/css px
+       dpr 2.000  ->  bar 15km over 141.7 css px  ->  105.9 m/css px
+
+   A css-fixed resolution predicts those two are EQUAL; they differ by 28%.
+   Fixed in device pixels predicts the ratio is 2.625/2 = 1.312; measured 1.277.
+   These are the numbers the whole density correction rests on — if this block
+   ever goes red, the correction is wrong, not the test. */
+eq("defaults to the reference phone, so nothing moves for it", WG.getCal(), WG.CAL);
+eq("reference dpr is the phone CAL was measured on", WG.DPR_REF, 3);
+
+WG.setDpr(2.625);
+eq("Pixel 9a at stock density reproduces the measured resolution",
+   WG.mppXct(46.3, 9.5), 135.1, 4);          /* within 3% of measured */
+WG.setDpr(2);
+eq("the same emulator at density 320 does too",
+   WG.mppXct(46.3, 9.5), 105.9, 4);
+
+/* The falsified model, kept as a test so it cannot creep back: if resolution
+   were fixed in css px the two would agree, and they must not. */
+WG.setDpr(2.625); var rA = WG.mppXct(46.3, 9.5);
+WG.setDpr(2);     var rB = WG.mppXct(46.3, 9.5);
+eq("resolution scales with density rather than being fixed in css px",
+   rA / rB, 2.625 / 2, 0.001);
+
+eq("a bad ratio falls back rather than blanking the map", WG.setDpr(0), 1);
+WG.setDpr(3);
+eq("back to the measured constant on the reference phone", WG.getCal(), 0.942);
+
+head("manual cal, on top of density");
+WG.setCal(1.1);
+eq("cal multiplies the density correction", WG.getCal(), 0.942 * 1.1, 1e-9);
+WG.setDpr(2);
+eq("and the two compose", WG.getCal(), 0.942 * 1.5 * 1.1, 1e-9);
 eq("a bad value is ignored rather than blanking the map", WG.setCal(0), 1);
-WG.setCal(1);
+WG.setCal(1); WG.setDpr(3);
 eq("back to the measured constant", WG.getCal(), 0.942);
 /* Labels must NOT move with cal: they depend on bar width x resolution, and a
    correction to one is compensated by the bar the pilot is comparing against. */
