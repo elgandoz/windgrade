@@ -135,10 +135,19 @@ var W = 0, H = 0, dpr = 1;
 WG.setDpr(C.dpr || window.devicePixelRatio || WG.DPR_REF);
 WG.setCal(C.cal);
 
-/* The scale actually being drawn. Equals C.step until the pilot taps a zone;
+/* The scale actually being drawn. Equals homeStep until the pilot taps a zone;
    after that the widget CANNOT know whether the map followed, which is why the
-   badge marks it and the scale bar exists. */
-var curStep = C.step;
+   badge marks it and the scale bar exists.
+
+   homeStep is resolved from C.scale on the FIRST fix and then held. Latitude moves the
+   answer slightly (cos lat), and re-resolving in flight would let the overlay
+   jump a step mid-glide while the map underneath stayed put. */
+var homeStep = 0, curStep = 0;
+function setHome(lat) {
+  if (homeStep) return;
+  homeStep = WG.resolveStep(C, lat);
+  if (!curStep) curStep = homeStep;
+}
 /* Right edge of the scale bar in css px, so the prompt can sit beside it. The
    bar's length changes with the scale, so this cannot be a constant. */
 var barRight = 15, barLat = 47;
@@ -243,7 +252,7 @@ function draw(fix, ranked){
    visible — the body is transparent, so theirs shows through. ───────── */
 function drawScaleBar(g, res){
   /* The bar names what the pilot's own XCTrack names, computed from THIS
-     widget's width and latitude — not from a table copied off one device. */
+     screen's density and latitude — not from a table copied off one device. */
   var m = WG.scaleMetres(curStep, barLat);
   if (!m || !res) return;
   var px = m / res;
@@ -278,7 +287,7 @@ function drawScaleBar(g, res){
   g.strokeText(t, x + px / 2, y - 4);
   /* Amber while the scale is offset: a permanent, quiet marker that outlives
      the prompt, sitting on the very number that needs comparing. */
-  g.fillStyle = (curStep !== C.step) ? "#8A5A00" : "#0A1116";
+  g.fillStyle = (curStep !== homeStep) ? "#8A5A00" : "#0A1116";
   g.fillText(t, x + px / 2, y - 4);
 }
 
@@ -330,7 +339,7 @@ function paintBadge(fix, shown, nStale){
   /* Separate element, separate concern: the badge reports the data, this
      reports that the pilot still has to act. Amber, not red — red means the
      readings are stale, and conflating the two would blunt both. */
-  if (curStep === C.step) hideWarn();
+  if (curStep === homeStep) hideWarn();
 }
 
 /* ── tick: poll at 2 Hz to match XCTrack's map redraw, but repaint only
@@ -338,6 +347,10 @@ function paintBadge(fix, shown, nStale){
    0.21 px/s, so this is nearly free. ─────────────────────────────── */
 function tick(){
   var p = WG.position(C), fix = p.fix;
+  /* The pilot asked for a ground scale; which ladder step that is depends on
+     this screen's density and on where they are, so it can only be answered
+     here. Before the first fix there is nothing to draw anyway. */
+  if (fix) setHome(fix.lat);
   if (!fix){ draw(null, []); paintBadge(null, 0, 0); return; }
 
   if (!lastFetch || Date.now() - lastFetch > C.poll * 1000) refresh(fix);
@@ -565,8 +578,8 @@ if (C.zbtn){
 
 function resetScale(ev){
   if (ev) ev.stopPropagation();
-  if (curStep === C.step) return;
-  curStep = C.step; drawKey = ""; lastFetch = 0; hideWarn(); tick();
+  if (curStep === homeStep) return;
+  curStep = homeStep; drawKey = ""; lastFetch = 0; hideWarn(); tick();
 }
 /* Two ways back, because the prompt fades but the need to reset does not. */
 document.getElementById("warn").addEventListener("click", resetScale);

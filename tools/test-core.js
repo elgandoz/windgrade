@@ -21,7 +21,8 @@ eq("step clamped to the ladder top", c.step, 34);
 eq("pad clamped to min", c.pad, 0);
 eq("unparseable max -> default", c.max, 40);
 eq("lat parsed", c.lat, 47.1);
-eq("default step is 8km", WG.XCT_LADDER[WG.cfg("").step], "8km");
+eq("default scale is 8km of ground", WG.cfg("").scale, 8000);
+eq("step is unset by default, so the scale decides", WG.cfg("").step, 0);
 eq("default stale", WG.cfg("").stale, 30);
 eq("default poll is the 10 min data cadence", WG.cfg("").poll, 600);
 
@@ -117,6 +118,59 @@ eq("NaN too", WG.scaleLabel(24, NaN), "10km");
 eq("a real latitude is still used", WG.scaleLabel(24, 47), "10km");
 eq("and it genuinely varies with latitude",
    WG.scaleLabel(24, 0) !== WG.scaleLabel(24, 60), true);
+
+head("ground scale -> ladder step, resolved on the device");
+/* THE BUG THIS FIXES. The launcher offered step 25 as "8km" because that is
+   what a dpr-3 phone prints; on a Pixel 9a the same step prints 6km. A step is
+   not a scale, so the pilot picks a scale and the step is worked out here. */
+WG.setDpr(3);
+eq("8km on the reference phone is step 25", WG.stepForScale(8000, 47.361), 25);
+eq("...and it really does print 8km there", WG.scaleLabel(25, 47.361), "8km");
+WG.setDpr(2.625);
+eq("8km on a Pixel 9a is NOT step 25", WG.stepForScale(8000, 47.361) !== 25, true);
+/* A Pixel 9a's ladder goes 6km, 10km — it has no 8km at all, and 10/8 is a
+   smaller factor than 8/6, so nearest-in-log-space lands on 10km. */
+eq("it has no 8km step, so the nearest is taken",
+   WG.scaleLabel(WG.stepForScale(8000, 47.361), 47.361), "10km");
+eq("a scale it DOES have is hit exactly",
+   WG.scaleLabel(WG.stepForScale(6000, 47.361), 47.361), "6km");
+WG.setDpr(3);
+
+eq("resolveStep uses the scale when step is unset",
+   WG.resolveStep({ scale:8000, step:0 }, 47.361), 25);
+eq("an explicit step wins over the scale",
+   WG.resolveStep({ scale:8000, step:22 }, 47.361), 22);
+eq("a below-ladder step reads as unset, not as a step",
+   WG.resolveStep({ scale:8000, step:5 }, 47.361), 25);
+eq("a junk scale falls back rather than picking an extreme",
+   WG.resolveStep({ scale:0, step:0 }, 47.361), 25);
+/* The pilot's choice must survive the trip to a different phone: the same
+   requested scale resolves to a different step, which is the entire point.
+   (Not every scale flips — 20km is step 22 on both — so this asserts on one
+   that does, and on the invariant that matters underneath.) */
+eq("8km resolves to step 25 at dpr 3 and step 24 at dpr 2.625",
+   (WG.setDpr(3), WG.stepForScale(8000, 47.361)) + "/" +
+   (WG.setDpr(2.625), WG.stepForScale(8000, 47.361)), "25/24");
+/* The invariant: whenever a device can actually print the requested scale, it
+   is what the pilot gets. Anything else and the launcher is lying again. */
+(function () {
+  var d, m, hit = 0, reachable = 0, v, i, lab;
+  var want = [300, 500, 600, 1000, 1200, 2000, 2500, 4000, 5000, 6000,
+              8000, 10000, 15000, 20000, 30000];
+  for (d = 0; d < 2; d++) {
+    WG.setDpr(d ? 2.625 : 3);
+    for (i = 0; i < want.length; i++) {
+      lab = WG.fmtScale(want[i]);
+      for (v = 12; v <= 34; v++) if (WG.scaleLabel(v, 47.361) === lab) break;
+      if (v > 34) continue;                        /* this screen has no such scale */
+      reachable++;
+      if (WG.scaleLabel(WG.stepForScale(want[i], 47.361), 47.361) === lab) hit++;
+    }
+  }
+  eq("every scale a device can print is hit exactly, on both", hit, reachable);
+  eq("  and that was a real sample, not an empty one", reachable > 20, true);
+})();
+WG.setDpr(3);
 
 head("pixel density");
 /* MEASURED 2026-08-11, tools/ruler.html, one emulator at two densities, reading

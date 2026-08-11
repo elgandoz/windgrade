@@ -252,7 +252,7 @@ function render(fix){
 function refresh(fix){
   if (fetching || !fix) return;
   fetching = true;
-  var bbox = WG.bboxAround(fix, WG.zoomOf(C), VIEW_W, VIEW_H, C.pad);
+  var bbox = WG.bboxAround(fix, WG.zoomOf(C, fix.lat), VIEW_W, VIEW_H, C.pad);
   PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list, meta){
     fetching = false;
     if (err) note("Fetch failed: " + err + " — showing the last good data, if any.");
@@ -278,7 +278,8 @@ function tick(){
   el("hdr").textContent =
     "src=" + fix.src + "  " + fix.lat.toFixed(5) + "," + fix.lon.toFixed(5) +
     (isFinite(fix.alt) ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
-    "scale " + WG.scaleLabel(C.step, fix.lat) + " ≙ z" + WG.zoomOf(C).toFixed(1) +
+    "scale " + WG.scaleLabel(WG.resolveStep(C, fix.lat), fix.lat) +
+    " ≙ z" + WG.zoomOf(C, fix.lat).toFixed(1) +
     (meta1 ? "  ·  " + meta1 : "") +
     (lastFetch ? "  ·  " + Math.round((Date.now() - lastFetch) / 1000) + " s ago" : "") +
     "  ·  " + stations.length + " stations";

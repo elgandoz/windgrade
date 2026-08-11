@@ -89,6 +89,10 @@ var XCT_METRES = (function () {
   }
   return o;
 })();
+/* The ends of mapWidget_scale. Exported because the scale <select> has to walk
+   the LADDER to find the reachable scales — walking its own metre range walked
+   two million integers and produced an empty list. */
+var STEP_MIN = 12, STEP_MAX = 34;
 function zoomForStep(v) { return (v - 3) / 2; }
 function stepForZoom(z) { return Math.round(z * 2 + 3); }
 
@@ -142,6 +146,38 @@ function fmtScale(m) {
 }
 function scaleLabel(step, lat) { return fmtScale(scaleMetres(step, lat)); }
 
+/* ── ground scale -> ladder step, resolved ON THE DEVICE ───────────────
+   A ladder step is NOT a scale. The same step is 8km on a dpr-3 phone and 6km
+   on a Pixel 9a, because XCTrack draws in device pixels — so a launcher running
+   on a laptop cannot know which step a pilot's phone needs, and picking one
+   there is guessing. It guessed wrong: step 25 offered as "8km" printed 6km.
+
+   So the pilot picks a GROUND SCALE, which is device-independent, and the step
+   is resolved here — on the device, at the real density, at the real latitude.
+   Nearest in log space, because the ladder is multiplicative: being a factor
+   1.2 out is equally wrong at 300m and at 300km.
+
+   Not every scale exists on every screen — a Pixel 9a has no 8km step at all —
+   so asking for one lands on the nearest that does, and the overlay's own bar
+   then says what it really is. */
+function stepForScale(metres, lat) {
+  var best = 25, bestErr = Infinity, v, m, e;
+  if (!(metres > 0)) return best;
+  for (v = STEP_MIN; v <= STEP_MAX; v++) {
+    m = scaleMetres(v, lat);
+    if (!m) continue;
+    e = Math.abs(Math.log(m / metres));
+    if (e < bestErr) { bestErr = e; best = v; }
+  }
+  return best;
+}
+
+/* `step` is an escape hatch: set explicitly it wins, otherwise the scale
+   decides. Anything below 12 is not a ladder step, so it reads as "unset". */
+function resolveStep(c, lat) {
+  return (c && c.step >= STEP_MIN) ? c.step : stepForScale(c ? c.scale : 0, lat);
+}
+
 /* Integer-zoom labels, derived so the two cannot disagree. */
 var XCT_SCALE = (function () {
   var o = {}, z;
@@ -163,12 +199,20 @@ var SPEC = [
   { k:"lng",   t:"num", d:null, ui:false,
     lab:"Longitude", help:"Overrides the position chain. XCTrack substitutes ${lng}." },
 
-  { k:"step",  t:"ladder", d:25, min:12, max:34,
+  { k:"scale", t:"scale", d:8000, min:100, max:2000000,
     lab:"Map scale",
-    help:"These labels are what a dpr-3 phone prints; a denser or coarser " +
-         "screen prints a different list for the same steps. So pair by BAR " +
-         "LENGTH: zoom XCTrack's map until its scale bar is the same length as " +
-         "the overlay's, not until the words match." },
+    help:"The ground scale you want, not a zoom number — the overlay picks the " +
+         "matching step on YOUR screen, since the same step is a different " +
+         "scale at a different pixel density. Set XCTrack's XC map to the same " +
+         "reading. If your phone has no such step the overlay takes the " +
+         "nearest and its own bar says what it really is." },
+  /* Kept for old URLs and for anyone who knows exactly which step they want.
+     adv:true hides the row without hiding the parameter — unlike ui:false,
+     which would also drop it from every URL the launcher builds. */
+  { k:"step",  t:"int", d:0, min:0, max:34, adv:true,
+    lab:"Ladder step override",
+    help:"0 = derive from the scale above, which is what you want. A number " +
+         "12-34 pins XCTrack's ladder step directly and ignores the scale." },
   { k:"pad",   t:"int", d:20, min:0, max:60,
     lab:"Fetch margin (km)",
     help:"Area fetched beyond the view. A cache radius, not a display radius." },
@@ -257,7 +301,8 @@ function clamp(spec, raw) {
   /* "ladder" is an integer with a label map — clamped exactly like an int.
      Without this it fell through to the raw passthrough below, so ?step=99
      survived unclamped and a URL string stayed a string. */
-  if (spec.t === "num" || spec.t === "int" || spec.t === "ladder") {
+  if (spec.t === "num" || spec.t === "int" || spec.t === "ladder" ||
+      spec.t === "scale") {
     v = toNum(raw);
     if (v !== v) return spec.d;                       /* NaN -> default */
     if (spec.t !== "num") v = Math.round(v);
@@ -301,7 +346,7 @@ function cfg(search) {
    that a tap can never reach both the widget and a zoom button, so the overlay
    can never learn that the map zoomed. The scale is fixed by configuration,
    which is what makes it correct by construction. See docs/findings.md. */
-function zoomOf(c) { return zoomForStep(c.step); }
+function zoomOf(c, lat) { return zoomForStep(resolveStep(c, lat)); }
 
 /* ── a live config object, for the launcher and any settings sheet ────
    `cfg(search)` is the pure parse used by the pages at load. This is the
@@ -724,6 +769,8 @@ return {
   XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES,
   BAR_MAX_DP: BAR_MAX_DP, niceBelow: niceBelow,
   scaleMetres: scaleMetres, scaleLabel: scaleLabel, fmtScale: fmtScale,
+  stepForScale: stepForScale, resolveStep: resolveStep,
+  STEP_MIN: STEP_MIN, STEP_MAX: STEP_MAX,
   XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
   zoomOf: zoomOf,

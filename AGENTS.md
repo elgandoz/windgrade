@@ -178,8 +178,15 @@ explicitly. Terrain may be cached; terrain does not change, and wind does. A
 cache that served a stale reading as current would defeat the staleness logic
 from behind.
 
+**Scale is chosen as a ground distance, not as a ladder step.** `scale` is in
+metres and `WG.resolveStep()` turns it into a step *on the device*, because the
+same step is a different scale at a different pixel density — that is exactly
+how the launcher came to offer step 25 as "8km" when a Pixel 9a prints 6km. The
+`step` parameter still exists as an explicit override (0 = derive) and is hidden
+from the settings UI by `adv:true`, which — unlike `ui:false` — keeps it in URLs.
+
 Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC`
-works the same way, e.g. `?zoom=10&peaks=1&stale=45` — or just use the
+works the same way, e.g. `?scale=15000&peaks=1&stale=45` — or just use the
 configurator on `index.html`, which builds the URL and a QR code for it.
 
 Pages: `index.html` launcher/configurator, `app.html` list, `widget.html` overlay.

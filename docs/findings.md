@@ -103,6 +103,33 @@ parameter therefore had no consumer left and is replaced by `dpr` (0 = use this
 device's own). And the `step` field no longer tells pilots to pair by label: the
 launcher shows the dpr-3 list, says so, and asks them to match **bar length**.
 
+#### Consequence: the configurator had to stop shipping ladder steps
+
+Confirmed on device once the density correction landed: the two scale bars now
+line up. What remained wrong was the *launcher* — `step=25` is 8km on a Pixel 8
+Pro and 6km on a Pixel 9a, so a configurator running on a laptop was picking a
+step for a screen it had never seen.
+
+A ladder step is not a scale. So the pilot now picks a **ground scale in metres**
+— device-independent — and `WG.resolveStep()` turns it into a step on the device,
+at the real density and the real latitude, nearest in log space because the
+ladder is multiplicative.
+
+Not every scale exists on every screen: a Pixel 9a's ladder runs 6km, 10km with
+no 8km at all, so asking for 8km lands on 10km (10/8 is a smaller factor than
+8/6) and the overlay's own bar says so. The invariant that is tested: **whenever
+a device can print the requested scale, it is what the pilot gets** — 
+checked across both devices' full label lists.
+
+`step` survives as an explicit override, hidden from the UI by a new `adv:true`
+marker. `ui:false` would have been wrong: it also strips the parameter from every
+URL the launcher builds.
+
+One trap worth recording. The scale `<select>` originally walked `sp.min..sp.max`,
+which for a metres-valued field is 100..2,000,000 — two million iterations
+producing an empty list. It walks the ladder now, via `WG.STEP_MIN/STEP_MAX`.
+The headless screenshot is what caught it; the unit tests were all green.
+
 #### Kept
 
 `tools/ruler.html` stays in the repo. It is the only instrument that measures

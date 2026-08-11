@@ -118,12 +118,14 @@ a{color:var(--chart)}
   </ol>
 
   <p class="note">
-    <b>The two scales must match.</b> The configurator lists XCTrack's own 23 scale
-    steps, so pick the same words in both places. The pairing to real ground
-    resolution was measured, not guessed: XCTrack's ladder is not on integer map
-    zoom levels. The overlay prints its scale in the corner so a mismatch shows up
-    as two labels disagreeing, rather than as arrows quietly sitting on the wrong
-    ridge.
+    <b>The two scales must match.</b> You pick a <b>ground scale</b> here, not a
+    zoom step, because a step is not a scale: XCTrack draws its map in device
+    pixels, so the same step is 8km on one phone and 6km on another. The overlay
+    resolves your scale into the right step on <em>your</em> screen and prints
+    what it landed on, so set XCTrack's XC map to that same reading. If your
+    phone's ladder has no such scale, the overlay takes the nearest and its
+    corner label tells you which. A mismatch then shows up as two labels
+    disagreeing, rather than as arrows quietly sitting on the wrong ridge.
   </p>
 
   <p class="note">

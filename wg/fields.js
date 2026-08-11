@@ -41,18 +41,23 @@ function buildRow(sp, onInput) {
      stored. An enum is a select. Everything else is a number field. */
   var isBool = (sp.t === "int" && sp.min === 0 && sp.max === 1);
   var isEnum = (sp.t === "enum");
-  var isLadder = (sp.t === "ladder");
+  var isLadder = (sp.t === "scale");
   var input, o, op;
   if (isLadder) {
-    /* XCTrack's own 23 scale steps, in the order its slider lists them, so the
-       pilot picks the same words they see in the app and never meets an OSM
-       zoom number. Every second step is a half zoom level, which is exactly
-       why offering only the integers was wrong. */
+    /* Ground scales, not ladder steps — the value stored is METRES, so the
+       choice survives a move to a phone with a different pixel density and the
+       overlay resolves it there. The list is generated from the ladder so it
+       only ever offers reachable scales, and a duplicate is skipped because two
+       neighbouring steps can round to the same nice number on a wide screen. */
     input = document.createElement("select");
-    for (o = sp.max; o >= sp.min; o--) {
+    var seen = {}, m;
+    for (o = WG.STEP_MAX; o >= WG.STEP_MIN; o--) {
+      m = WG.scaleMetres(o, null);
+      if (!m || seen[m]) continue;
+      seen[m] = 1;
       op = document.createElement("option");
-      op.value = o;
-      op.textContent = WG.scaleLabel(o, null);
+      op.value = m;
+      op.textContent = WG.fmtScale(m);
       input.appendChild(op);
     }
   } else if (isEnum) {
@@ -79,7 +84,7 @@ function buildRow(sp, onInput) {
      whole point of the configurator is producing a widget that matches the
      map underneath it. */
   var pair = null;
-  if (sp.k === "step") {
+  if (sp.k === "scale") {
     pair = document.createElement("b");
     pair.className = "pair";
     row.appendChild(pair);
@@ -88,7 +93,8 @@ function buildRow(sp, onInput) {
   function load() {
     var v = WG.getConfig()[sp.k];
     if (isBool) input.checked = !!v; else input.value = v;
-    if (pair) pair.textContent = "≙ z" + WG.zoomForStep(v).toFixed(1);
+    if (pair) pair.textContent =
+      "≙ z" + WG.zoomForStep(WG.stepForScale(v, null)).toFixed(1);
   }
 
   input.addEventListener("change", function () {
@@ -122,6 +128,7 @@ WG.fields = function (container, opts) {
   for (i = 0; i < WG.SPEC.length; i++) {
     sp = WG.SPEC[i];
     if (sp.ui === false) continue;                          /* URL-only */
+    if (sp.adv) continue;                    /* still in URLs, not in the UI */
     if (o.skipWidgetOnly && sp.only === "widget") continue;
 
     /* Closure per row, so the patch key is the row's own. */
