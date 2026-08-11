@@ -25,7 +25,7 @@
    the background revalidation picks those up on its own.
    ═══════════════════════════════════════════════════════════════════ */
 
-var CACHE = "windgrade-v1";
+var CACHE = "windgrade-v2";
 
 var ASSETS = [
   "./",
@@ -40,6 +40,7 @@ var ASSETS = [
   "wg/qr.js",
   "wg/offline.js",
   "manifest.webmanifest",
+  "favicon.ico",
   "icon.svg",
   "icon-180.png",
   "icon-192.png",
