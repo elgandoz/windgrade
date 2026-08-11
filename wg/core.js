@@ -338,9 +338,12 @@ var SPEC = [
     lab:"Popup timeout (s)",
     help:"Tap a marker to see its last few hours. 0 keeps it open until you " +
          "tap again." },
-  { k:"hours", t:"int", d:3, min:1, max:12, only:"widget", grp:"Interactive mode",
+  /* NOT widget-only: the list expands a row on tap and draws the same trend
+     from the same wg/marker.js renderer, so it needs the same setting. `popup`
+     stays widget-only — an expanded list row has no reason to time out. */
+  { k:"hours", t:"int", d:3, min:1, max:12, grp:"Interactive mode",
     lab:"Trend length (h)",
-    help:"How far back that popup goes." },
+    help:"How far back the history goes when you tap a station." },
   { k:"zbtn",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Interactive mode",
     lab:"Show zoom buttons",
     help:"A + and − pair for the overlay's own scale." },

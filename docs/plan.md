@@ -871,7 +871,62 @@ no longer repeats the hint the sentence above it already gives.
 **Not done, and worth doing:** the overlay lets you tap a marker for its last
 few hours, and the list does not. `fetchHistoric` / `normaliseHistoric` already
 exist and are already used by `widget.html`; the missing part is a detail sheet
-and a shared trend renderer.
+and a shared trend renderer. *(Done in Phase 3l.)*
+
+## Phase 3l — tap a station in the list for its trend (2026-08-11)
+
+Closing the gap Phase 3k left. The list now expands a row on tap and draws the
+same recent-history strip the overlay's popup does.
+
+**The renderer moved into `wg/marker.js`** as `WG.marker.trendHtml(samples,
+opts)`, and `widget.html` was rewired onto it. Two copies of "which colour does
+22 km/h get" is precisely the drift that file exists to prevent, and the
+loading / error / no-history states moved with it — *"This station keeps no
+history"* is a fact about the data and both pages must say it identically.
+`hhmm` and `esc` came along, since both were local helpers in `widget.html`.
+
+**Expand in place, not a bottom sheet.** A list where tapping a row opens it is
+the most conventional pattern on a phone, needs no dismiss gesture to discover,
+and keeps the neighbouring stations visible — which is the comparison a pilot
+is actually making. The overlay needs a popup because a map has no rows.
+
+**One open at a time.** Two open rows means two histories in flight and a list
+that has to be scrolled to compare anything. Tapping the open row closes it.
+
+**The row is a `<button>`, not a div with a click handler** — focusable, keyboard
+operable, and announced as a control, for free.
+
+**Open state is driven from `openId` through `render()`, not from the click.** A
+re-render happens every 5 s and on every settings change; a panel attached at
+click time would survive a station leaving the list and then be repainted into a
+row that no longer exists. `syncDetail()` attaches and detaches from the ranked
+list, and a station dropping out clears `openId` with it. `dropRows()` also
+clears `histCache`, because `hours` may have just changed and a cached 3-hour
+strip under a 6-hour heading is a quiet lie.
+
+**`hours` stopped being `only:"widget"`** — the list needs the same setting.
+`popup` stays widget-only: an expanded list row has no reason to time out.
+
+**On demand, cached for one poll interval.** A sparkline on every chip would be
+one HTTP call per station for data nobody asked to see, which is what
+winds.mobi's *"do not overload"* forbids. That is why this is a tap.
+
+#### FOUND: the oldest sample read as a wrong value
+
+Scrolled to the newest sample, the leftmost cell is cut mid-width — and a
+clipped time does not look clipped, it looks like data. The first strip drawn
+showed **`5:00`** where the value was `15:00`.
+
+Snapping to a cell boundary cannot fix it. The two edges only both align when
+the viewport is an exact multiple of the cell pitch, and if one has to be cut it
+must be the oldest sample, never the newest. The first attempt used
+`Math.ceil(max/pitch)*pitch`, which overshoots and is clamped straight back to
+`max` — it did nothing at all.
+
+So `trendScroll()` sets a `cut` class while anything is hidden to the left, and
+a left-edge gradient mask makes the partial cell read as *scrolled* rather than
+as a number. Only while something IS hidden: a permanent fade would dim a cell
+that is fully visible. A `scroll` listener keeps it right as the pilot swipes.
 
 ## Phase 4 — polish
 

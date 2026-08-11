@@ -97,6 +97,9 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
    flash on tapping a second marker actually was. */
 #pop .trend{display:flex;gap:3px;overflow-x:auto;padding-bottom:2px;
   min-height:62px;align-items:center}
+/* See WG.marker.trendScroll: only while the oldest samples are scrolled out. */
+#pop .trend.cut{-webkit-mask-image:linear-gradient(to right,transparent 0,#000 24px);
+  mask-image:linear-gradient(to right,transparent 0,#000 24px)}
 #pop .trend .wait{color:var(--dim);font:400 11px ui-monospace,monospace}
 #pop .t{flex:none;width:44px;text-align:center}
 #pop .t svg{display:block;width:34px;height:34px;margin:0 auto}
@@ -492,10 +495,6 @@ function openPop(st){
 function esc(s){
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-function hhmm(ts){
-  var d = new Date(ts);
-  return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
-}
 
 /* Two paints, deliberately separate. The shell is written once when a marker is
    tapped; the trend replaces only its own container when the history lands.
@@ -536,27 +535,14 @@ function paintPop(){
 }
 
 /* Oldest left, newest right, same marker geometry at small size so a change of
-   colour reads the way it does on the map. */
+   colour reads the way it does on the map. The strip itself is built in
+   wg/marker.js, because app.html draws the same thing and two copies of it
+   would be two chances to disagree about a colour. */
 function paintTrend(){
-  var tr = document.querySelector("#pop .trend"), i, s, h = "";
+  var tr = document.querySelector("#pop .trend");
   if (!tr) return;
-  if (popErr) h = '<span class="wait">trend unavailable: ' + esc(popErr) + '</span>';
-  else if (!popHist) h = '<span class="wait">loading trend…</span>';
-  else if (!popHist.length) h = '<span class="wait">no history for this station</span>';
-  else {
-    for (i = 0; i < popHist.length; i++){
-      s = popHist[i];
-      h += '<div class="t">' +
-           WG.marker.svg({ dir:s.dir, avg:s.avg, gust:s.gust,
-                           rAvg:WG.rateAvg(s.avg), rGust:WG.rateGust(s.gust) }, 34) +
-           '<em>' + WG.marker.labelText(s) + '</em>' +
-           '<span>' + hhmm(s.ts) + '</span></div>';
-    }
-  }
-  tr.innerHTML = h;
-  /* Oldest-left reads naturally but puts the NEWEST sample — the one most
-     wanted — off the right edge on a narrow screen. */
-  tr.scrollLeft = tr.scrollWidth;
+  tr.innerHTML = WG.marker.trendHtml(popHist, { size:34, err:popErr });
+  WG.marker.trendScroll(tr);
 }
 
 /* Taps inside the popup must not fall through and re-close it or zoom. */

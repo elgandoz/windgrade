@@ -264,6 +264,18 @@ technical line behind the same switch so a bug report from either shows the
 same fields. The sentence also carries the two things invisible by looking:
 all-stale, and the provider's 500-station truncation.
 
+**Both pages draw the trend strip from `WG.marker.trendHtml`.** Tapping a
+station shows its last few hours — the overlay in a popup, the list by expanding
+the row in place. One renderer, in `wg/marker.js`, because two copies of "which
+colour does 22 km/h get" is the drift that file exists to prevent; its three
+empty states (loading / error / *this station keeps no history*) are part of the
+contract and are unit-tested. History is fetched **on demand** and cached for
+one poll interval — a sparkline on every chip would be one HTTP call per station
+for data nobody asked to see, which is what winds.mobi's *"do not overload"*
+forbids. `WG.marker.trendScroll` scrolls to the newest sample and sets a `cut`
+class while older ones are hidden to the left; the mask that class applies is
+not decoration, it is what stops a half-clipped `15:00` reading as `5:00`.
+
 **Refresh is the age.** A pill in the header reads `↻ 12 min ago` and tapping it
 refetches; it goes amber past two poll intervals, the same threshold the
 overlay's status line uses. Do not add a separate Refresh button back — it cost

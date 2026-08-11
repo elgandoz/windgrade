@@ -160,12 +160,87 @@ function svg(st, px, opts) {
   return s + "</g></svg>";
 }
 
+/* ── the trend strip ──────────────────────────────────────────────────
+   Recent history as a row of small markers, oldest left. Purely descriptive —
+   the same measured values, over time — so it breaks no rule, and it answers
+   the one question a single reading cannot: is this building or easing?
+
+   Lives here rather than in a page because BOTH the overlay's popup and the
+   list's expanded row draw it, and two copies of "which colour does 22 km/h
+   get" is exactly the drift this file exists to prevent. It returns the strip's
+   inner HTML; each page owns the container and its CSS. The class names are
+   part of the contract — `.t`, `.wait`, and `em`/`span` inside `.t`.
+
+   The loading and error states are in here too, because "no history for this
+   station" is a fact about the data and both pages must say it the same way.
+   ─────────────────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function hhmm(ts) {
+  var d = new Date(ts);
+  return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+}
+
+/* samples: oldest-first, from the provider's normaliseHistoric. `null` means
+   still loading — an empty array means the station has no history, which is a
+   different thing and must not read as a spinner that never finishes. */
+function trendHtml(samples, opts) {
+  var o = opts || {}, px = o.size || 34, i, s, h = "";
+  if (o.err) return '<span class="wait">No history: ' + esc(o.err) + '</span>';
+  if (!samples) return '<span class="wait">Loading…</span>';
+  if (!samples.length) return '<span class="wait">This station keeps no history.</span>';
+  for (i = 0; i < samples.length; i++) {
+    s = samples[i];
+    h += '<div class="t">' +
+         svg({ dir:s.dir, avg:s.avg, gust:s.gust,
+               rAvg:WG.rateAvg(s.avg), rGust:WG.rateGust(s.gust) }, px) +
+         '<em>' + labelText(s) + '</em>' +
+         '<span>' + hhmm(s.ts) + '</span></div>';
+  }
+  return h;
+}
+
+/* Scroll the strip to the NEWEST sample, and mark it when the oldest end is
+   cut off.
+
+   Oldest-left reads naturally but puts the newest sample — the one actually
+   wanted — off the right edge: three hours of MeteoSwiss ten-minute samples is
+   eighteen cells, far more than a phone is wide, so scrolling is inherent, not
+   a layout mistake to design away.
+
+   The subtle part is what that does to the left edge. Scrolled fully right, the
+   leftmost visible cell is cut mid-width, and a clipped time does not look
+   clipped — it looks like bad data. The first strip drawn showed "5:00" where
+   the value was 15:00. Snapping to a cell boundary cannot fix it: the two edges
+   can only both align when the viewport is an exact multiple of the cell pitch,
+   and if one of them has to be cut it must be the oldest sample, never the
+   newest. So the fade says so instead. `cut` is set only while there is
+   something hidden to the left, because a permanent fade would dim a cell that
+   is in fact fully visible. */
+function trendScroll(el) {
+  if (!el) return;
+  var max = el.scrollWidth - el.clientWidth;
+  el.scrollLeft = (max > 0) ? max : 0;
+  if (!el.getAttribute("data-bound")) {
+    el.setAttribute("data-bound", "1");
+    el.addEventListener("scroll", function () { trendCut(el); });
+  }
+  trendCut(el);
+}
+function trendCut(el) {
+  var cut = el.scrollLeft > 2, has = / cut\b/.test(" " + el.className);
+  if (cut !== has) el.className = cut ? (el.className + " cut")
+                                     : el.className.replace(/\s*\bcut\b/, "");
+}
+
 WG.marker = {
   isCalm: isCalm, pts: ptsFor, rot: rotFor, layers: layers,
   canvas: drawCanvas, trace: trace,
   label: labelCanvas, labelText: labelText, fmt: fmt,
   alt: altCanvas, altText: altText, altSize: altSize,
-  svg: svg
+  svg: svg, trendHtml: trendHtml, trendScroll: trendScroll,
+  hhmm: hhmm, esc: esc
 };
 
 })(typeof WG !== "undefined" ? WG : (module.exports = require("./core.js")));

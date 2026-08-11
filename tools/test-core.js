@@ -387,6 +387,34 @@ eq("Infinity draws nothing", MK.altText({ alt:Infinity }), "");
 eq("the line is smaller than the speed it sits under", MK.altSize(13) < 13, true);
 eq("but never microscopic at the smallest marker size", MK.altSize(9), 8);
 
+/* The trend strip is shared by the overlay's popup and the list's expanded row.
+   Its three empty states are NOT interchangeable: still-loading and
+   has-no-history are different facts, and showing a spinner for a station that
+   will never have history is a display that lies about what it is waiting for. */
+head("trend strip — shared by both pages, three distinct empty states");
+eq("null means still loading", /Loading/.test(MK.trendHtml(null, {})), true);
+eq("an empty array means the station HAS no history, and says so",
+   /keeps no history/.test(MK.trendHtml([], {})), true);
+eq("loading and no-history do not read the same",
+   MK.trendHtml(null, {}) === MK.trendHtml([], {}), false);
+eq("an error names itself", /No history: timeout/.test(MK.trendHtml(null, { err:"timeout" })), true);
+eq("an error wins over the loading state — a dead call is not pending",
+   /Loading/.test(MK.trendHtml(null, { err:"timeout" })), false);
+(function () {
+  var ts = 1786453200000;              /* fixed, so this is not clock-dependent */
+  var h = MK.trendHtml([{ ts:ts, dir:200, avg:22, gust:37 },
+                        { ts:ts + 600000, dir:210, avg:4, gust:9 }], { size:20 });
+  eq("one cell per sample", (h.match(/class="t"/g) || []).length, 2);
+  eq("the speed pair is printed, same rule as a marker", h.indexOf(">22/37<") !== -1, true);
+  eq("the size is honoured", h.indexOf('width="20"') !== -1, true);
+  eq("each cell is stamped with its own local time",
+     h.indexOf(">" + MK.hhmm(ts) + "<") !== -1 &&
+     h.indexOf(">" + MK.hhmm(ts + 600000) + "<") !== -1, true);
+  eq("times are zero-padded to four digits", /^\d\d:\d\d$/.test(MK.hhmm(ts)), true);
+  /* The provider's own name reaches the panel unescaped otherwise. */
+  eq("markup in a value cannot escape", MK.esc('<b>&"'), "&lt;b&gt;&amp;\"");
+})();
+
 head("geo (equirectangular, ranking only)");
 eq("10 km east", WG.dist(47, 8, 47, 8 + 10000 / (111319.49 * Math.cos(47 * Math.PI / 180))), 10000, 12);
 eq("10 km north", WG.dist(47, 8, 47 + 10000 / 111319.49, 8), 10000, 12);

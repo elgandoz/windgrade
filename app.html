@@ -36,11 +36,40 @@ h1{flex:1;font-size:.86em;letter-spacing:.1em;text-transform:uppercase;margin:0;
 #err b{color:var(--amber-str)}
 
 /* chip: marker, then numbers, then facts. The number is never optional. */
-.chip{display:flex;align-items:center;gap:9px;padding:7px 8px;margin:0 0 5px;
-  background:var(--panel);border:1px solid var(--rule);border-radius:4px;
-  box-shadow:var(--shadow)}
+.chip{margin:0 0 5px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:4px;box-shadow:var(--shadow);overflow:hidden}
+/* The tappable part. A <button> and not a div: it is focusable, it announces
+   itself as a control, and Enter works — for free, on a page whose whole point
+   is being usable one-handed. */
+.chip > .row{display:flex;align-items:center;gap:9px;width:100%;padding:7px 8px;
+  background:none;border:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
 .chip.stale{border-color:var(--red);background:var(--stale-bg)}
 .chip.warn{border-color:var(--warn-line)}
+.chip.open{border-color:var(--chart)}
+
+/* ── the expanded trend ─────────────────────────────────────────────
+   Expand in place rather than a bottom sheet: a list where tapping a row opens
+   it is the most conventional pattern on a phone, it needs no dismiss gesture
+   to discover, and it keeps the neighbouring stations visible — which is the
+   comparison a pilot is actually making. The overlay needs a popup because a
+   map has no rows; this does not.
+
+   Fixed min-height so the row does not resize again when the history lands a
+   moment after the tap. Same lesson as the widget's popup. */
+.detail{border-top:1px solid var(--rule);padding:8px 8px 9px}
+.trend{display:flex;gap:3px;overflow-x:auto;min-height:calc(62px * var(--scale));
+  align-items:center;-webkit-overflow-scrolling:touch}
+/* Set by WG.marker.trendScroll only while samples are hidden off to the left,
+   so a half-visible oldest cell reads as "scrolled" and not as a stray value. */
+.trend.cut{-webkit-mask-image:linear-gradient(to right,transparent 0,#000 24px);
+  mask-image:linear-gradient(to right,transparent 0,#000 24px)}
+.trend .wait{color:var(--dim);font:400 .78em var(--mono)}
+.trend .t{flex:none;width:calc(44px * var(--scale));text-align:center}
+.trend .t svg{display:block;width:calc(34px * var(--scale));
+  height:calc(34px * var(--scale));margin:0 auto}
+.trend .t em{display:block;font:700 .74em var(--mono);font-style:normal}
+.trend .t span{display:block;color:var(--dim);font:400 .62em var(--mono)}
+.detail .src{color:var(--dim);font-size:.7em;line-height:1.45;margin-top:7px}
 .mk{flex:none;width:calc(44px * var(--scale));height:calc(44px * var(--scale))}
 .num{flex:none;min-width:calc(84px * var(--scale));font-family:var(--mono);font-weight:700;
   font-size:1.22em;letter-spacing:-.02em;text-align:right}
@@ -195,9 +224,15 @@ function marker(st){ return WG.marker.svg(st, null, { cls: "mk" }); }
 function buildRow(st){
   var d = document.createElement("div");
   d.className = "chip";
-  d.innerHTML = marker(st) +
-    '<div class="num"><span></span><small></small></div>' +
-    '<div class="meta"><div class="nm"></div><div class="sub"></div></div>';
+  d.innerHTML =
+    '<button class="row" type="button" aria-expanded="false">' +
+      marker(st) +
+      '<div class="num"><span></span><small></small></div>' +
+      '<div class="meta"><div class="nm"></div><div class="sub"></div></div>' +
+    '</button>';
+  d.firstChild.addEventListener("click", (function (id) {
+    return function () { toggleOpen(id); };
+  })(st.id));
   return { el:d, cache:{} };
 }
 function mkNode(st){
@@ -208,9 +243,13 @@ function mkNode(st){
 
 function paintRow(r, st){
   var c = r.cache;
+  /* The marker is the button's first child now, not the chip's — the chip also
+     holds the expanded trend. Replacing r.el.firstChild here would swap out the
+     whole control. */
+  var rowEl = r.el.firstChild;
 
   var key = st.rAvg + "/" + st.rGust + "/" + (st.dir | 0) + "/" + st.avg + "/" + st.gust;
-  if (c.mk !== key){ r.el.replaceChild(mkNode(st), r.el.firstChild); c.mk = key; }
+  if (c.mk !== key){ rowEl.replaceChild(mkNode(st), rowEl.firstChild); c.mk = key; }
 
   var num = WG.marker.labelText(st);
   if (c.num !== num){ r.el.querySelector(".num span").textContent = num; c.num = num; }
@@ -263,7 +302,8 @@ function paintRow(r, st){
     c.sub = sk;
   }
 
-  var cls = "chip" + (st.stale.cls === "fresh" ? "" : " " + st.stale.cls);
+  var cls = "chip" + (st.stale.cls === "fresh" ? "" : " " + st.stale.cls) +
+            (openId === st.id ? " open" : "");
   if (r.el.className !== cls) r.el.className = cls;
 }
 
@@ -271,6 +311,85 @@ function compass(b){
   if (b !== b) return "";
   var n = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
   return n[Math.round(b / 22.5) % 16];
+}
+
+/* ── tap a station for its recent trend ───────────────────────────────
+   Descriptive only: the same measured values this station already reports, over
+   time. It answers the one thing a single reading cannot — is this building or
+   easing — without inferring anything.
+
+   History is fetched ON DEMAND, one small call (~0.5-1 KB for a few hours), and
+   cached for one poll interval. Prefetching for every row would be one HTTP
+   call per station for data nobody asked to see, which is exactly what
+   winds.mobi's "do not overload" forbids. That is why this is a tap and not a
+   sparkline on every chip.
+
+   ONE open at a time: two open rows means two histories in flight and a list
+   that has to be scrolled to compare anything. Tapping the open row closes it.
+   ─────────────────────────────────────────────────────────────────── */
+var openId = null, hist = null, histErr = "", histCache = {};
+
+function toggleOpen(id){
+  if (openId === id){ openId = null; hist = null; histErr = ""; tick(); return; }
+  openId = id; hist = null; histErr = "";
+
+  /* Reuse anything fetched within one data cycle — upstream only updates on that
+     cadence, so a second call would return the same samples. */
+  var c = histCache[id];
+  if (c && Date.now() - c.at < C.poll * 1000) hist = c.list;
+  tick();
+  if (hist) return;
+
+  PROV.fetchHistoric(id, { duration: C.hours * 3600 }, function (err, list){
+    if (openId !== id) return;                      /* closed meanwhile */
+    if (err) histErr = "no connection";
+    else { hist = list; histCache[id] = { at: Date.now(), list: list }; }
+    paintDetail();
+  });
+}
+
+/* The shell is written when the row opens; only the strip is replaced when the
+   history lands. Rewriting the whole panel twice in quick succession is what
+   made the widget's popup flash. */
+function openDetail(r, st){
+  var d = document.createElement("div");
+  d.className = "detail";
+  d.innerHTML = '<div class="trend"></div>' +
+    '<div class="src">Last ' + C.hours + (C.hours === 1 ? " hour" : " hours") +
+    ', oldest first, from ' + WG.marker.esc(st.provider) +
+    '. Measured — not a forecast.</div>';
+  r.el.appendChild(d);
+  paintDetail();
+}
+
+function paintDetail(){
+  var r = openId && rows[openId], tr;
+  if (!r) return;
+  tr = r.el.querySelector(".trend");
+  if (!tr) return;
+  tr.innerHTML = WG.marker.trendHtml(hist, { size:34, err:histErr });
+  WG.marker.trendScroll(tr);
+}
+
+/* Called from render(): add the panel to whichever row is open, and make sure
+   no other row still carries one. Driven from `openId` rather than from the
+   click, so a re-render (new readings, a settings change) cannot leave a stale
+   panel attached to a row that has since moved or gone. */
+function syncDetail(ranked){
+  var i, st, r, d;
+  for (i = 0; i < ranked.length; i++){
+    st = ranked[i];
+    r = rows[st.id];
+    if (!r) continue;
+    d = r.el.querySelector(".detail");
+    if (openId === st.id){
+      if (!d) openDetail(r, st);
+      r.el.firstChild.setAttribute("aria-expanded", "true");
+    } else if (d){
+      r.el.removeChild(d);
+      r.el.firstChild.setAttribute("aria-expanded", "false");
+    }
+  }
 }
 
 /* ── render ───────────────────────────────────────────────────────── */
@@ -288,8 +407,13 @@ function render(fix){
     if (rows.hasOwnProperty(id) && !seen[id]){
       if (rows[id].el.parentNode) rows[id].el.parentNode.removeChild(rows[id].el);
       delete rows[id];
+      /* A station can leave the list while its trend is open — the pilot moved,
+         or the scale changed. Drop the open state with it, or paintDetail()
+         hunts for a row that no longer exists. */
+      if (openId === id){ openId = null; hist = null; histErr = ""; }
     }
   }
+  syncDetail(ranked);
 
   /* ONE plain sentence, then the exceptions. Anything with a number in it that
      a pilot cannot act on belongs in the debug line, not here. */
@@ -413,6 +537,10 @@ function dropRows(){
     if (rows[id].el.parentNode) rows[id].el.parentNode.removeChild(rows[id].el);
     delete rows[id];
   }
+  openId = null; hist = null; histErr = "";
+  /* Cached histories go too: `hours` may have just changed, and a cached
+     3-hour strip shown under a 6-hour heading is a quiet lie. */
+  histCache = {};
 }
 
 el("reset").addEventListener("click", function(){
