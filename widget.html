@@ -373,11 +373,12 @@ function paintBadge(fix, shown, nStale){
     if (C.debug) s = WG.scaleLabel(curStep, fix.lat) + " N↑  " + s;
   }
 
-  /* Hidden by choice, but NEVER while something is wrong. `badge` turns off a
-     routine count; it does not turn off the display admitting it cannot be
-     trusted, which would be the one way this could quietly mislead someone.
-     (Before this, badge=0 hid nothing at all — the setting was inert.) */
-  var want = C.badge ? true : bad;
+  /* Off by default: the count is a nicety and the map wants the pixels. Three
+     ways it appears anyway — asked for, debugging, or something is wrong. That
+     last one is not negotiable: no position, OFFLINE and ALL STALE are the
+     display admitting it cannot be trusted, and no display setting may switch
+     that off. (Before this, badge=0 hid nothing at all — it was inert.) */
+  var want = (C.badge || C.debug) ? true : bad;
   if (b.hidden === want) b.hidden = !want;
   if (!want) return;
 
