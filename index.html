@@ -209,6 +209,11 @@ a{color:var(--chart)}
 /* Stored settings first, then the URL on top, so the launcher opens on
    whatever this device last chose and a shared link still wins. */
 WG.initConfig(location.search, { store: true });
+/* The laptop's own density says nothing about the pilot's phone, so the
+   launcher labels for the reference device unless told otherwise. Pairing is
+   by BAR LENGTH, not by these labels, precisely because they cannot be known
+   from here. */
+WG.setDpr(WG.getConfig().dpr || WG.DPR_REF);
 WG.applyTheme();
 
 var urlBox = document.getElementById("url");

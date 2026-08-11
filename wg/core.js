@@ -97,16 +97,19 @@ function stepForZoom(z) { return Math.round(z * 2 + 3); }
    inputs are knowable at runtime: the widget's own width, and the latitude
    from the position chain. So the widget can name the scale the way the
    pilot's own XCTrack does, instead of parroting one device's list. */
-/* CAUTION — this is not established, only convenient. The label lists constrain
-   ONLY the product (bar width x resolution), never either factor. 0.325 x width
-   fits both devices; so does a constant ~150 css px combined with a resolution
-   that scales with pixel density. Labels come out right either way, because the
-   product is what they depend on — but the RESOLUTION does not, and that is what
-   places the markers. See docs/findings.md, "can it be density". */
-var BAR_FRACTION = 0.325;
-var NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
+/* RESOLVED. The label lists constrain only the PRODUCT (bar width x
+   resolution), so on their own they could not choose between "0.325 x widget
+   width" and "a constant ~150 dp with a density-scaled resolution". The ruler
+   measured the resolution independently and picked the second: with the density
+   law applied, a constant bar reproduces all 46 labels across both devices,
+   where a fraction-of-width manages at best 42 and a constant in device pixels
+   35. A fixed max length in dp is also simply how an Android widget is written.
 
-function barMaxPx(widthPx) { return BAR_FRACTION * (widthPx || 448); }
+   Anything in 147.1..154.3 dp scores 46/46; 150 is the middle. NOT a fitted
+   fudge for the resolution — the resolution is measured, and this only has to
+   agree with the label lists it was checked against. */
+var BAR_MAX_DP = 150;
+var NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
 function niceBelow(x) {
   var best = 0, k, i, v;
@@ -125,9 +128,9 @@ function niceBelow(x) {
    null through, Math.cos(null) is 1, and the whole label table came out
    computed at the EQUATOR — one step off, which sent the owner to the wrong
    map scale. Reject anything that is not a real number. */
-function scaleMetres(step, lat, widthPx) {
+function scaleMetres(step, lat) {
   var la = (typeof lat === "number" && lat === lat) ? lat : 47;
-  return niceBelow(barMaxPx(widthPx) * mppXct(la, zoomForStep(step)));
+  return niceBelow(BAR_MAX_DP * mppXct(la, zoomForStep(step)));
 }
 /* XCTrack switches to km only for whole thousands: it prints 1km and 2km but
    1200m and 2500m. Getting this wrong is cosmetic on our side but makes the
@@ -137,7 +140,7 @@ function fmtScale(m) {
   m = Math.round(m);
   return (m % 1000 === 0) ? ((m / 1000) + "km") : (m + "m");
 }
-function scaleLabel(step, lat, widthPx) { return fmtScale(scaleMetres(step, lat, widthPx)); }
+function scaleLabel(step, lat) { return fmtScale(scaleMetres(step, lat)); }
 
 /* Integer-zoom labels, derived so the two cannot disagree. */
 var XCT_SCALE = (function () {
@@ -162,7 +165,10 @@ var SPEC = [
 
   { k:"step",  t:"ladder", d:25, min:12, max:34,
     lab:"Map scale",
-    help:"Set XCTrack's XC map widget to the same value." },
+    help:"These labels are what a dpr-3 phone prints; a denser or coarser " +
+         "screen prints a different list for the same steps. So pair by BAR " +
+         "LENGTH: zoom XCTrack's map until its scale bar is the same length as " +
+         "the overlay's, not until the words match." },
   { k:"pad",   t:"int", d:20, min:0, max:60,
     lab:"Fetch margin (km)",
     help:"Area fetched beyond the view. A cache radius, not a display radius." },
@@ -185,11 +191,12 @@ var SPEC = [
     lab:"Scale correction",
     help:"Leave at 1. Pixel density is already corrected for automatically; this " +
          "is only for a residual the automatic correction does not cover." },
-  { k:"wpx",   t:"int", d:448, min:200, max:1400,
-    lab:"Widget width (px)",
-    help:"CSS pixels across the widget on YOUR device. XCTrack's printed scale " +
-         "labels depend on it, so this makes the list above match what you see. " +
-         "The overlay reads its own width and ignores this." },
+  { k:"dpr",   t:"num", d:0, min:0, max:6,
+    lab:"Pixel density override",
+    help:"0 = use this device's own. XCTrack draws its map in DEVICE pixels, so " +
+         "the ground scale of every step depends on density; the overlay reads " +
+         "its own and is always right. Set a number only to preview another " +
+         "phone's scale from here — probe.html and tools/ruler.html print it." },
   { k:"size",  t:"int", d:50, min:0, max:100,
     lab:"Size", help:"Scales text on the pages and markers in the overlay." },
   { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto",
@@ -715,7 +722,7 @@ return {
   CAL: CAL, DPR_REF: DPR_REF, setCal: setCal, setDpr: setDpr, getCal: getCal,
   XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
   XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES,
-  BAR_FRACTION: BAR_FRACTION, barMaxPx: barMaxPx, niceBelow: niceBelow,
+  BAR_MAX_DP: BAR_MAX_DP, niceBelow: niceBelow,
   scaleMetres: scaleMetres, scaleLabel: scaleLabel, fmtScale: fmtScale,
   XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,

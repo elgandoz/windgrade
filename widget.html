@@ -132,7 +132,7 @@ var W = 0, H = 0, dpr = 1;
 /* Density FIRST, before anything projects. XCTrack draws its map in device
    pixels, so this is what makes the overlay agree with it on any screen; cal is
    only a residual on top. Measured — see docs/findings.md. */
-WG.setDpr(window.devicePixelRatio || WG.DPR_REF);
+WG.setDpr(C.dpr || window.devicePixelRatio || WG.DPR_REF);
 WG.setCal(C.cal);
 
 /* The scale actually being drawn. Equals C.step until the pilot taps a zone;
@@ -189,7 +189,7 @@ function draw(fix, ranked){
        a marker drawn over either removes the thing it was there to reveal. */
     var keepOut = [];
     if (C.bar){
-      var barPx = WG.scaleMetres(curStep, fix.lat, W) / P.res;
+      var barPx = WG.scaleMetres(curStep, fix.lat) / P.res;
       keepOut.push([0, H - C.barY - 26, 25 + (barPx > 0 ? barPx : 0), H]);
     }
     if (C.badge) keepOut.push([0, 0, 190, 26]);
@@ -244,7 +244,7 @@ function draw(fix, ranked){
 function drawScaleBar(g, res){
   /* The bar names what the pilot's own XCTrack names, computed from THIS
      widget's width and latitude — not from a table copied off one device. */
-  var m = WG.scaleMetres(curStep, barLat, W);
+  var m = WG.scaleMetres(curStep, barLat);
   if (!m || !res) return;
   var px = m / res;
   if (px < 24 || px > W - 20) return;          /* would not be comparable */
@@ -309,7 +309,7 @@ function paintBadge(fix, shown, nStale){
   if (!fix){
     s = "no position"; bad = true;
   } else {
-    s = WG.scaleLabel(curStep, fix.lat, W) + " N↑";
+    s = WG.scaleLabel(curStep, fix.lat) + " N↑";
     if (!lastFetch){
       s += fetchErr ? ("  no data: " + fetchErr) : "  loading…";
       bad = !!fetchErr;

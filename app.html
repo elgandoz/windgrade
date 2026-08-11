@@ -122,7 +122,7 @@ function el(id){ return document.getElementById(id); }
 
 /* Only the scale labels need this here, but the engine is shared and one page
    silently disagreeing with the other is exactly what drifts. */
-WG.setDpr(window.devicePixelRatio || WG.DPR_REF);
+WG.setDpr(C.dpr || window.devicePixelRatio || WG.DPR_REF);
 WG.applyTheme();
 
 /* ── position: browser geolocation on a laptop, XCTrack on the phone ── */
@@ -278,7 +278,7 @@ function tick(){
   el("hdr").textContent =
     "src=" + fix.src + "  " + fix.lat.toFixed(5) + "," + fix.lon.toFixed(5) +
     (isFinite(fix.alt) ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
-    "scale " + WG.scaleLabel(C.step, fix.lat, C.wpx) + " ≙ z" + WG.zoomOf(C).toFixed(1) +
+    "scale " + WG.scaleLabel(C.step, fix.lat) + " ≙ z" + WG.zoomOf(C).toFixed(1) +
     (meta1 ? "  ·  " + meta1 : "") +
     (lastFetch ? "  ·  " + Math.round((Date.now() - lastFetch) / 1000) + " s ago" : "") +
     "  ·  " + stations.length + " stations";

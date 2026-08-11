@@ -52,7 +52,7 @@ function buildRow(sp, onInput) {
     for (o = sp.max; o >= sp.min; o--) {
       op = document.createElement("option");
       op.value = o;
-      op.textContent = WG.scaleLabel(o, null, WG.getConfig().wpx);
+      op.textContent = WG.scaleLabel(o, null);
       input.appendChild(op);
     }
   } else if (isEnum) {

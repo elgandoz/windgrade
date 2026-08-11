@@ -56,25 +56,33 @@ eq("step<->zoom round trips", WG.stepForZoom(WG.zoomForStep(25)), 25);
 eq("and at a half step too", WG.stepForZoom(WG.zoomForStep(24)), 24);
 
 /* THE EVIDENCE THAT SETTLED IT. The printed labels come from the scale bar,
-   not the ladder: the bar shows the largest nice number that fits ~0.325 of
-   the widget width. One sqrt2 ladder plus two different widths reproduces two
-   different devices' label lists exactly — 46 labels, no misses. An
-   alternating ladder fitted to one list cannot explain the other. */
+   not the ladder: the bar shows the largest nice number fitting a fixed max
+   length of ~150 dp. One sqrt2 ladder plus the measured density law reproduces
+   two different devices' label lists exactly — 46 labels, no misses. An
+   alternating ladder fitted to one list cannot explain the other.
+
+   The width the labels react to is DENSITY, not css width: the same 150 dp bar
+   covers less ground on a denser screen, because XCTrack's map is drawn in
+   device pixels. A fraction-of-width bar manages at best 42 of 46 here. */
 (function () {
   var phone = "300m,500m,600m,1km,1200m,2km,2500m,4km,5km,8km,10km,15km,20km,30km,40km,60km,80km,120km,150km,250km,300km,500km,600km".split(","),
       pixel = "300m,400m,600m,800m,1200m,1500m,2500m,3km,5km,6km,10km,12km,20km,25km,40km,50km,80km,100km,150km,200km,300km,400km,600km".split(","),
       v, i = 0, okP = 0, okX = 0;
   for (v = 34; v >= 12; v--, i++) {
-    if (WG.scaleLabel(v, 47.361, 448) === phone[i]) okP++;
-    if (WG.scaleLabel(v, 47.361, 411) === pixel[i]) okX++;
+    WG.setDpr(3);     if (WG.scaleLabel(v, 47.361) === phone[i]) okP++;
+    WG.setDpr(2.625); if (WG.scaleLabel(v, 47.361) === pixel[i]) okX++;
   }
-  eq("reproduces all 23 labels on the owner's phone (448 css px)", okP, 23);
-  eq("reproduces all 23 labels on a Pixel 9a (411 css px)", okX, 23);
+  WG.setDpr(3);
+  eq("reproduces all 23 labels on the owner's phone (dpr 3)", okP, 23);
+  eq("reproduces all 23 labels on a Pixel 9a (dpr 2.625)", okX, 23);
 })();
-eq("same step, different screens, different printed label",
-   WG.scaleLabel(25, 47.361, 448) !== WG.scaleLabel(25, 47.361, 411), true);
-eq("  phone prints 8km", WG.scaleLabel(25, 47.361, 448), "8km");
-eq("  pixel prints 6km", WG.scaleLabel(25, 47.361, 411), "6km");
+eq("same step, different densities, different printed label",
+   WG.scaleLabel(25, 47.361) !== (WG.setDpr(2.625), WG.scaleLabel(25, 47.361)), true);
+WG.setDpr(3);
+eq("  phone prints 8km", WG.scaleLabel(25, 47.361), "8km");
+WG.setDpr(2.625);
+eq("  pixel prints 6km", WG.scaleLabel(25, 47.361), "6km");
+WG.setDpr(3);
 eq("...at exactly the same resolution",
    WG.mppXct(47.361, WG.zoomForStep(25)), 54.96, 0.02);
 eq("labels derive from the ladder, so they cannot disagree",
@@ -103,12 +111,12 @@ eq("an explicit step wins over a legacy zoom",
 head("scale labels survive a missing latitude");
 /* A null latitude used to reach Math.cos and become the equator, shifting every
    label a whole step and sending the pilot to the wrong map scale. */
-eq("null latitude falls back, not to the equator", WG.scaleLabel(24, null, 448), "10km");
-eq("undefined too", WG.scaleLabel(24, undefined, 448), "10km");
-eq("NaN too", WG.scaleLabel(24, NaN, 448), "10km");
-eq("a real latitude is still used", WG.scaleLabel(24, 47, 448), "10km");
+eq("null latitude falls back, not to the equator", WG.scaleLabel(24, null), "10km");
+eq("undefined too", WG.scaleLabel(24, undefined), "10km");
+eq("NaN too", WG.scaleLabel(24, NaN), "10km");
+eq("a real latitude is still used", WG.scaleLabel(24, 47), "10km");
 eq("and it genuinely varies with latitude",
-   WG.scaleLabel(24, 0, 448) !== WG.scaleLabel(24, 60, 448), true);
+   WG.scaleLabel(24, 0) !== WG.scaleLabel(24, 60), true);
 
 head("pixel density");
 /* MEASURED 2026-08-11, tools/ruler.html, one emulator at two densities, reading
@@ -151,10 +159,10 @@ eq("and the two compose", WG.getCal(), 0.942 * 1.5 * 1.1, 1e-9);
 eq("a bad value is ignored rather than blanking the map", WG.setCal(0), 1);
 WG.setCal(1); WG.setDpr(3);
 eq("back to the measured constant", WG.getCal(), 0.942);
-/* Labels must NOT move with cal: they depend on bar width x resolution, and a
-   correction to one is compensated by the bar the pilot is comparing against. */
-eq("label at step 25 is still 8km on a 448 px screen",
-   WG.scaleLabel(25, 47.361, 448), "8km");
+/* Labels DO move with density — that is the whole finding — but not with cal,
+   which is a residual on a resolution the labels already agree with. */
+eq("label at step 25 is 8km at the reference density",
+   WG.scaleLabel(25, 47.361), "8km");
 var P = WG.projector({ lat:47.361, lon:8.578 }, 11, 448, 978);
 eq("centre x", P.x(8.578), 224, 1e-6);
 eq("centre y", P.y(47.361), 489, 1e-6);
