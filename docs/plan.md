@@ -1087,6 +1087,54 @@ fade. 7 of 7 drawn against 4 of 7.
 
 `sw.js` `CACHE` → `v4`.
 
+## Phase 3p — the nudge, properly: rotate, order, cap at three (2026-08-11)
+
+Owner's revision of 3o: *"keep them closer. if the nudge line can be rotated and
+arranged in order to improve the visibility, instead of limiting to just put it
+right below. Test it up to 3 arrow overlapping (more than 3 they get lost). in
+term of ordering, if the value is not amber they all have the same priority and
+the highest one stays on top. If there is a stale one, it goes to the bottom."*
+
+**"Rotate" and "keep them closer" turn out to be the same fix.** The exclusion
+zone is a rectangle, `hgap` wide by `vgap` tall, and vgap is much the larger
+because a marker is an arrow plus a number plus an altitude line. Escaping it
+downward costs ~50 px; escaping it **sideways costs ~30 px**. 3o only ever
+pushed straight down, so it always paid the expensive direction.
+
+Everything now lives in **`WG.marker.layout()`** — pure arithmetic, no DOM, so
+`tools/test-core.js` asserts the owner's rules directly instead of them being
+judged from a screenshot. 19 assertions.
+
+| rule | how |
+|---|---|
+| closest first | candidates sorted by distance **at build time**, so the list cannot drift from the promise |
+| never above its betters | every candidate has `dy >= 0`, plus a priority floor |
+| stale to the bottom | priority floor: a strictly lower tier starts below everything already placed |
+| highest on top | sort by staleness class, then altitude descending; first placed keeps its TRUE position |
+| at most three | `maxPerCluster`, extras dropped |
+| clusters | connected components of the overlap relation on true positions |
+
+**The priority floor is not redundant with `dy >= 0`.** A stale station can
+start out *above* the rest of its cluster — in the test case a stale 3345 m
+reading sits at the top — and candidates relative to its own position can never
+push it below the others. Caught by a test, not by looking.
+
+**`hgap` is now MEASURED.** It was `box*1.5`, which sizes the exclusion to the
+arrow. That was fine while the only escape was downward; with lateral placement
+two markers routinely end up level, and `31/44` is wider than the arrow it hangs
+under — so the numbers touched. The caller measures `measureText("00/00")` and
+passes it in. Caught by screenshotting the three-marker cluster.
+
+**Markers paint in reverse layout order**, so a cluster's anchor ends up on top
+where labels hang into each other.
+
+Fade is **0.6** on the arrow only, as asked.
+
+At the Zermatt URL: `12 stations ↓6` against `8 of 12 stations` with `nudge=0`.
+`tools/nudge.html` now drives the shared layout, gained a stale 3345 m station
+dropped into the tightest pair so all three rules are exercised at once, and
+reports `8 of 8 drawn, 4 moved` beside `4 of 8 drawn, 4 lost`.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

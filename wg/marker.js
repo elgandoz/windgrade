@@ -160,6 +160,147 @@ function svg(st, px, opts) {
   return s + "</g></svg>";
 }
 
+/* ── laying out a cluster of markers that will not fit ────────────────
+   Pure arithmetic, no DOM, so tools/test-core.js exercises it directly. Given
+   projected positions it returns where each marker should actually be drawn.
+
+   WHY IT ROTATES. The exclusion zone is a rectangle — `hgap` wide, `vgap`
+   tall — and vgap is much the larger, because a marker is its arrow plus a
+   number plus an altitude line. Escaping it downward therefore costs ~49 px
+   while escaping it SIDEWAYS costs ~29 px. The first version only ever pushed
+   straight down and so always paid the expensive direction. Candidates are
+   ordered by how far they move the marker, which puts the lateral ones first.
+
+   WHY EVERY CANDIDATE HAS dy >= 0. The ordering below has to survive the
+   layout: a marker may be moved level with an earlier one or below it, never
+   above it, or the arrangement would contradict the priority it was sorted by.
+
+   ORDER WITHIN A CLUSTER, owner's rule:
+     stale readings go to the bottom, whatever their altitude
+     everything fresher is equal priority, and the HIGHEST STATION IS ON TOP
+   So a stack reads as a vertical profile of the valley — which is the point,
+   since 1648 m and 2600 m 390 m apart is the whole question in a valley wind.
+   The first member placed keeps its TRUE position and is drawn normally; the
+   rest are displaced, faded, and annotated with a leader line.
+
+   AT MOST `maxPerCluster` (3) ARE DRAWN. Past three, a pile stops being
+   readable and the extras are dropped rather than shuffled somewhere they
+   would be read as a different station's reading.
+
+   Clusters are connected components of the overlap relation, computed from
+   TRUE positions — "which stations overlap each other" — not from wherever
+   the layout has since put them. ────────────────────────────────────── */
+function prioOf(it) {
+  return (it.stale === "stale") ? 2 : (it.stale === "warn" ? 1 : 0);
+}
+
+function layout(items, o) {
+  var hgap = o.hgap, vgap = o.vgap, box = o.box || 0;
+  var maxPer = o.maxPerCluster || 3;
+  var n = items.length, i, j, out = [], placed = [];
+
+  /* Just past the edge of the exclusion rectangle. The multiplier is what
+     stops a float comparison landing exactly on the boundary and looping.
+
+     SORTED BY DISTANCE at build time rather than written in order, so the
+     "closest first" promise cannot drift from the list as entries are added.
+     A lateral step is ~hgap and a vertical one ~vgap, so the sort is what puts
+     sideways ahead of downward without anyone having to remember to. */
+  var HX = hgap * 1.04, VY = vgap * 1.04;
+  var CAND = [
+    [ HX, 0], [-HX, 0],
+    [ HX, VY * 0.5], [-HX, VY * 0.5],
+    [ HX * 1.5, 0], [-HX * 1.5, 0],
+    [0, VY],
+    [ HX, VY], [-HX, VY],
+    [ HX * 2, 0], [-HX * 2, 0],
+    [ HX * 2, VY], [-HX * 2, VY],
+    [0, VY * 2]
+  ];
+  CAND.sort(function (a, b) {
+    return (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1]);
+  });
+
+  function overlap(ax, ay, bx, by) {
+    return Math.abs(ax - bx) < hgap && Math.abs(ay - by) < vgap;
+  }
+  function free(x, y) {
+    var k;
+    if (o.inBounds && !o.inBounds(x, y)) return false;
+    if (o.blocked && o.blocked(x, y)) return false;
+    for (k = 0; k < placed.length; k++)
+      if (overlap(x, y, placed[k][0], placed[k][1])) return false;
+    return true;
+  }
+
+  /* connected components of "these two overlap" */
+  var parent = [];
+  for (i = 0; i < n; i++) parent[i] = i;
+  function find(a) { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; }
+  for (i = 0; i < n; i++)
+    for (j = i + 1; j < n; j++)
+      if (overlap(items[i].x, items[i].y, items[j].x, items[j].y)) {
+        var ra = find(i), rb = find(j);
+        if (ra !== rb) parent[rb] = ra;
+      }
+
+  /* Grouped in first-appearance order, and `items` arrives nearest-first, so
+     the nearest cluster gets first pick of the screen. */
+  var groups = [], byRoot = {}, r;
+  for (i = 0; i < n; i++) {
+    r = find(i);
+    if (byRoot[r] === undefined) { byRoot[r] = groups.length; groups.push([]); }
+    groups[byRoot[r]].push(i);
+  }
+
+  for (i = 0; i < groups.length; i++) {
+    var g = groups[i].slice();
+    g.sort(function (a, b) {
+      var pa = prioOf(items[a]), pb = prioOf(items[b]);
+      if (pa !== pb) return pa - pb;                  /* stale sinks */
+      var aa = items[a].alt, ab = items[b].alt;       /* then highest on top */
+      var na = !(aa === aa), nb = !(ab === ab);       /* no altitude sorts last */
+      if (na !== nb) return na ? 1 : -1;
+      if (!na && aa !== ab) return ab - aa;
+      return a - b;                                   /* else nearest first */
+    });
+
+    /* THE PRIORITY FLOOR. Candidates all have dy >= 0, which stops a marker
+       being pushed above its OWN true position — but that is not the rule. The
+       rule is about the arrangement: a stale reading goes to the bottom of the
+       cluster, and it may well start out above everything else. So a marker of
+       strictly lower priority is forbidden from landing above any higher-
+       priority one already placed. Equal priority may sit level, which is what
+       lets a same-tier pair go side by side at the cheapest distance. */
+    var drawn = 0, floorY = -Infinity, floorPrio = -1;
+    for (j = 0; j < g.length; j++) {
+      /* A flag, not a sentinel coordinate: a marker at the left edge has a
+         legitimately negative x and -1 would silently drop it. */
+      var it = items[g[j]], px = 0, py = 0, got = false, c, p = prioOf(it);
+      var floor = (p > floorPrio) ? floorY + 1 : -Infinity;
+      if (drawn >= maxPer) break;                     /* a pile of four is lost */
+      if (it.y >= floor && free(it.x, it.y)) { px = it.x; py = it.y; got = true; }
+      else if (o.nudge) {
+        for (c = 0; c < CAND.length; c++) {
+          var cx = it.x + CAND[c][0], cy = it.y + CAND[c][1];
+          if (cy >= floor && free(cx, cy)) { px = cx; py = cy; got = true; break; }
+        }
+      }
+      if (!got) continue;                             /* nowhere to put it */
+      placed.push([px, py]);
+      out.push({ i: g[j], x: px, y: py, tx: it.x, ty: it.y,
+                 moved: (px !== it.x || py !== it.y) });
+      /* floorY is the running maximum over everything placed in this cluster;
+         floorPrio the lowest priority tier reached so far. Together they mean
+         "the next tier down starts below all of this". */
+      if (py > floorY) floorY = py;
+      if (p > floorPrio) floorPrio = p;
+      drawn++;
+    }
+  }
+  return out;
+}
+
 /* ── leader line, for a marker that had to be moved ───────────────────
    The overlay nudges a marker DOWN when it would overlap one already placed,
    rather than dropping the reading — see draw() in widget.html. This is what
@@ -175,16 +316,22 @@ function svg(st, px, opts) {
    a speed number must be hidden behind it, not scribbled over it. Painting each
    marker as it was placed put the next line straight through the previous
    marker's number — caught by screenshotting it, not by reading it. */
-function leader(g, x, y, ny, box) {
+function leader(g, tx, ty, x, y, box) {
+  var dx = x - tx, dy = y - ty, len = Math.sqrt(dx * dx + dy * dy);
+  if (!len) return;
+  /* Stop short of the marker along the line's own direction, so a sideways or
+     diagonal displacement is trimmed the same way a vertical one is. */
+  var back = Math.min(box * 0.55, len * 0.45);
+  var ex = x - dx / len * back, ey = y - dy / len * back;
   g.lineCap = "round";
   g.beginPath();
-  g.moveTo(x, y);
-  g.lineTo(x, ny - box * 0.55);
+  g.moveTo(tx, ty);
+  g.lineTo(ex, ey);
   g.strokeStyle = "#FFFFFF"; g.lineWidth = 3.4; g.stroke();
   g.strokeStyle = "#3A4A56"; g.lineWidth = 1.4; g.stroke();
-  g.beginPath(); g.arc(x, y, 3.1, 0, 6.2832);
+  g.beginPath(); g.arc(tx, ty, 3.1, 0, 6.2832);
   g.fillStyle = "#FFFFFF"; g.fill();
-  g.beginPath(); g.arc(x, y, 1.9, 0, 6.2832);
+  g.beginPath(); g.arc(tx, ty, 1.9, 0, 6.2832);
   g.fillStyle = "#3A4A56"; g.fill();
 }
 
@@ -192,7 +339,7 @@ function leader(g, x, y, ny, box) {
    full strength: the number is the fallback for a colour scale a lot of pilots
    cannot separate, so it never pays for the annotation. 0.6 applied to the whole
    marker was measured as marginal against dark forest. */
-var NUDGE_ALPHA = 0.55;
+var NUDGE_ALPHA = 0.6;
 
 /* ── the trend strip ──────────────────────────────────────────────────
    Recent history as a row of small markers, oldest left. Purely descriptive —
@@ -274,7 +421,7 @@ WG.marker = {
   label: labelCanvas, labelText: labelText, fmt: fmt,
   alt: altCanvas, altText: altText, altSize: altSize,
   svg: svg, trendHtml: trendHtml, trendScroll: trendScroll,
-  leader: leader, NUDGE_ALPHA: NUDGE_ALPHA,
+  leader: leader, layout: layout, NUDGE_ALPHA: NUDGE_ALPHA,
   hhmm: hhmm, esc: esc
 };
 

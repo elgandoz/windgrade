@@ -230,8 +230,10 @@ window.addEventListener("resize", resize);
    lost the reading, and either half alone is worse than omitting the station —
    see the SeeYou decluttering bug in handover.md.
 
-   NUDGE (`nudge=1`, on): a loser is moved straight DOWN until it clears,
-   drawn at 60% with a leader line back to where it really is.
+   NUDGE (`nudge=1`, on): a marker that will not fit is MOVED rather than
+   dropped — drawn at WG.marker.NUDGE_ALPHA with a leader line back to where it
+   really is. The clustering, the ordering and the placement are all in
+   WG.marker.layout(), which is pure arithmetic and therefore unit-tested.
 
    The case that forced it, from Zermatt: ZFC: Landing at 2600 m and Zermatt at
    1648 m are 387 m apart on the ground — 16 px at scale 3000 — so the valley
@@ -245,15 +247,14 @@ window.addEventListener("resize", resize);
    is not claiming to be where it is drawn. The fade says it has been moved and
    the leader line says where from, ending in a dot on the true point. A
    silently displaced marker would be a lie; an annotated one is a fact plus a
-   label. Straight down, always, so the displacement direction is learnable and
-   the leader line never crosses the arrow it belongs to.
+   label.
 
    Nudged markers ALWAYS print their altitude, whatever `alt` says. Two markers
-   stacked on top of each other are the one case where the pilot cannot tell
-   which reading is which, and altitude is what separates them — it is the
-   difference between a valley floor and a ridge 950 m up. `vgap` therefore
-   reserves the altitude line's height whenever nudging is on, or the line would
-   land on the arrow below.
+   side by side are the one case where the pilot cannot tell which reading is
+   which, and altitude is what separates them — it is the difference between a
+   valley floor and a ridge 950 m up. `vgap` therefore reserves the altitude
+   line's height whenever nudging is on, or the line would land on the arrow
+   below.
 
    TWO THINGS THE FIRST VERSION GOT WRONG, both caught by screenshotting it:
 
@@ -276,7 +277,7 @@ function draw(fix, ranked){
     var scale = 0.55 + (C.size / 100) * 0.75;      /* 0.55 .. 1.30 */
     var fs = Math.round(9 + (C.size / 100) * 7);   /* 9 .. 16 px */
     var P = WG.projector(fix, WG.zoomForStep(curStep), W, H, WG.getCal());
-    var box = WG.REACH * scale, placed = [], i, st, x, y, k, hit;
+    var box = WG.REACH * scale, i, st, x, y;
     /* The altitude line grows each marker downwards, so the vertical spacing
        has to grow with it — by exactly the line's height, taken from the
        renderer rather than guessed, or one marker's altitude lands on the
@@ -308,77 +309,72 @@ function draw(fix, ranked){
       return false;
     }
 
-    function clear(px, py){
-      for (var q = 0; q < placed.length; q++){
-        if (Math.abs(px - placed[q][0]) < box * 1.5 &&
-            Math.abs(py - placed[q][1]) < vgap) return false;
-      }
-      return !blocked(px, py);
-    }
-
-    /* Straight down in vgap steps. Capped: past a few marker heights the leader
-       line is longer than the eye will follow and the reading would be better
-       omitted than filed under the wrong ridge. */
-    var NUDGE_TRIES = 4;
-    function nudgeDown(px, py){
-      var n, ny;
-      for (n = 1; n <= NUDGE_TRIES; n++){
-        ny = py + vgap * n;
-        if (ny > H - box * 0.5) return -1;         /* off the bottom */
-        if (clear(px, ny)) return ny;
-      }
-      return -1;
-    }
-
-    /* ── pass 1: lay out. Nothing is painted here. ── */
-    var lay = [], ny, ly, nMoved = 0;
+    /* Everything on screen and not sitting on a keep-out rectangle, in
+       nearest-first order — the layout takes it from there. */
+    var cand = [];
     for (i = 0; i < ranked.length; i++){
       st = ranked[i];
       x = P.x(st.lon); y = P.y(st.lat);
       if (x < -box || x > W + box || y < -box || y > H + box) continue;
-
       if (blocked(x, y)) continue;
+      cand.push({ x: x, y: y, alt: st.alt, stale: st.stale.cls, st: st });
+    }
 
-      hit = false;
-      for (k = 0; k < placed.length; k++){
-        if (Math.abs(x - placed[k][0]) < box * 1.5 &&
-            Math.abs(y - placed[k][1]) < vgap){ hit = true; break; }
+    /* Clustering, priority and placement all live in wg/marker.js: it is pure
+       arithmetic, so tools/test-core.js exercises the rules directly and
+       tools/nudge.html draws exactly what this draws. */
+    /* hgap MEASURED, not assumed. `box*1.5` sizes the exclusion to the ARROW,
+       which was fine while the only escape was downward. Now that sideways is
+       the preferred direction, two markers routinely end up level — and the
+       label "31/44" is wider than the arrow it hangs under, so an arrow-sized
+       gap let the numbers touch. The number is the fallback for a colour scale
+       many pilots cannot separate; it may not be the thing that collides. */
+    bctx.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
+    var hgap = Math.max(box * 1.5, bctx.measureText("00/00").width + 8);
+
+    var lay = WG.marker.layout(cand, {
+      hgap: hgap, vgap: vgap, box: box,
+      nudge: !!C.nudge, maxPerCluster: 3,
+      blocked: blocked,
+      inBounds: function (px, py){
+        return px > box * 0.5 && px < W - box * 0.5 &&
+               py > box * 0.5 && py < H - box * 0.6;
       }
+    });
 
-      ny = y;
-      if (hit){
-        if (!C.nudge) continue;
-        ny = nudgeDown(x, y);
-        if (ny < 0) continue;                      /* nowhere to put it */
+    var ly, nMoved = 0, L;
+
+    /* Every leader line first, under every marker. Painting each marker as it
+       was placed put the next line straight through the previous marker's
+       speed number — caught by screenshotting it, not by reading it. */
+    for (i = 0; i < lay.length; i++){
+      L = lay[i];
+      if (L.moved){
         nMoved++;
+        WG.marker.leader(bctx, L.tx, L.ty, L.x, L.y, box);
       }
+    }
 
-      placed.push([x, ny]);
-      lay.push({ st: st, x: x, y: y, ny: ny });
+    /* REVERSE order, so the highest-priority member of a cluster paints LAST
+       and therefore on top. The exclusion test keeps the arrows apart, but a
+       label and an altitude line hang below the box and can still touch — and
+       when they do, the anchor is the one that should win. */
+    for (i = lay.length - 1; i >= 0; i--){
+      L = lay[i];
+      st = cand[L.i].st;
       /* The tap target follows the DRAWN marker, not the true position — the
          pilot taps what they can see. */
-      hits.push({ st: st, x: x, y: ny, r: box });
-    }
-
-    /* ── pass 2: every leader line, underneath everything ── */
-    for (i = 0; i < lay.length; i++)
-      if (lay[i].ny !== lay[i].y)
-        WG.marker.leader(bctx, lay[i].x, lay[i].y, lay[i].ny, box);
-
-    /* ── pass 3: the markers ── */
-    for (i = 0; i < lay.length; i++){
-      st = lay[i].st; x = lay[i].x; ny = lay[i].ny;
-      var moved = (ny !== lay[i].y);
+      hits.push({ st: st, x: L.x, y: L.y, r: box });
       /* Only the ARROW fades. The number is the fallback for a colour scale a
          lot of pilots cannot separate, so it never pays for the annotation. */
-      if (moved) bctx.globalAlpha = WG.marker.NUDGE_ALPHA;
-      WG.marker.canvas(bctx, st, x, ny, scale);
+      if (L.moved) bctx.globalAlpha = WG.marker.NUDGE_ALPHA;
+      WG.marker.canvas(bctx, st, L.x, L.y, scale);
       bctx.globalAlpha = 1;
-      ly = WG.marker.label(bctx, st, x, ny, scale, fs);
-      if (C.alt || moved) WG.marker.alt(bctx, st, x, ly, fs);
+      ly = WG.marker.label(bctx, st, L.x, L.y, scale, fs);
+      if (C.alt || L.moved) WG.marker.alt(bctx, st, L.x, ly, fs);
     }
     nNudged = nMoved;
-    shown = placed.length;
+    shown = lay.length;
     if (C.bar) { barLat = fix.lat; drawScaleBar(bctx, P.res); }
   }
   /* one atomic replace of the visible canvas */

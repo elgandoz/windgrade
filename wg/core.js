@@ -308,9 +308,9 @@ var SPEC = [
      for comparison. See draw() in widget.html and findings 2026-08-11. */
   { k:"nudge", t:"int", d:1, min:0, max:1, only:"widget", grp:"Which stations",
     lab:"Move overlapping markers",
-    help:"Two stations too close together to draw side by side: the second is " +
-         "moved down, faded, with a line back to where it really is. Off hides " +
-         "it instead." },
+    help:"Stations too close together to draw in place are moved aside, faded, " +
+         "with a line back to where they really are. Up to three per pile, " +
+         "highest station first and old readings last. Off hides them instead." },
   /* Applied AFTER the view cull in prepare(), so on a map it caps what could
      be drawn rather than what happens to fall inside a radius. It was 40,
      which cost half the drawable markers at wide scales — findings 2026-08-11. */

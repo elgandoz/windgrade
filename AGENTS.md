@@ -256,19 +256,40 @@ clear and the vertical requirement is the larger, so in a north-south valley the
 overlay declutters hardest along the valley. Full numbers in `docs/findings.md`
 2026-08-11.
 
-**`nudge=1` (default) moves the loser down instead of dropping it**, faded, with
-a leader line back to its true position. That is allowed to coexist with "an
+**`nudge=1` (default) moves markers aside instead of dropping them**, faded, with
+a leader line back to their true position. That is allowed to coexist with "an
 arrow sits on its own terrain" only because it is ANNOTATED: the fade says it has
 been moved and the line says where from. Never displace a marker silently.
-Three rules that go with it, each of which cost a screenshot to find:
+
+**`WG.marker.layout()` owns the clustering, the ordering and the placement.** It
+is pure arithmetic — no DOM — so `tools/test-core.js` asserts the rules directly
+and `tools/nudge.html` draws exactly what the widget draws. The rules:
+
+- **Sideways first.** The exclusion zone is `hgap` wide and `vgap` tall, and vgap
+  is much the larger, so lateral escape costs ~30 px against ~50 px downward.
+  Candidates are sorted by distance at build time, which is what puts them in
+  that order — do not hand-order the list.
+- **`hgap` is MEASURED, not `box*1.5`.** The label "31/44" is wider than the
+  arrow it hangs under, and once markers sit level the label is what collides.
+  The caller measures it with `measureText` and passes it in.
+- **Order:** stale sinks to the bottom of its cluster whatever its altitude;
+  everything fresher is equal priority and the highest station keeps its true
+  position. Enforced by a priority floor, because a stale marker can start out
+  above everything and candidates alone cannot fix that.
+- **At most three per cluster** — past that a pile stops being readable and the
+  extras are dropped rather than put somewhere they read as another station.
+- Clusters are connected components of the overlap relation on TRUE positions.
+
+Three drawing rules go with it, each of which cost a screenshot to find:
 
 - `draw()` is three passes — lay out, then every leader line, then every marker.
   Painting as you place puts the next leader line straight through the previous
-  marker's speed number.
-- **Only the arrow fades** (`WG.marker.NUDGE_ALPHA`). The number and the altitude
-  stay at full strength; the number is the fallback for a colour scale many
-  pilots cannot separate, so it never pays for the annotation.
-- A nudged marker always prints its altitude, whatever `alt` says — stacked
+  marker's speed number. Markers paint in REVERSE layout order so a cluster's
+  anchor ends up on top.
+- **Only the arrow fades** (`WG.marker.NUDGE_ALPHA`, 0.6). The number and the
+  altitude stay at full strength; the number is the fallback for a colour scale
+  many pilots cannot separate, so it never pays for the annotation.
+- A nudged marker always prints its altitude, whatever `alt` says — displaced
   markers are the one case where the pilot cannot tell which reading is which,
   and 1648 m vs 2600 m is the whole point in a valley wind.
 

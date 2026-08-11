@@ -383,6 +383,77 @@ eq("0.5/0.4 rounds to 1/0, so it is NOT calm",
 eq("no direction is always calm", MK.isCalm({ avg:9, gust:12, dir:NaN }), true);
 eq("a real reading is not calm", MK.isCalm({ avg:9, gust:12, dir:200 }), false);
 
+/* WG.marker.layout — clustering, priority and placement for markers too close
+   to draw in place. Pure arithmetic on purpose, so the rules the owner gave are
+   asserted here rather than judged from a screenshot. */
+head("marker layout: clusters, priority, rotation");
+(function () {
+  var HG = 30, VG = 50;                       /* the real exclusion rectangle */
+  function opt(extra) {
+    var o = { hgap:HG, vgap:VG, box:20, nudge:true, maxPerCluster:3 }, k;
+    for (k in extra) if (extra.hasOwnProperty(k)) o[k] = extra[k];
+    return o;
+  }
+  function it(x, y, alt, stale) { return { x:x, y:y, alt:alt, stale:stale || "fresh" }; }
+
+  eq("a marker on its own is never moved",
+     MK.layout([it(100, 100, 2000)], opt())[0].moved, false);
+
+  /* The exclusion zone is 30 wide and 50 tall, so sideways is the cheaper
+     escape. The old code only ever went down and always paid 50. */
+  var pair = MK.layout([it(100, 100, 2600), it(105, 108, 1648)], opt());
+  eq("both of an overlapping pair are drawn", pair.length, 2);
+  eq("the first keeps its true position", pair[0].moved, false);
+  eq("the second is moved", pair[1].moved, true);
+  eq("and it moves SIDEWAYS, not down — the cheap direction",
+     Math.abs(pair[1].y - pair[1].ty) < 1, true);
+  eq("by just past the horizontal gap", Math.abs(pair[1].x - pair[1].tx), HG * 1.04, 0.01);
+  eq("which is much closer than the old straight-down move",
+     Math.abs(pair[1].x - pair[1].tx) < VG, true);
+
+  /* Owner's rule: fresh readings are equal priority and the HIGHEST station is
+     on top; a stale one goes to the bottom whatever its altitude. */
+  var byAlt = MK.layout([it(100, 100, 1648), it(104, 106, 2600)], opt());
+  eq("the higher station takes the anchor, not the nearer one",
+     byAlt[0].i, 1);
+  eq("and the lower one is the one displaced", byAlt[1].i, 0);
+
+  var withStale = MK.layout(
+    [it(100, 100, 3000, "stale"), it(104, 104, 1000), it(108, 108, 2000)], opt());
+  eq("stale sinks below both fresher ones however high it is",
+     withStale[withStale.length - 1].i, 0);
+  eq("and among the fresh ones the higher is still first",
+     withStale[0].i, 2);
+  eq("a stale marker is never placed above the one that outranks it",
+     withStale[2].y >= withStale[0].y, true);
+
+  /* "more than 3 they get lost" */
+  var four = MK.layout([it(100,100,4000), it(104,104,3000),
+                        it(108,108,2000), it(112,112,1000)], opt());
+  eq("a cluster draws at most three", four.length, 3);
+  eq("and it is the LOWEST that is dropped", four.map(function(p){return p.i;}).join(","), "0,1,2");
+
+  eq("nudge off restores drop-the-loser",
+     MK.layout([it(100,100,2600), it(105,108,1648)], opt({ nudge:false })).length, 1);
+
+  /* Placement must respect the same keep-out rectangles the widget uses, and
+     must not put a marker off the edge of the canvas. */
+  var boxed = MK.layout([it(100,100,2600), it(105,108,1648)],
+    opt({ blocked: function (x) { return x > 120; } }));
+  eq("a blocked candidate is skipped, so it goes left instead of right",
+     boxed[1].x < boxed[1].tx, true);
+  eq("nowhere to go at all means the marker is dropped, not drawn wrong",
+     MK.layout([it(100,100,2600), it(105,108,1648)],
+       opt({ inBounds: function (x, y) { return x === 100 && y === 100; } })).length, 1);
+
+  /* Two clusters far apart must not interfere. */
+  var two = MK.layout([it(100,100,2600), it(105,108,1648),
+                       it(400,400,2600), it(405,408,1648)], opt());
+  eq("separate clusters are laid out independently", two.length, 4);
+  eq("each keeps one anchor in place",
+     two.filter(function (p) { return !p.moved; }).length, 2);
+})();
+
 head("station altitude line");
 /* A missing altitude must draw NOTHING — not a dash, not a zero. The provider
    not knowing is different from the station being at sea level, and this tool
