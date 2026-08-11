@@ -773,6 +773,40 @@ tint, on a `#FDF3E0` panel — so the *emphasised* words in the one box that
 says "these colours are not a safety verdict" had the least contrast in it.
 Now `--amber-str`, defined per theme like everything else. Checked in both.
 
+## Phase 3j — the launcher, rewritten for a pilot (2026-08-11)
+
+Third pass on the same page, owner's review. The settings were fixed in 3h/3i;
+this is the prose and the shape around them.
+
+**The setup is now three numbered steps** — choose a scale, get the link onto
+your phone, set it up in XCTrack — instead of a configurator followed by
+undifferentiated notes. Step 3 prints the scale the pilot actually chose
+(`#stepScale`, refreshed with the URL), so nobody has to remember a number
+while scrolling, and the XCTrack settings are nested under the widget they
+belong to rather than listed flat.
+
+**Two top buttons became one.** The old pair offered *XCTrack overlay →*
+pointing straight at `widget.html`, which in an ordinary browser is a
+transparent page of arrows floating on nothing. It looks broken and it is not
+how anyone should obtain the overlay — the URL box and the QR code are. The
+list stayed, and moved up: it works anywhere, needs no setup, and is the only
+thing that shows a stranger what this is in one tap. It is now the page's one
+primary action.
+
+**The intro said what is wrong with other tools before saying what this one
+does.** A pilot who has just arrived does not yet care.
+
+**`grp:"Tapping and zoom"` → `grp:"Interactive mode"`.** All six parameters
+were already in one group; the group was simply not called what the guide
+calls it, so the guide could not point at it. Now it can, and does.
+
+**Tools moved to `tools.html`.** Six diagnostic pages at the bottom of the
+launcher were six things to scroll past for a pilot who will never open any of
+them. The new page groups them by what they answer — registration against
+XCTrack, the marker itself, what a device can do — with a sentence each saying
+when you would want it, and the launcher links to it from the footer. `sw.js`
+`CACHE` bumped to `v3` for the new file.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

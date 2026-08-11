@@ -25,13 +25,14 @@
    the background revalidation picks those up on its own.
    ═══════════════════════════════════════════════════════════════════ */
 
-var CACHE = "windgrade-v2";
+var CACHE = "windgrade-v3";
 
 var ASSETS = [
   "./",
   "index.html",
   "app.html",
   "widget.html",
+  "tools.html",
   "wg/base.css",
   "wg/core.js",
   "wg/marker.js",

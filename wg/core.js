@@ -339,27 +339,27 @@ var SPEC = [
     help:"Adds the scale the overlay assumed and how many stations it received. " +
          "For reporting a problem." },
 
-  { k:"popup", t:"int", d:30, min:0, max:300, only:"widget", grp:"Tapping and zoom",
+  { k:"popup", t:"int", d:30, min:0, max:300, only:"widget", grp:"Interactive mode",
     lab:"Popup timeout (s)",
     help:"Tap a marker to see its last few hours. 0 keeps it open until you " +
          "tap again." },
-  { k:"hours", t:"int", d:3, min:1, max:12, only:"widget", grp:"Tapping and zoom",
+  { k:"hours", t:"int", d:3, min:1, max:12, only:"widget", grp:"Interactive mode",
     lab:"Trend length (h)",
     help:"How far back that popup goes." },
-  { k:"zbtn",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
+  { k:"zbtn",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Interactive mode",
     lab:"Show zoom buttons",
     help:"A + and − pair for the overlay's own scale." },
-  { k:"zpos",  t:"enum", only:"widget", d:"bottom-right", grp:"Tapping and zoom",
+  { k:"zpos",  t:"enum", only:"widget", d:"bottom-right", grp:"Interactive mode",
     opts:["bottom-right", "bottom-left", "top-right", "top-left",
           "top-centre", "bottom-centre", "left-centre", "right-centre"],
     lab:"Where the buttons sit",
     help:"Avoid bottom-left and top-left — the scale bar and the status line " +
          "are already there." },
-  { k:"zrow",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
+  { k:"zrow",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Interactive mode",
     lab:"Buttons side by side",
     help:"Horizontal instead of stacked, leaving room for XCTrack's own pair " +
          "beside them." },
-  { k:"ztap",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
+  { k:"ztap",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Interactive mode",
     lab:"Tap the screen to change scale",
     help:"The top and bottom halves become invisible zoom controls. Off for " +
          "normal use." },

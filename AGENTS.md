@@ -245,13 +245,25 @@ Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC
 works the same way, e.g. `?scale=15000&peaks=1&stale=45` — or just use the
 configurator on `index.html`, which builds the URL and a QR code for it.
 
-Pages: `index.html` launcher/configurator, `app.html` list, `widget.html` overlay.
+Pages: `index.html` launcher/configurator, `app.html` list, `widget.html`
+overlay, `tools.html` the diagnostic index.
 Engine: `wg/core.js` (no DOM), `wg/marker.js` (both renderers), `wg/windsmobi.js`
 (provider), `wg/fields.js` (SPEC-driven controls), `wg/qr.js` (launcher only).
 Tools: `tools/ruler.html` (measures XCTrack's resolution *without* our
 calibration — the instrument that settled pixel density, keep it),
 `tools/registration.html`, `tools/arrow.html`, `tools/arrow.svg`,
-`tools/test-core.js`, `probe.html`.
+`tools/test-core.js`, `probe.html`. **They are linked from `tools.html`, not
+from the launcher** — six diagnostic pages were six things a pilot had to
+scroll past. Add a new one there and to `sw.js`.
+
+**`index.html` is written for a pilot, not for us.** Three numbered steps
+(choose a scale → get the link onto your phone → set it up in XCTrack), one
+primary action at the top, and the measured reasons behind each XCTrack setting
+kept in HTML comments beside the list. Two things not to undo: the page offers
+**one** button and it goes to `app.html`, because a link straight to
+`widget.html` opens a transparent page of arrows on nothing and reads as
+broken; and step 3 prints the pilot's chosen scale live from `#stepScale`, so
+the instruction names a number rather than referring back up the page.
 
 A headless browser is available for visual checks, which beats shipping UI blind:
 

@@ -17,11 +17,12 @@ h1{margin:0 0 4px;font-size:1.5em;letter-spacing:-.01em}
 .sub b{color:var(--fg)}
 h2{margin:26px 0 8px;font-size:.82em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 
-.pick{display:grid;gap:10px;grid-template-columns:1fr 1fr}
-.pick a{display:block;padding:14px;background:var(--panel);border:1px solid var(--rule);
-  border-radius:4px;text-decoration:none;color:var(--fg)}
-.pick b{display:block;margin-bottom:3px}
-.pick span{display:block;font-size:.8em;color:var(--dim);line-height:1.4}
+/* The one thing a first-time visitor can do without reading anything. Full
+   width and in the accent colour, because everything below it is setup. */
+.tryit{display:block;padding:14px 16px;background:var(--chart);border-radius:4px;
+  text-decoration:none;color:#fff}
+.tryit b{display:block;font-size:1.05em}
+.tryit span{display:block;font-size:.82em;opacity:.85;margin-top:3px}
 
 
 button{font:600 .9em var(--sans);cursor:pointer}
@@ -41,6 +42,12 @@ button{font:600 .9em var(--sans);cursor:pointer}
 
 ol{margin:0;padding-left:1.25em;font-size:.9em;line-height:1.65;color:var(--dim)}
 ol b{color:var(--fg)}
+ol li{margin-bottom:4px}
+/* Settings inside a step: indented, so "turn this on" reads as belonging to
+   the widget the step just told you to add. */
+ol ul{margin:4px 0 6px;padding-left:1.1em;list-style:none}
+ol ul li{position:relative;padding-left:.1em}
+ol ul li::before{content:"·";position:absolute;left:-.8em;color:var(--chart);font-weight:700}
 .note{margin:12px 0 0;padding:10px 12px;background:var(--panel);border:1px solid var(--rule);
   border-radius:3px;color:var(--dim);font-size:.84em;line-height:1.5}
 .note b{color:var(--fg)}
@@ -48,18 +55,17 @@ ol b{color:var(--fg)}
   border:1px solid var(--amber-line);border-radius:3px;color:var(--amber);
   font-size:.82em;line-height:1.45}
 .warn b{color:var(--amber-str)}
-.tools{display:flex;flex-wrap:wrap;gap:8px}
-.tools a{display:block;padding:9px 11px;background:var(--panel);border:1px solid var(--rule);
-  border-radius:3px;text-decoration:none;color:var(--fg);font-size:.82em}
-.tools a small{display:block;color:var(--dim);font-size:.9em;margin-top:2px}
-footer{margin-top:26px;color:var(--dim);font-size:.76em;line-height:1.6}
+footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);
+  color:var(--dim);font-size:.76em;line-height:1.6}
+footer p{margin:0 0 10px;font-size:1.1em}
 a{color:var(--chart)}
-#reset:active,.pick a:active,.tools a:active{background:var(--panel-hi)}
+#reset:active{background:var(--panel-hi)}
+.tryit:active{filter:brightness(.94)}
 #copy:active{filter:brightness(.92)}
 @media (hover:hover) and (pointer:fine){
-  .pick a,.tools a,#reset,#copy{transition:background-color .12s,border-color .12s,filter .12s}
-  .pick a:hover,.tools a:hover,#reset:hover{border-color:var(--chart)}
-  #copy:hover{filter:brightness(1.08)}
+  #reset,#copy,.tryit{transition:background-color .12s,border-color .12s,filter .12s}
+  #reset:hover{border-color:var(--chart)}
+  #copy:hover,.tryit:hover{filter:brightness(1.08)}
 }
 </style>
 </head>
@@ -67,58 +73,81 @@ a{color:var(--chart)}
 <div class="wrap">
 
   <h1>Windgrade</h1>
+  <!-- The old intro explained what is wrong with other tools before saying what
+       this one does. A pilot who has just arrived does not yet care. -->
   <p class="sub">
-    Nearby wind stations drawn <b>on the terrain they sit on</b>, each an arrow
-    coloured by measured speed and gust. Existing tools list stations by name —
-    which tells you nothing if you don't fly the area, because a name can't say
-    whether a reading came from a valley floor, a summit or a gorge that funnels.
+    Wind stations near you, drawn <b>on the terrain they sit on</b> — an arrow
+    per station, coloured by how strong the wind is. A station name can't tell
+    you whether a reading came from a valley floor or a summit. Seeing where it
+    is can.
   </p>
 
-  <div class="pick">
-    <a id="toapp" href="app.html">
-      <b>List →</b>
-      <span>Nearby stations as chips, ranked by distance. Works on any phone or laptop.</span>
-    </a>
-    <a id="towidget" href="widget.html">
-      <b>XCTrack overlay →</b>
-      <span>Transparent arrows to stack <strong>over XCTrack's own map</strong>. Needs the setup below.</span>
-    </a>
-  </div>
+  <!-- One button, not two. The old pair offered "XCTrack overlay ->" pointing
+       straight at widget.html, which in a normal browser is a transparent page
+       of arrows floating on nothing - it looks broken, and it is not how anyone
+       should get the overlay. The URL box and the QR below are. The list, on
+       the other hand, works anywhere and is the only thing that shows a
+       stranger what this is in one tap, so it stays and it goes first. -->
+  <a class="tryit" id="toapp" href="app.html">
+    <b>See the stations near me →</b>
+    <span>Works right now, in this browser. No setup.</span>
+  </a>
 
-  <h2>Configurator</h2>
+  <p class="sub" style="margin:22px 0 0">
+    To get the arrows <b>on top of XCTrack's own map</b>, there are three steps.
+  </p>
+
+  <h2>Step 1 — choose your map scale</h2>
   <div id="fields"></div>
   <button type="button" id="reset">Reset to defaults</button>
 
+  <h2>Step 2 — get the link onto your phone</h2>
+  <p class="note">
+    <b>On your phone:</b> tap Copy, then paste it into XCTrack in step 3.<br>
+    <b>On a computer:</b> point your phone's camera at the QR code.
+  </p>
   <textarea id="url" rows="3" readonly></textarea>
-  <button id="copy" type="button">Copy overlay URL</button>
+  <button id="copy" type="button">Copy link</button>
 
   <div class="qr">
     <canvas id="qrc" role="img" aria-label="QR code of the overlay URL"></canvas>
-    <small>Same URL as above. Point your phone's camera at it to open it there,
-      then paste it into XCTrack.</small>
+    <small>The same link. Open it on your phone, then copy it from there.</small>
   </div>
 
-  <h2>Add it to XCTrack</h2>
-  <!-- Every step here is a measured XCTrack behaviour, not a preference. The
-       reasons, in order: refresh rate 0 because ${lat}/${lng} substitution
-       makes XCTrack reload the whole page on that interval and throw away
-       everything drawn; tapping OFF because the widget then swallows every
-       tap over its rectangle, including ones meant for controls underneath
-       (tools/tap.html, docs/findings.md). Keep the list short — a pilot
-       setting this up on a phone will not read paragraphs. -->
+  <h2>Step 3 — set it up in XCTrack</h2>
+  <!-- Every item here is a measured XCTrack behaviour, not a preference:
+
+       * refresh rate 0 — ${lat}/${lng} substitution makes XCTrack reload the
+         whole page on that interval and throw away everything drawn.
+       * tapping OFF — with it on the widget swallows every tap over its own
+         rectangle, including taps meant for controls underneath it. Measured;
+         tools/tap.html, docs/findings.md.
+       * North-up — the overlay projects to true north. Nothing reads XCTrack's
+         rotation, so a rotated map would put every arrow in the wrong place.
+
+       Wording rule for this list: one instruction per line, the setting named
+       exactly as XCTrack names it, and the consequence only where getting it
+       wrong is silent. A pilot doing this on a phone will not read prose. -->
+  <p class="note">
+    In XCTrack, edit a page and add <b>two widgets on top of each other</b>: its
+    own map underneath, and Windgrade above it.
+  </p>
   <ol>
-    <li>Add an <b>XC map</b> widget. Set its <b>scale</b> to the same value as
-      <b>Map scale</b> above, and its rotation to <b>North-up</b>.</li>
-    <li>Add a <b>Web page</b> widget <b>over the same area</b>, on top, and paste
-      the URL.</li>
-    <li>Turn on <b>Allow web page to access XCTrack data</b> — this is what gives
-      it your position.</li>
-    <li>Set <b>refresh rate to 0</b>, or XCTrack reloads the page every minute or
-      two and throws away everything it has drawn.</li>
-    <li>Leave <b>Allow tapping on the web page when locked</b> <b>OFF</b>, unless
-      you want the interactive features below. With it on, the widget swallows
-      every tap over its area — including taps meant for controls underneath.</li>
-    <li>Turn on <b>Disable unlocking</b> so a stray swipe doesn't rearrange the
+    <li>Add an <b>XC map</b> widget. Set its <b>scale</b> to <b id="stepScale">the
+      value you chose above</b> and its rotation to <b>North-up</b>.</li>
+    <li>Add a <b>Web page</b> widget <b>covering the same area</b>, and paste your
+      link into it.</li>
+    <li>In the Web page widget's settings:
+      <ul>
+        <li><b>Allow web page to access XCTrack data</b> — <b>on</b>. This is what
+          gives it your position.</li>
+        <li><b>Refresh rate</b> — <b>0</b>. Anything else makes XCTrack reload the
+          page every minute or two and lose everything it has drawn.</li>
+        <li><b>Allow tapping on the web page when locked</b> — <b>off</b>, unless
+          you want the optional tapping features below.</li>
+      </ul>
+    </li>
+    <li>Turn on <b>Disable unlocking</b> so a stray swipe can't rearrange your
       page.</li>
   </ol>
 
@@ -128,10 +157,10 @@ a{color:var(--chart)}
        name; the overlay resolves the scale on the device. Measured with
        tools/ruler.html — docs/findings.md 2026-08-11. -->
   <p class="note">
-    <b>The two scales must match.</b> The overlay draws its own scale bar just
-    above XCTrack's. <b>Same length means they match</b> — you never have to read
-    either number. If your phone has no such scale the overlay takes the nearest
-    and its bar says which.
+    <b>Did it work?</b> Windgrade draws a small scale bar just above XCTrack's
+    own. <b>If the two bars are the same length, you're set</b> — you never have
+    to read either number. If they differ, change XCTrack's map scale until they
+    match.
   </p>
 
   <!-- getLocation() returns nothing at all until the GPS has a fix, which is
@@ -139,33 +168,26 @@ a{color:var(--chart)}
        placeholders are XCTrack's last known position and cover that gap. An
        unsubstituted "${lat}" arrives as a literal and is ignored, not parsed. -->
   <p class="note">
-    <b>Keep the <code>?lat=${lat}&amp;lng=${lng}</code> on the end of the URL.</b>
-    XCTrack fills those in with its last known position, so the overlay draws
-    straight away instead of waiting for a GPS fix. Once there is a fix, the live
-    position takes over.
+    <b>Don't shorten the link.</b> The <code>${lat}</code> and <code>${lng}</code>
+    at the end let XCTrack hand over its last known position, so the arrows
+    appear immediately instead of after the GPS locks on.
   </p>
 
-  <h2>Interactive mode (optional)</h2>
+  <h2>Optional — tapping and zoom</h2>
   <p class="note">
-    Under <b>Advanced settings → Tapping and zoom</b>. Leave these off for normal
-    use. They all need <b>Allow tapping on the web page when locked</b> turned
-    <b>ON</b> — and with that on, <b>your own zoom buttons must be moved outside
-    the widget rectangle</b> or they stop working.
+    Under <b>Advanced settings → Interactive mode</b>, and off by default. They
+    need <b>Allow tapping on the web page when locked</b> turned <b>on</b> — and
+    once it is, Windgrade takes every tap over its own area, so <b>move
+    XCTrack's zoom buttons outside it</b> or they will stop responding.
   </p>
   <ol>
-    <li><b>Popup timeout</b> — tap a marker for its last few hours, as small
-      arrows, oldest left. Tap anywhere to dismiss.</li>
-    <li><b>Show zoom buttons</b> — a <code>+</code>/<code>−</code> pair for the
-      overlay's own scale, placeable on any edge or corner.</li>
-    <li><b>Tap the screen to change scale</b> — the top and bottom halves become
-      invisible zoom controls. A tap on a marker opens its popup first, so the
-      two never fight.</li>
+    <li>Tap a station to see how its wind has changed over the last few hours.</li>
+    <li>Add <b>+</b> and <b>−</b> buttons, or use the top and bottom of the
+      screen, to change Windgrade's scale.</li>
+    <li>That changes <b>Windgrade's</b> scale only — XCTrack doesn't let a web
+      page change its map. Windgrade says so at the bottom until you change the
+      map to match.</li>
   </ol>
-  <p class="note">
-    Changing the overlay's scale does <b>not</b> change the map — nothing in
-    XCTrack lets a web widget do that. The overlay says so at the bottom until
-    you set the map yourself.
-  </p>
 
   <!-- The colour scale's middle - green/yellow/orange/red - is a hue-only
        cluster, invisible to a significant fraction of male pilots, and yellow
@@ -180,17 +202,10 @@ a{color:var(--chart)}
     stale is old and must be treated as unknown.
   </p>
 
-  <h2>Tools</h2>
-  <div class="tools">
-    <a href="tools/registration.html">Overlay registration<small>Check the map scale pairing</small></a>
-    <a href="tools/ruler.html">CSS pixel ruler<small>Measure XCTrack's map resolution</small></a>
-    <a href="tools/tap.html">Tap pass-through<small>Answered: no. Kept to re-test</small></a>
-    <a href="tools/arrow.html">Marker geometry<small>Every fill × rim pair</small></a>
-    <a href="tools/arrow.svg">arrow.svg<small>Editable master shape</small></a>
-    <a href="probe.html">Capability probe<small>WebView storage, CORS, WebGL</small></a>
-  </div>
-
   <footer>
+    <p><a href="tools.html">Diagnostic tools →</a> — for checking the overlay
+      against XCTrack. Not needed to fly.</p>
+
     Unofficial, no warranty. Station data via <a href="https://winds.mobi">winds.mobi</a>,
     which aggregates MeteoSwiss, SLF, Holfuy, OpenWindMap and others — the data
     belongs to those networks. You are responsible for your own flight preparation.
@@ -240,11 +255,15 @@ function drawQr(url){
 
 function refreshLinks(){
   var w = WG.buildUrl("widget.html", { placeholders: true });
-  var a = WG.buildUrl("app.html");
-  document.getElementById("towidget").href = w;
-  document.getElementById("toapp").href = a;
+  document.getElementById("toapp").href = WG.buildUrl("app.html");
   urlBox.value = new URL(w, location.href).href;
   drawQr(urlBox.value);
+
+  /* Step 3 names the number the pilot actually chose, so they are not asked to
+     remember it while scrolling. It is the SCALE, not a ladder step — that is
+     what XCTrack's own list shows, and it is the same on any phone. */
+  document.getElementById("stepScale").textContent =
+    WG.fmtScale(WG.getConfig().scale);
 }
 
 /* Generated from WG.SPEC — nothing is skipped here except URL-only rows,

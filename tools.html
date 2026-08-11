@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A1116">
+<title>Windgrade — tools</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="wg/base.css">
+<style>
+/* Moved off the launcher: none of this is for a pilot. The launcher is what
+   someone reads once, on a phone, before their first flight with it, and six
+   diagnostic pages at the bottom of it were six things to scroll past. */
+body{padding:0 0 40px}
+.wrap{max-width:calc(640px * var(--scale));margin:0 auto;padding:20px 14px}
+h1{margin:0 0 4px;font-size:1.5em;letter-spacing:-.01em}
+.sub{margin:0 0 22px;color:var(--dim);font-size:.92em;line-height:1.5}
+h2{margin:26px 0 8px;font-size:.82em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.tools{display:grid;gap:8px}
+.tools a{display:block;padding:11px 12px;background:var(--panel);
+  border:1px solid var(--rule);border-radius:3px;text-decoration:none;
+  color:var(--fg);font-size:.88em}
+.tools a small{display:block;color:var(--dim);font-size:.88em;line-height:1.45;margin-top:3px}
+.back{display:inline-block;margin-top:26px;font-size:.86em}
+footer{margin-top:22px;color:var(--dim);font-size:.76em;line-height:1.6}
+a{color:var(--chart)}
+.tools a:active{background:var(--panel-hi)}
+@media (hover:hover) and (pointer:fine){
+  .tools a{transition:border-color .12s}
+  .tools a:hover{border-color:var(--chart)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Tools</h1>
+  <p class="sub">
+    Diagnostic pages. You do not need any of these to fly with Windgrade — they
+    exist to check the overlay against XCTrack and to record what was measured.
+  </p>
+
+  <h2>Checking the overlay against XCTrack</h2>
+  <div class="tools">
+    <a href="tools/registration.html">Overlay registration
+      <small>Draws a grid over XCTrack's map so you can see whether the two line
+        up. Use this if the arrows look shifted.</small></a>
+    <a href="tools/ruler.html">CSS pixel ruler
+      <small>A ruler across the screen. Read XCTrack's own scale bar against it
+        and you get its map resolution directly, with no assumption of ours in
+        the way. This is the instrument that settled how the scale works.</small></a>
+  </div>
+
+  <h2>The marker itself</h2>
+  <div class="tools">
+    <a href="tools/arrow.html">Marker geometry
+      <small>Every fill and rim colour pair, at every size, so the whole scale
+        can be judged at once.</small></a>
+    <a href="tools/arrow.svg">arrow.svg
+      <small>The master shape, editable.</small></a>
+  </div>
+
+  <h2>What this device can do</h2>
+  <div class="tools">
+    <a href="probe.html">Capability probe
+      <small>Storage, network, WebGL and screen density, as XCTrack's browser
+        reports them. Run this on a phone that misbehaves.</small></a>
+    <a href="tools/tap.html">Tap pass-through
+      <small>Answered: taps do not pass through to XCTrack underneath. Kept so
+        the answer can be re-checked when XCTrack changes.</small></a>
+  </div>
+
+  <a class="back" href="index.html">← Back to Windgrade</a>
+
+  <footer>
+    Unofficial, no warranty. Station data via <a href="https://winds.mobi">winds.mobi</a>.
+  </footer>
+
+</div>
+<script src="wg/core.js"></script>
+<script src="wg/fields.js"></script>
+<script src="wg/offline.js"></script>
+<script>
+"use strict";
+/* Theme and text size only — this page has no settings of its own, but it
+   should not be the one page that ignores the pilot's choice. */
+WG.initConfig(location.search, { store: true });
+WG.applyTheme();
+</script>
+</body>
+</html>
