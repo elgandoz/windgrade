@@ -4,6 +4,71 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — the ladder does NOT step by √2. Half-steps were 12% wrong.
+
+**Verdict: `z = (value − 3) / 2` is withdrawn.** It was right at every step we had
+measured and wrong at every step in between. Caught by the owner from a screenshot
+at `10km` where our scale bar was visibly shorter than XCTrack's.
+
+**Why three correct measurements were not enough.** All three points verified
+against airspace edges — `15km`, `8km`, `4km` — are **two steps apart**, and two
+steps double under both models. Any model with a two-step doubling fits them. The
+steps in between were never checked, and the closed form quietly assumed the
+ladder was geometric.
+
+It is not. The ratios alternate, and **1.25 × 1.6 = 2.0 exactly**, which is
+precisely why the doubling held and the error hid:
+
+```
+… 4km ×1.25→ 5km ×1.6→ 8km ×1.25→ 10km ×1.6→ 16km ×1.25→ 20km …
+```
+
+**The evidence is the label list itself.** Anchored on step 25 = 8000 m = z11 — the
+one step verified to the pixel — the alternating ladder reproduces **all 23 printed
+labels within 8%**, and every label it misses is exactly the number a UI would
+round:
+
+| true | printed |
+|---|---|
+| 312.5 | `300m` |
+| 625 | `600m` |
+| 1250 | `1200m` |
+| 16000 | `15km` |
+| 32000 | `30km` |
+| 64000 | `60km` |
+| 128000 | `120km` |
+| 512000 | `500km` |
+
+No √2 ladder can produce that list: it would want `11.3km` where XCTrack prints
+`10km`, and `5.7km` where it prints `5km`.
+
+**So there are now two numbers per step and they must not be confused:**
+
+| | |
+|---|---|
+| `XCT_TRUE_M` | the real ground scale — drives **resolution** |
+| `XCT_METRES` | what the label says — drives the **scale bar length** |
+
+They agree at `8km`, `10km`, `4km`, `20km` and most others; they differ only where
+the label is rounded.
+
+**Effect of the fix.** At `10km` the resolution goes 77.7 → 68.7 m/px and the bar
+128.6 → 145.5 px, +13% — matching the screenshot. The three measured points are
+unchanged (109.93 / 54.96 / 27.48 against 109.89 / 54.95 / 27.47).
+
+**Still open, and it needs one screenshot.** At a *rounded* step such as `15km`, is
+XCTrack's bar drawn at the labelled 15 km or at the true 16 km? We draw the label,
+so if XCTrack draws the true value our bar will read ~6% short there and it would
+be a false alarm rather than a real mismatch. Every step where the label is exact
+is unaffected. Compare the two bars at `15km` to settle it.
+
+**The lesson worth keeping:** a model that fits every measurement can still be
+wrong everywhere the measurements did not land. The three points were two steps
+apart *because that is where the integer OSM zooms were* — the sampling was chosen
+by the hypothesis it was meant to test.
+
+---
+
 ### 2026-08-11 — `${lat}` answers before a GPS fix; `getLocation()` does not
 
 **Verdict: every widget URL must carry `?lat=${lat}&lng=${lng}`.** Owner noticed it

@@ -23,17 +23,26 @@ var WG = (function () {
 var CAL = 0.942;
 
 /* ── XCTrack's scale ladder ────────────────────────────────────────────
-   Its map scale is an integer, mapWidget_scale.value, running 12 to 34, and
-   ONE STEP IS sqrt(2) IN SCALE — half an OSM zoom level. The closed form
-       z = (value - 3) / 2
-   reproduces all three measured points to within 0.04 m/px (see
-   docs/findings.md), so every second step is an integer OSM zoom and the
-   ones between are halves. Our projector takes a fractional zoom, so we can
-   follow the ladder exactly rather than only its integer positions.
+   Its map scale is an integer, mapWidget_scale.value, running 12 to 34.
 
-   THE LABELS ARE THIS BUILD'S. chmd's XCTrack printed a different set for the
-   same steps, so treat the label map as cosmetic and version-specific; the
-   step numbers and the formula are the durable part. ───────────────── */
+   IT DOES NOT STEP BY sqrt(2). An earlier version assumed it did, because
+   every SECOND step doubles and all three points measured against airspace
+   edges were two steps apart — so they could not tell the two models apart.
+   The steps in between were never verified, and they were wrong by 12%,
+   which is what the owner's 2026-08-11 screenshot showed at "10km".
+
+   The ladder alternates x1.25 and x1.6, and 1.25 x 1.6 = 2.0 exactly, which
+   is why the two-step doubling held. Anchored on step 25 = 8000 m = z11, the
+   one point verified to the pixel, it reproduces ALL 23 printed labels to
+   within 8% — and the ones it misses are exactly the awkward numbers a UI
+   would round: 312.5 -> "300m", 625 -> "600m", 1250 -> "1200m",
+   16000 -> "15km", 32000 -> "30km", 128000 -> "120km".
+
+   So there are two different numbers per step and they must not be confused:
+     XCT_TRUE_M   the real ground scale — drives RESOLUTION
+     XCT_METRES   what the label says   — drives the length of the scale bar
+   They agree at 8km, 10km, 4km, 20km and the rest; they differ where the
+   label is rounded. ──────────────────────────────────────────────────── */
 var XCT_LADDER = {
   12:"600km", 13:"500km", 14:"300km", 15:"250km", 16:"150km", 17:"120km",
   18:"80km",  19:"60km",  20:"40km",  21:"30km",  22:"20km",  23:"15km",
@@ -41,6 +50,15 @@ var XCT_LADDER = {
   30:"1200m", 31:"1km",   32:"600m",  33:"500m",  34:"300m"
 };
 var XCT_STEP_MIN = 12, XCT_STEP_MAX = 34;
+
+/* The real ladder. Coarser (lower step): even x1.25, odd x1.6. */
+var XCT_TRUE_M = (function () {
+  var o = {}, v;
+  o[25] = 8000;                                   /* verified against airspace */
+  for (v = 24; v >= XCT_STEP_MIN; v--) o[v] = o[v + 1] * ((v % 2 === 0) ? 1.25 : 1.6);
+  for (v = 26; v <= XCT_STEP_MAX; v++) o[v] = o[v - 1] / ((v % 2 === 0) ? 1.6 : 1.25);
+  return o;
+})();
 
 /* Ground distance each label names, in metres. The scale bar draws exactly
    this, so it can be compared against XCTrack's own bar length rather than
@@ -54,8 +72,21 @@ var XCT_METRES = (function () {
   }
   return o;
 })();
-function zoomForStep(v) { return (v - 3) / 2; }
-function stepForZoom(z) { return Math.round(z * 2 + 3); }
+function zoomForStep(v) {
+  var m = XCT_TRUE_M[v];
+  if (!m) return 11;
+  return 11 - Math.log(m / 8000) / Math.LN2;
+}
+/* Inverse by search, not algebra: the ladder is not uniform, so there is no
+   closed form to invert. */
+function stepForZoom(z) {
+  var best = 25, bd = 1e9, v, d;
+  for (v = XCT_STEP_MIN; v <= XCT_STEP_MAX; v++) {
+    d = Math.abs(zoomForStep(v) - z);
+    if (d < bd) { bd = d; best = v; }
+  }
+  return best;
+}
 
 /* Integer-zoom labels, derived so the two cannot disagree. */
 var XCT_SCALE = (function () {
@@ -622,7 +653,7 @@ function attribution(list) {
 
 return {
   CAL: CAL, XCT_SCALE: XCT_SCALE, SPEC: SPEC, LEVELS: LEVELS,
-  XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES,
+  XCT_LADDER: XCT_LADDER, XCT_METRES: XCT_METRES, XCT_TRUE_M: XCT_TRUE_M,
   XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
   zoomOf: zoomOf,
