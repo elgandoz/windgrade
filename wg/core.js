@@ -243,8 +243,11 @@ var SPEC = [
   { k:"pad",   t:"int", d:20, min:0, max:60,
     lab:"Fetch margin (km)",
     help:"Area fetched beyond the view. A cache radius, not a display radius." },
-  { k:"max",   t:"int", d:40, min:1, max:200,
-    lab:"Max stations" },
+  { k:"max",   t:"int", d:120, min:1, max:400,
+    lab:"Max stations",
+    help:"Cap AFTER the view cull, so on a map it limits what could be drawn, " +
+         "not what happens to be within a radius. 40 was cutting half the " +
+         "drawable markers at wide scales." },
   { k:"peaks", t:"int", d:0, min:0, max:1,
     lab:"Summits only",
     help:"Provider-supplied fact, not a guess." },
@@ -625,9 +628,17 @@ function bearing(lat1, lon1, lat2, lon2) {
 
 /* Bounding box for a fetch: the visible area plus a margin in km. The
    margin is a CACHE radius — 20 km buys ~30 min of flight at 40 km/h, so
-   movement never forces a refetch faster than the data cadence does. */
+   movement never forces a refetch faster than the data cadence does.
+
+   `mul` defaults to getCal(), NOT the raw CAL constant. It used to be CAL,
+   which is the dpr-3 value: on a denser screen the real view covers MORE
+   ground than CAL predicts, so the box was smaller than the view and the
+   edges were never fetched at all. The projector already used getCal(); the
+   two disagreeing is exactly how stations went missing off-screen-left.
+   Pass padKm 0 and this returns the view rectangle itself — which is what
+   prepare()'s `keep` argument wants. */
 function bboxAround(fix, z, W, H, padKm, mul) {
-  var res = mppOsm(fix.lat, z) / ((mul === undefined) ? CAL : mul);
+  var res = mppOsm(fix.lat, z) / ((mul === undefined) ? getCal() : mul);
   var halfW = (W / 2) * res + padKm * 1000;
   var halfH = (H / 2) * res + padKm * 1000;
   var dLat = halfH / M_PER_DEG;
@@ -780,12 +791,24 @@ function staleness(st, c, now) {
    Horizontal distance. Delta-altitude weighting was withdrawn by the
    owner (see plan.md "Altitude — downgraded"); the station's own altitude
    is still shown as a fact, and terrain position is what Phase 3/3b
-   convey. `peaks` filters on the provider's own peak flag. ────────── */
-function prepare(list, fix, c, now) {
+   convey. `peaks` filters on the provider's own peak flag.
+
+   `keep` is an optional {s,n,w,e} rectangle applied BEFORE the `max` cut.
+   Without it the cut is radial while the screen is a rectangle, so at a
+   30 km scale on a 448x978 widget 17 of 40 slots went to stations that
+   could never be drawn — and 13 drawable ones were dropped to pay for
+   them. A list page wants nearest-regardless and passes nothing; a map
+   passes its own view rectangle. Kept as lat/lon so core stays DOM-free
+   and the rule stays testable. ─────────────────────────────────────── */
+function inBox(st, b) {
+  return st.lat >= b.s && st.lat <= b.n && st.lon >= b.w && st.lon <= b.e;
+}
+function prepare(list, fix, c, now, keep) {
   var out = [], i, st;
   for (i = 0; i < list.length; i++) {
     st = list[i];
     if (c.peaks && !st.peak) continue;
+    if (keep && !inBox(st, keep)) continue;
     st.dist = fix ? dist(fix.lat, fix.lon, st.lat, st.lon) : NaN;
     st.brg  = fix ? bearing(fix.lat, fix.lon, st.lat, st.lon) : NaN;
     st.rAvg  = rateAvg(st.avg);
@@ -847,7 +870,7 @@ return {
   levelName: levelName, colour: colour,
 
   ageMin: ageMin, staleness: staleness,
-  prepare: prepare, attribution: attribution,
+  prepare: prepare, inBox: inBox, attribution: attribution,
 
   providers: {}
 };

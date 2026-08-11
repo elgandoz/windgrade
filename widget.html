@@ -195,6 +195,10 @@ var popStation = null, popTimer = null, popHist = null, popErr = "";
    here, so it neither flashes nor spends a call. */
 var histCache = {};
 var stations = [], lastFetch = 0, fetchErr = "", fetching = false;
+/* How many the box actually held, whether the API truncated at its 500 cap,
+   and how many survived the view cull — the three numbers that say whether a
+   missing marker was never fetched, was capped away, or lost a collision. */
+var fetchCapped = false, nRanked = 0;
 var drawKey = "", lastShown = 0;
 
 /* ── sizing. Cap the backing store at DPR 2: the probe measured DPR 3, and
@@ -340,10 +344,13 @@ function refresh(fix){
   if (fetching || !fix) return;
   fetching = true;
   var bbox = WG.bboxAround(fix, WG.zoomForStep(curStep), W || 448, H || 978, C.pad);
-  PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list){
+  PROV.fetchBBox(bbox, { maxAgeSec: C.stale * 60 * 4, limit: 500 }, function (err, list, meta){
     fetching = false;
     if (err) fetchErr = err;               /* keep the last good data on screen */
-    else { fetchErr = ""; stations = list; lastFetch = Date.now(); }
+    else {
+      fetchErr = ""; stations = list; lastFetch = Date.now();
+      fetchCapped = !!(meta && meta.capped);
+    }
     drawKey = ""; tick();
   });
 }
@@ -376,7 +383,12 @@ function paintBadge(fix, shown, nStale){
     else if (nStale) s += " (" + nStale + " stale)";
     if (fetchErr){ s += "  OFFLINE " + fetchAge + "m"; bad = true; }
     else if (fetchAge >= Math.ceil(C.poll / 60) * 2){ s += "  " + fetchAge + "m"; bad = true; }
-    if (C.debug) s = WG.scaleLabel(curStep, fix.lat) + " N↑  " + s;
+    /* Truncation is not a debug detail: the box held more than the API will
+       return, so the map is missing stations it never heard about. Say it
+       whatever the badge setting, like the other admissions of doubt. */
+    if (fetchCapped){ s += "  BOX FULL"; bad = true; }
+    if (C.debug) s = WG.scaleLabel(curStep, fix.lat) + " N↑  " + s +
+                     "  [" + nRanked + " in view / " + stations.length + " got]";
   }
 
   /* Off by default: the count is a nicety and the map wants the pixels. Three
@@ -413,9 +425,15 @@ function tick(){
   if (!lastFetch || Date.now() - lastFetch > C.poll * 1000) refresh(fix);
 
   var now = Date.now();
-  var ranked = WG.prepare(stations, fix, C, now), i, nStale = 0;
-
   var z = WG.zoomForStep(curStep);
+
+  /* Cull to the view BEFORE C.max, or the cap is spent on stations that are
+     off the sides of a tall screen. A marker's width of slack so one at the
+     very edge is still a candidate — draw() does the exact clipping. */
+  var view = WG.bboxAround(fix, z, (W || 448) + 60, (H || 978) + 60, 0);
+  var ranked = WG.prepare(stations, fix, C, now, view), i, nStale = 0;
+  nRanked = ranked.length;
+
   var key = Math.round(WG.lonToPx(fix.lon, z) * WG.getCal()) + "/" +
             Math.round(WG.latToPx(fix.lat, z) * WG.getCal()) + "/" +
             W + "x" + H + "/" + curStep + "/" + lastFetch + "/" + Math.round(now / 60000);
@@ -491,7 +509,12 @@ function paintPop(){
   p.setAttribute("data-for", st.id);
 
   h += '<h3>' + esc(st.name) + (st.peak ? ' <span style="color:var(--chart)">▲</span>' : '') + '</h3>';
+  /* The geocoded municipality, when it is not just the name again. It is the
+     word a pilot who does not know the site has a chance of recognising, and
+     the reason a station can look absent when it is right there — see the
+     name/short swap in windsmobi.js. */
   h += '<div class="sub">' +
+       (st.place ? esc(st.place) + ' · ' : '') +
        (isFinite(st.alt) ? Math.round(st.alt) + ' m · ' : '') +
        (Math.round(st.dist / 100) / 10) + ' km · ' + esc(st.provider) + '</div>';
 

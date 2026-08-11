@@ -7,8 +7,11 @@
    Switzerland. See docs/findings.md.
 
    Normalises to the shape core.js and the pages expect:
-     {id, name, short, lat, lon, alt, dir, avg, gust, ts, peak, status,
-      provider, url}
+     {id, name, place, short, lat, lon, alt, dir, avg, gust, ts, peak,
+      status, provider, url}
+   `name` is the station owner's own name and `place` the geocoded
+   municipality when it differs — see normalise(), the two are swapped
+   relative to what the API calls them.
 
    TERMS OF USE (from the OpenAPI spec, quoted because one is a problem):
      1. "Always identify your calls ... by setting a user-agent HTTP header"
@@ -38,6 +41,15 @@ var BASE = "https://winds.mobi/api/2/stations/";
 var KEYS = ["name", "short", "alt", "peak", "status", "pv-name", "loc",
             "last._id", "last.w-dir", "last.w-avg", "last.w-max"];
 
+/* The API's own documented ceiling ("Nb stations to return (max=500)"), and
+   it is a HARD truncation with no documented ordering — ask for a box with
+   more than 500 stations and you silently get some 500 of them. Measured
+   2026-08-11: a 143x265 km Piedmont box holds 161, a 190x267 km Swiss box
+   309-356, so a wide scale over the densest Alps can reach it. We always
+   ask for the maximum and REPORT when the answer came back at the ceiling
+   (meta.capped) rather than pretend the set is complete. Splitting the box
+   into several calls would trade one silent failure for a breach of "do not
+   overload"; the honest move is to say so. */
 var LIMIT_MAX = 500;
 
 function url(bbox, opts) {
@@ -86,19 +98,42 @@ function get(u, cb) {
    fields, altitude in metres, a documented `peak` boolean, and a unix
    timestamp. No projection maths and no unit conversion — which is most of
    why it displaced going direct to MeteoSwiss, whose feed is EPSG:2056 and
-   needs two endpoints. */
+   needs two endpoints.
+
+   NAMES ARE THE OTHER WAY ROUND FROM WHAT THE FIELD NAMES SUGGEST. For
+   openwindmap.org — 63 of 161 stations in a Piedmont sample, the largest
+   single network there — `name` is a GEOCODED MUNICIPALITY and `short` is
+   the name the station's owner gave it:
+
+       name "Valgioie"          short "Decollo TRUCETTI 980m"
+       name "Ciciu del Villar"  short "Décollo Liretta Paradeltaclub Cuneo"
+
+   A pilot searching for Trucetti finds "Valgioie" and concludes the station
+   is missing. So the owner's name is what we call `name`, and the geocoded
+   place is carried alongside as `place` when it says something different.
+   For ffvl, holfuy, slf and meteoswiss the two fields are identical and
+   `place` comes out empty. Whitespace is squeezed because several records
+   carry trailing spaces and non-breaking spaces ("Baouroux 1600m "). */
+function txt(v) {
+  if (typeof v !== "string") return "";
+  return v.replace(/[\s\u00A0]+/g, " ").replace(/^ +| +$/g, "");
+}
+
 function normalise(raw) {
-  var out = [], i, s, c, last;
+  var out = [], i, s, c, last, owner, place;
   for (i = 0; i < raw.length; i++) {
     s = raw[i];
     c = s.loc && s.loc.coordinates;
     if (!c || c.length < 2) continue;
     last = s.last || {};
+    owner = txt(s.short);
+    place = txt(s.name);
 
     out.push({
       id:       s._id,
-      name:     s.name || s.short || s._id,
-      short:    s.short || s.name || s._id,
+      name:     owner || place || s._id,
+      place:    (place && place !== owner) ? place : "",
+      short:    owner || place || s._id,
       lat:      +c[1],
       lon:      +c[0],
       alt:      (s.alt === null || s.alt === undefined) ? NaN : +s.alt,
@@ -186,7 +221,8 @@ WG.providers.windsmobi = {
         if (j && j.detail) return cb("API rejected the query", null, { url:u, detail:j.detail });
         return cb(null, [], { url:u, ms:Date.now() - t0, bytes:body.length });
       }
-      cb(null, normalise(j), { url:u, ms:Date.now() - t0, bytes:body.length, count:j.length });
+      cb(null, normalise(j), { url:u, ms:Date.now() - t0, bytes:body.length,
+                               count:j.length, capped:j.length >= LIMIT_MAX });
     });
   }
 };

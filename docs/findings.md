@@ -4,6 +4,125 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — the widget was drawing half the stations it had, and hiding the names pilots know
+
+Reported from the air over Piedmont, an area the owner knows well:
+
+    widget.html?scale=25000&lat=44.88&lng=7.33&debug=1
+    → "30km N↑  15 stations (5 stale)"
+
+with sites the owner knows to exist — *Decollo TRUCETTI*, *Décollo Liretta
+Paradeltaclub Cuneo* — apparently absent. Four separate causes, all confirmed
+against the live API.
+
+#### The fetch was never the problem
+
+The box for that view is 143 × 265 km. Probing `within-pt1/pt2` directly:
+
+```
+limit=500  last-measure=7200  is-highest-duplicates-rating=true → 125
+limit=500  last-measure=7200                                    → 152
+limit=500                     is-highest-duplicates-rating=true → 131
+limit=500                                                       → 161
+limit=1000 / 2000 / 5000                                        → 161   (true total)
+no limit at all                                                 →  13   (small default)
+```
+
+So 125 stations arrived and **15 were drawn**. Both named stations were in the
+response. `is-highest-duplicates-rating` drops 30, and inspecting every one of
+them, 29 are genuine co-locations 0–30 m apart; the seven that are 1.7–8.9 km
+apart are all cases where the discarded twin was 1 800–38 700 minutes old.
+It is doing its job — leave it on.
+
+#### Cause 1 — the cap was radial, the screen is a rectangle
+
+`prepare()` sorted by distance and cut at `c.max` = 40. A tall widget covers
+103 × 225 km, so **17 of those 40 slots went to stations off the left and
+right edges** that could never be drawn, and paid for them by dropping
+drawable ones. Measured over the same 125 records:
+
+| widget (dpr) | in view | drawn before | drawn after |
+|---|---|---|---|
+| 448 × 978 (3)   | 52 | 17 | **30** |
+| 411 × 846 (2.625) | 26 | 13 | **18** |
+| 540 × 1097 (2)  | 79 | 20 | **41** |
+| 360 × 640 (3)   | 19 | 13 | **14** |
+
+Fix: `prepare(list, fix, c, now, keep)` takes an optional lat/lon rectangle
+applied **before** the cap. The widget passes its own view (`bboxAround` with
+`padKm` 0 and a marker's slack); `app.html` passes nothing, because a list
+wants nearest-regardless. Kept as a rectangle rather than a callback so
+`core.js` stays DOM-free and the rule stays unit-testable.
+
+#### Cause 2 — `max` 40 was too small once the cull was right
+
+Even culled, 40 still cost 7–18 markers at wide scales. Default is now **120**
+(ceiling 400). Collision eviction, not the cap, should be what limits a map.
+
+#### Cause 3 — `bboxAround` ignored pixel density
+
+It divided by the raw `CAL` — the dpr-3 constant — while `projector` used
+`getCal()`. On a screen denser than dpr 3 the view covers more ground than the
+box, so the edges were **never fetched**. `mul` now defaults to `getCal()`.
+
+Worth recording because the first instinct was that this would destabilise
+`app.html`, whose box is a nominal widget rather than a real view. The
+opposite is true — `zoomOf()` already compensates for density, so the raw
+`CAL` was double-counting:
+
+```
+                        mul = getCal()   mul = CAL (old)
+dpr 1     step 18         137 x 252 km     331 x 676 km
+dpr 2     step 20         137 x 252 km     186 x 358 km
+dpr 2.625 step 21         130 x 237 km     143 x 265 km
+dpr 3     step 21         143 x 265 km     143 x 265 km
+```
+
+The new default is the one that holds the ground area roughly constant.
+
+#### Cause 4 — winds.mobi's `name` and `short` are the opposite way round
+
+This is why the two named stations "were missing" — they were on screen the
+whole time, under names the owner had no way to recognise:
+
+```json
+{ "_id": "pioupiou-1363", "name": "Valgioie",
+  "short": "Decollo TRUCETTI 980m",  "pv-name": "openwindmap.org" }
+{ "_id": "pioupiou-1407", "name": "Ciciu del Villar",
+  "short": "Décollo Liretta Paradeltaclub Cuneo ", "pv-name": "openwindmap.org" }
+```
+
+For **openwindmap.org — 63 of the 161 stations here, the largest single
+network in the area — `name` is a geocoded municipality and `short` is the
+name the station's owner gave it.** For `ffvl.fr`, `holfuy.com`, `slf.ch` and
+`meteoswiss.ch` the two fields are identical. `aviationweather.gov` differs
+but both forms are real names ("Cuneo International Airport" / "Cuneo/Levaldigi
+Arpt").
+
+So `normalise()` now sets `name` to the **owner's** name and carries the
+geocoded place as `place` when it differs — shown as the first item of the
+subtitle in both the popup and the list. Several records also carry trailing
+spaces and non-breaking spaces (`"Baouroux 1600m "`), squeezed on the way
+in so the two fields can be compared at all.
+
+#### The 500 cap is real and was silent
+
+`limit` is documented `max=500` and is a hard truncation with no documented
+ordering. Piedmont holds 161, but a 190 × 267 km Swiss box holds 309–356, so a
+wide scale over the densest Alps can reach it. Splitting the box into several
+calls would trade a silent failure for a breach of *"do not overload"*, so
+instead the provider reports `meta.capped` and the widget appends **BOX FULL**
+to the status line — not suppressible, like the other admissions of doubt.
+
+#### Still filtered, deliberately
+
+`last-measure = stale × 4` (2 h by default) drops 9 of 161 server-side. Those
+instruments exist but have not reported in hours; they are not shown at all
+rather than shown red. That is a choice, not an oversight — recorded here so
+it is not rediscovered as a bug.
+
+---
+
 ### 2026-08-11 — SETTLED: XCTrack's map works in DEVICE pixels, not CSS pixels
 
 **The question the last three findings kept circling is now measured, and the

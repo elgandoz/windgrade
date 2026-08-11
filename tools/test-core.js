@@ -19,7 +19,7 @@ head("config / SPEC clamping");
 var c = WG.cfg("?step=99&pad=-5&max=abc&lat=47.1&lng=8.5");
 eq("step clamped to the ladder top", c.step, 34);
 eq("pad clamped to min", c.pad, 0);
-eq("unparseable max -> default", c.max, 40);
+eq("unparseable max -> default", c.max, 120);
 eq("lat parsed", c.lat, 47.1);
 eq("default scale is 8km of ground", WG.cfg("").scale, 8000);
 eq("step is unset by default, so the scale decides", WG.cfg("").step, 0);
@@ -364,6 +364,22 @@ eq("width  = 24.6 view + 40 pad", wKm, 64.6, 0.6);
 eq("height = 53.8 view + 40 pad", hKm, 93.8, 0.6);
 eq("box contains the fix", b.s < 47.0447 && b.n > 47.0447 && b.w < 8.643 && b.e > 8.643, true);
 
+/* The box has to follow the SAME resolution the projector draws with. It used
+   to divide by the raw CAL — the dpr-3 value — so on a denser screen the view
+   covered more ground than the box did and the edges were never fetched. */
+head("fetch bbox follows pixel density, like the projector");
+WG.setDpr(1.5);
+var bLo = WG.bboxAround({ lat:47.0447, lon:8.6430 }, 11, 448, 978, 0);
+WG.setDpr(3);
+var bHi = WG.bboxAround({ lat:47.0447, lon:8.6430 }, 11, 448, 978, 0);
+eq("a denser screen shows more ground, so it fetches a wider box",
+   (bHi.e - bHi.w) > (bLo.e - bLo.w), true);
+eq("and by exactly the density ratio",
+   (bHi.e - bHi.w) / (bLo.e - bLo.w), 2, 0.001);
+eq("pad 0 gives the view rectangle itself, which is what prepare's keep wants",
+   WG.dist(47.0447, bHi.w, 47.0447, bHi.e) / 448, WG.mppXct(47.0447, 11), 0.5);
+WG.setDpr(3);
+
 head("staleness — old wind must never look current");
 var cf = WG.cfg(""), now = 1786370000000;
 eq("5 min  -> fresh", WG.staleness({ ts:now - 5 * 60000 }, cf, now).cls, "fresh");
@@ -383,6 +399,32 @@ eq("peaks=1 filters on the provider's fact",
 eq("max caps the list", WG.prepare([far, near], { lat:47.0447, lon:8.6430 }, WG.cfg("?max=1"), now).length, 1);
 eq("attribution names the networks, not just the aggregator",
    WG.attribution([far, near]).join(","), "a,b");
+
+/* The screen is a rectangle and distance is a circle. Culling to the view
+   BEFORE the cap is what stops C.max being spent on stations that can never
+   be drawn — measured at 17 of 40 wasted on a 448x978 widget at 30 km. */
+head("prepare: the view cull runs before the cap");
+var view = { s:47.0, n:47.1, w:8.6, e:8.7 };
+var east = { id:"east", name:"East", lat:47.05, lon:9.4, alt:900, avg:8, gust:12, ts:now, peak:false, provider:"c" };
+eq("a station outside the rectangle is dropped",
+   WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now, view).length, 1);
+eq("and it is the one inside that survives",
+   WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now, view)[0].id, "near");
+eq("no rectangle means no cull — the list page wants nearest regardless",
+   WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now).length, 2);
+/* The case that matters: a station that is NEARER but off the side of the
+   screen. Radial ranking hands it the only slot; the cull gives the slot to
+   the one that can actually be drawn. */
+var sideCloser = { id:"side", name:"Side", lat:47.0447, lon:8.71, alt:900, avg:8, gust:12, ts:now, peak:false, provider:"c" };
+var farInside  = { id:"deep", name:"Deep", lat:47.0980, lon:8.6430, alt:900, avg:8, gust:12, ts:now, peak:false, provider:"c" };
+eq("off-screen station really is the nearer of the two",
+   WG.dist(47.0447, 8.643, 47.0447, 8.71) < WG.dist(47.0447, 8.643, 47.098, 8.643), true);
+eq("without the cull, max=1 spends its only slot off-screen",
+   WG.prepare([sideCloser, farInside], { lat:47.0447, lon:8.6430 }, WG.cfg("?max=1"), now)[0].id, "side");
+eq("with the cull, the slot goes to the one that can be drawn",
+   WG.prepare([sideCloser, farInside], { lat:47.0447, lon:8.6430 }, WG.cfg("?max=1"), now, view)[0].id, "deep");
+eq("inBox is inclusive on the edges", WG.inBox({ lat:47.0, lon:8.6 }, view), true);
+eq("inBox rejects outside", WG.inBox({ lat:46.9, lon:8.6 }, view), false);
 
 head("provider: url building");
 var WM = require("../wg/windsmobi.js");
@@ -413,6 +455,29 @@ eq("unix seconds -> ms", st.ts, 1786371600000);
 eq("provider network named for attribution", st.provider, "meteoswiss.ch");
 eq("peak flag preserved", st.peak, false);
 eq("status preserved as a separate axis from age", st.status, "green");
+eq("name and short identical -> no separate place to show", st.place, "");
+
+/* The trap that made a station look absent: for openwindmap.org the API's
+   `name` is a geocoded municipality and `short` is the name the owner gave
+   it. A pilot looking for "Decollo TRUCETTI" was shown "Valgioie". */
+head("provider: the openwindmap name/short swap");
+var ow = P2.normalise([{
+  _id:"pioupiou-1363", alt:978,
+  loc:{ type:"Point", coordinates:[7.347268, 45.07645] },
+  name:"Valgioie", peak:true, "pv-name":"openwindmap.org",
+  short:"Decollo TRUCETTI 980m", status:"green",
+  last:{ _id:1786453264, "w-dir":202, "w-avg":5.5, "w-max":9.8 }
+}])[0];
+eq("the owner's name is what the pilot is shown", ow.name, "Decollo TRUCETTI 980m");
+eq("the geocoded municipality is kept alongside", ow.place, "Valgioie");
+var ws = P2.normalise([{
+  _id:"ffvl-x", loc:{ type:"Point", coordinates:[6, 45] },
+  name:"Baouroux 1600m ", short:"Baouroux  1600m ", "pv-name":"ffvl.fr"
+}])[0];
+eq("nbsp and doubled spaces squeezed", ws.name, "Baouroux 1600m");
+eq("so the two fields still compare equal and place stays empty", ws.place, "");
+eq("no name at all falls back to the id",
+   P2.normalise([{ _id:"bare", loc:{ type:"Point", coordinates:[6, 45] } }])[0].name, "bare");
 
 head("widget URL carries the XCTrack placeholders");
 WG.initConfig("");

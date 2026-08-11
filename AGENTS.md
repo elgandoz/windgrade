@@ -190,8 +190,27 @@ from the settings UI by `adv:true`, which — unlike `ui:false` — keeps it in 
 
 The overlay's furniture is opt-in and mostly off: `alt=1` puts the station
 altitude under the speed, `badge=1` shows the station count, `debug=1` adds the
-assumed scale and forces the line on. Nothing switches off `no position`,
-`OFFLINE` or `ALL STALE` — those are the display admitting it cannot be trusted.
+assumed scale, the in-view/fetched counts and forces the line on. Nothing
+switches off `no position`, `OFFLINE`, `ALL STALE` or `BOX FULL` — those are
+the display admitting it cannot be trusted.
+
+**How many markers get drawn is decided in three places, and two of them used
+to be wrong.** `prepare()` culls to a lat/lon rectangle *before* it applies
+`max`, because distance ranking is a circle and a widget is a tall rectangle —
+without the cull, 17 of 40 slots went to stations off the sides that could
+never be drawn. The widget passes its own view; `app.html` passes nothing,
+since a list wants nearest-regardless. `max` defaults to **120**, not 40: what
+should limit a map is collision eviction, which knows about pixels. And
+`bboxAround`'s `mul` defaults to `getCal()` — the same resolution the
+projector draws with — never the raw `CAL`. See `docs/findings.md` 2026-08-11.
+
+**winds.mobi's `name` and `short` are the opposite way round from what they
+sound like.** For openwindmap.org, `name` is a geocoded municipality and
+`short` is the name the station's owner gave it — "Decollo TRUCETTI 980m" is
+filed under "Valgioie". `normalise()` swaps them and keeps the municipality as
+`place`. Do not "fix" this back. The API also truncates at `limit=500` with no
+documented ordering; that is reported as `meta.capped`, never papered over,
+and splitting the box into more calls would breach *"do not overload"*.
 
 Testing without a position: append `?lat=47.05&lng=8.64`. Any parameter in `SPEC`
 works the same way, e.g. `?scale=15000&peaks=1&stale=45` — or just use the

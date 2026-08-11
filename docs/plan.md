@@ -636,6 +636,54 @@ Checked over snow, grass, rock and dark rock with an airspace line and a river
 crossing the markers, at sizes 0 and 100: the smaller text is where legibility
 over an arbitrary basemap fails first.
 
+## Phase 3g — coverage: the map was showing half of what it had (2026-08-11)
+
+Reported from Piedmont: `?scale=25000&lat=44.88&lng=7.33` drew 15 markers and
+appeared to omit sites the owner knows. Full probe in `docs/findings.md`; the
+short version is that the fetch was fine — 125 stations arrived — and four
+things downstream of it were not.
+
+**The cull now runs before the cap.** `prepare()` takes an optional lat/lon
+rectangle. Distance ranking is a circle and a widget is a tall rectangle, so
+17 of `max`'s 40 slots were being spent on stations off the sides. The widget
+passes its view; `app.html` passes nothing, because a list genuinely does want
+the nearest regardless of any view. A rectangle rather than a predicate, so
+`core.js` stays DOM-free and the behaviour is testable — six assertions,
+including the discriminating one: a station that is *nearer* but off-screen
+must lose its slot to a farther one that can be drawn.
+
+**`max` 40 → 120** (ceiling 200 → 400). What limits a map should be collision
+eviction, which knows about pixels, not a cap that does not.
+
+Measured on the same 125 records: 17 → 30 markers at 448 × 978, 20 → 41 at
+540 × 1097.
+
+**`bboxAround` follows `getCal()`, not the raw `CAL`.** The projector already
+did. The two disagreeing meant that on a screen denser than the dpr-3
+reference, the view covered more ground than the box and the edges were never
+fetched at all. Counter-intuitively this also *stabilises* `app.html`, whose
+box is a nominal widget: `zoomOf()` already compensates for density, so the
+raw `CAL` was double-counting and gave a 331 × 676 km box at dpr 1 against
+143 × 265 at dpr 3.
+
+**The station name shown is now the owner's, not the geocoder's.** For
+openwindmap.org — the largest network in that area — winds.mobi's `name` is a
+municipality and `short` is what the site is actually called. "Decollo
+TRUCETTI" was on screen all along, labelled "Valgioie". `normalise()` swaps
+them and keeps the municipality as `place`, shown first in the subtitle: it is
+still the word a pilot who does *not* know the area can place on a map, so it
+earns its space, just not the headline.
+
+**`BOX FULL`.** The API truncates at 500 with no documented ordering. A
+Piedmont box holds 161 but a Swiss one 309–356, so a wide scale over the dense
+Alps can hit it. `meta.capped` is reported and the status line says so
+whatever `badge` is set to — a map that is missing stations it never heard
+about is exactly the class of thing that must announce itself.
+
+**Left alone, deliberately:** `is-highest-duplicates-rating=true` (all 30 of
+its drops in the sample were either 0–30 m co-locations or a twin hours out of
+date) and the `stale × 4` server-side age filter.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

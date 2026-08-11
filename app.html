@@ -186,7 +186,10 @@ function paintRow(r, st){
     c.nm = nm;
   }
 
-  var head = (isFinite(st.alt) ? Math.round(st.alt) + " m · " : "") +
+  /* The geocoded municipality first when it differs from the owner's name —
+     the one word a pilot who does not know the site can place on a map. */
+  var head = (st.place ? st.place + " · " : "") +
+             (isFinite(st.alt) ? Math.round(st.alt) + " m · " : "") +
              (Math.round(st.dist / 100) / 10) + " km " + compass(st.brg) + " · ";
   var sk = head + "|" + st.stale.cls + "|" + Math.round(st.stale.age) + "|" + st.status;
   if (c.sub !== sk){
@@ -259,7 +262,10 @@ function refresh(fix){
     else {
       lastErr = ""; paintErr();
       stations = list; lastFetch = Date.now();
-      meta1 = (meta.bytes / 1024).toFixed(1) + " KB · " + meta.ms + " ms";
+      meta1 = (meta.bytes / 1024).toFixed(1) + " KB · " + meta.ms + " ms" +
+              /* The API truncates at 500 with no documented ordering, so a
+                 full answer means stations exist that we never received. */
+              (meta.capped ? " · TRUNCATED at " + meta.count : "");
     }
     tick();
   });
