@@ -4,6 +4,86 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — "missing" stations in Zermatt: decluttering, not the fetch
+
+Reported: `widget.html?scale=3000&alt=1&lat=46.0207&lng=7.7491` appears to omit
+*ZFC: Schwarzsee*, *Gornergrat*, *Zermatt* and *Platthorn*, all of which the
+list page shows at the same position. **Nothing is wrong with the fetch.** All
+twelve stations arrive, all twelve are inside the view, and the overlay evicts
+some of them on purpose.
+
+#### The stations, and the view they have to fit in
+
+```
+  0.64 km  brg   4   ZFC: Landing        2600 m
+  0.99 km  brg  15   Zermatt             1648 m
+  2.56 km  brg  96   ZFC: Blauherd       2500 m
+  2.92 km  brg 325   Triftchumme         2752 m
+  3.28 km  brg 183   ZFC: Riffelberg     1620 m
+  3.80 km  brg 345   Platthorn           3345 m
+  3.91 km  brg  90   ZFC: Rothorn South  3040 m
+  4.41 km  brg 235   Stafelalp           2408 m
+  4.43 km  brg 221   ZFC: Schwarzsee     2576 m
+  4.59 km  brg 144   Gornergratsee       2953 m
+  5.01 km  brg 145   Gornergrat          3139 m
+  9.82 km  brg 188   ZFC: Kl. Matterhorn 3800 m
+```
+
+`scale=3000` resolves to step 27–28 depending on density, so **~20–25 m per css
+pixel**. A 411 × 846 widget is then about 10 × 21 km of ground — every one of
+those twelve is on screen.
+
+#### What actually drops them
+
+`draw()` evicts a whole marker when it would overlap one already placed,
+nearest first. The exclusion zone is **29 px horizontally and 49 px
+vertically** (`box*1.5` and `box*1.9 + altSize`), against a drawn footprint of
+roughly 39 px across and 61 px tall with the altitude line on — so the zone is
+if anything *smaller* than the marker. The colliding pairs:
+
+| kept | dropped | apart | at 25 m/px |
+|---|---|---|---|
+| ZFC: Landing (0.64 km) | **Zermatt** (0.99 km) | 387 m | 16 px |
+| Gornergratsee (4.59 km) | **Gornergrat** (5.01 km) | 434 m | 18 px |
+| Stafelalp (4.41 km) | **ZFC: Schwarzsee** (4.43 km) | 1041 m | 42 px |
+| Triftchumme (2.92 km) | **Platthorn** (3.80 km) | 1452 m | 59 px |
+
+Every one is closer than a single marker is wide. Which of the four disappear
+depends on pixel density and widget size — measured 10 of 12 drawn at dpr 3 on
+448 × 978, 9 of 12 at dpr 2.625 on 411 × 846, 9 of 13 at dpr 2 on 540 × 1097.
+
+**Zooming in does not always separate them.** Both axes must clear, and the
+vertical requirement is the larger one at 49 px. Zermatt and ZFC: Landing are
+387 m apart on a bearing that is mostly north, so on a north-up screen their
+separation is mostly vertical: they still collide at `scale=1500` (dy 26) and at
+`scale=1000` (dy 37), and only separate below about `scale=700`. **In a valley
+running north–south, the overlay declutters hardest along the valley** — which
+is the axis the stations are strung out on. Worth knowing before reading a gap
+as an absence.
+
+#### The real defect was the count
+
+`is-highest-duplicates-rating` is not involved: these are 400 m to 1.5 km apart,
+not co-located. `max` is not involved either — 12 is far under 120.
+
+The badge said **"9 stations"**, which claims the map is showing everything it
+has. It is not. It now says **"9 of 12 stations"** whenever decluttering dropped
+anything, and a bare count means nothing was hidden. That is the difference
+between "zoom in" and "the data is broken", and the second reading is what sent
+the owner looking for a fetch bug.
+
+The list page has no geometry and therefore never hides anything for overlap,
+which is exactly why a station absent from the overlay appears there. That
+asymmetry is by design and is now visible on screen rather than discovered.
+
+**Not changed, deliberately:** the eviction rule itself. Keeping both markers by
+nudging one would break the only thing the overlay is for — an arrow sitting on
+the terrain it was measured at. Choosing a "more useful" winner instead of the
+nearest would be an inference about which reading matters, which this tool does
+not make.
+
+---
+
 ### 2026-08-11 — the widget was drawing half the stations it had, and hiding the names pilots know
 
 Reported from the air over Piedmont, an area the owner knows well:

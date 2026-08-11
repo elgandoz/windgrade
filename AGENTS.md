@@ -248,6 +248,19 @@ which knows about pixels. And `bboxAround`'s `mul` defaults to `getCal()` — th
 same resolution the projector draws with — never the raw `CAL`. See
 `docs/findings.md` 2026-08-11.
 
+**A station missing from the overlay but present in the list is usually
+DECLUTTERING, not the fetch.** `draw()` evicts a whole marker that would overlap
+one already placed, nearest kept, with a 29 x 49 px exclusion zone — smaller
+than the marker's own footprint. In Zermatt at `scale=3000` that removes
+Zermatt, Gornergrat, Schwarzsee and Platthorn, whose partners are 390 m to
+1450 m away: 16 to 59 px at that resolution. **Zooming in does not always fix
+it** — both axes must clear and the vertical requirement is the larger, so in a
+north-south valley the overlay declutters hardest along the valley. The badge
+therefore reads **"9 of 12 stations"** whenever anything was dropped; a bare
+count means nothing was hidden. Do not remove that, and do not "fix" the
+eviction by nudging markers — an arrow that is not on its own terrain defeats
+the whole tool. Full numbers in `docs/findings.md` 2026-08-11.
+
 **The two pages fetch different SHAPES, and that is deliberate.** The overlay
 has a viewport, so it uses `scale` + `pad` and a view rectangle. **The list has
 no map, so it has no scale** — it uses `range`, a radius in km, via

@@ -379,7 +379,17 @@ function paintBadge(fix, shown, nStale){
     bad = !!fetchErr;
   } else {
     fetchAge = Math.round((Date.now() - lastFetch) / 60000);
-    s = shown + (shown === 1 ? " station" : " stations");
+    /* "9 of 12" whenever decluttering dropped something, never a bare "9".
+       A bare count implies the map is showing everything it has, and it is
+       not: markers that would overlap are evicted whole, nearest kept. In
+       Zermatt at scale 3000 that silently removed Zermatt, Gornergrat and
+       Schwarzsee — pairs 390 m to 1050 m apart, which is 16 to 42 px at that
+       resolution against a marker needing 29 x 49 px of clearance. The owner
+       reasonably read the absence as a fetch bug and went looking for one.
+       The number now says there is more, so the answer is "zoom in", not
+       "the data is broken". */
+    s = shown + (nRanked > shown ? " of " + nRanked : "") +
+        (nRanked === 1 ? " station" : " stations");
     /* All-stale replaces the count of stale ones rather than adding to it:
        "12 stations (12 stale)" states the same fact twice and buries it. */
     if (shown && nStale === shown){ s += "  ALL STALE"; bad = true; }
