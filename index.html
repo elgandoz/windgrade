@@ -47,7 +47,7 @@ ol b{color:var(--fg)}
 .warn{margin:20px 0 0;padding:10px 12px;background:var(--amber-bg);
   border:1px solid var(--amber-line);border-radius:3px;color:var(--amber);
   font-size:.82em;line-height:1.45}
-.warn b{color:#F6D9A8}
+.warn b{color:var(--amber-str)}
 .tools{display:flex;flex-wrap:wrap;gap:8px}
 .tools a{display:block;padding:9px 11px;background:var(--panel);border:1px solid var(--rule);
   border-radius:3px;text-decoration:none;color:var(--fg);font-size:.82em}
@@ -99,90 +99,85 @@ a{color:var(--chart)}
   </div>
 
   <h2>Add it to XCTrack</h2>
+  <!-- Every step here is a measured XCTrack behaviour, not a preference. The
+       reasons, in order: refresh rate 0 because ${lat}/${lng} substitution
+       makes XCTrack reload the whole page on that interval and throw away
+       everything drawn; tapping OFF because the widget then swallows every
+       tap over its rectangle, including ones meant for controls underneath
+       (tools/tap.html, docs/findings.md). Keep the list short — a pilot
+       setting this up on a phone will not read paragraphs. -->
   <ol>
     <li>Add an <b>XC map</b> widget. Set its <b>scale</b> to the same value as
-      <b>Map scale</b> above — the list is XCTrack's own — and its rotation to
-      <b>North-up</b>.</li>
+      <b>Map scale</b> above, and its rotation to <b>North-up</b>.</li>
     <li>Add a <b>Web page</b> widget <b>over the same area</b>, on top, and paste
       the URL.</li>
     <li>Turn on <b>Allow web page to access XCTrack data</b> — this is what gives
-      it your position once the GPS has a fix.</li>
-    <li>Set <b>refresh rate to 0</b>. Anything else makes XCTrack reload the page
-      every minute or two and throw away everything it has drawn.</li>
-    <li>Leave <b>Allow tapping on the web page when locked</b> <b>OFF</b>. The
-      overlay has nothing to tap, and with it on the widget swallows every tap
-      over its area — including the ones meant for your own zoom buttons
-      underneath. Measured; see <code>docs/findings.md</code>.</li>
+      it your position.</li>
+    <li>Set <b>refresh rate to 0</b>, or XCTrack reloads the page every minute or
+      two and throws away everything it has drawn.</li>
+    <li>Leave <b>Allow tapping on the web page when locked</b> <b>OFF</b>, unless
+      you want the interactive features below. With it on, the widget swallows
+      every tap over its area — including taps meant for controls underneath.</li>
     <li>Turn on <b>Disable unlocking</b> so a stray swipe doesn't rearrange the
       page.</li>
   </ol>
 
+  <!-- WHY a ground scale rather than a zoom step: XCTrack's map resolution is
+       fixed in DEVICE pixels, so one ladder step is 8km on a dpr-3 phone and
+       6km on a Pixel 9a. A launcher on a laptop cannot know which step to
+       name; the overlay resolves the scale on the device. Measured with
+       tools/ruler.html — docs/findings.md 2026-08-11. -->
   <p class="note">
-    <b>The two scales must match.</b> You pick a <b>ground scale</b> here, not a
-    zoom step, because a step is not a scale: XCTrack draws its map in device
-    pixels, so the same step is 8km on one phone and 6km on another. The overlay
-    resolves your scale into the right step on <em>your</em> screen and prints
-    what it landed on, so set XCTrack's XC map to that same reading. If your
-    phone's ladder has no such scale, the overlay takes the nearest and its
-    corner label tells you which. A mismatch then shows up as two labels
-    disagreeing, rather than as arrows quietly sitting on the wrong ridge.
+    <b>The two scales must match.</b> The overlay draws its own scale bar just
+    above XCTrack's. <b>Same length means they match</b> — you never have to read
+    either number. If your phone has no such scale the overlay takes the nearest
+    and its bar says which.
   </p>
 
+  <!-- getLocation() returns nothing at all until the GPS has a fix, which is
+       exactly when a pilot is standing at launch looking at the widget. The
+       placeholders are XCTrack's last known position and cover that gap. An
+       unsubstituted "${lat}" arrives as a literal and is ignored, not parsed. -->
   <p class="note">
     <b>Keep the <code>?lat=${lat}&amp;lng=${lng}</code> on the end of the URL.</b>
-    XCTrack fills those in with its last known position even before the GPS has a
-    fix — which is the one moment <code>getLocation()</code> returns nothing at
-    all. Without them the overlay stays blank on the ground until a lock; with
-    them it draws immediately, from the same position XCTrack's own map is using.
-    They are only a starting point: once there is a fix, the live position takes
-    over.
+    XCTrack fills those in with its last known position, so the overlay draws
+    straight away instead of waiting for a GPS fix. Once there is a fix, the live
+    position takes over.
   </p>
 
   <h2>Interactive mode (optional)</h2>
   <p class="note">
-    Under <b>Advanced settings → Tapping and zoom</b>. Leave these at zero for
-    normal use. They all need <b>Allow tapping on the web page when locked</b>
-    turned <b>ON</b> — and with that on, the overlay swallows every tap over its
-    area, so <b>your own zoom buttons must be moved outside the widget
-    rectangle</b> or they stop working. Measured, not assumed.
+    Under <b>Advanced settings → Tapping and zoom</b>. Leave these off for normal
+    use. They all need <b>Allow tapping on the web page when locked</b> turned
+    <b>ON</b> — and with that on, <b>your own zoom buttons must be moved outside
+    the widget rectangle</b> or they stop working.
   </p>
   <ol>
-    <li><b>Popup timeout</b> — tap a marker for its recent trend: the last few
-      hours of readings as small arrows, oldest left. Tap anywhere to dismiss, or
-      let it time out. <code>0</code> keeps it open until dismissed.</li>
-    <li><b>Trend length</b> — how far back the popup reaches.</li>
-    <li><b>Visible zoom buttons</b> — a small <code>+</code>/<code>−</code> pair.
-      <b>Zoom button position</b> puts them in any corner or against any edge, and
-      <b>side by side</b> lays them horizontally instead of stacked — which leaves
-      room to park a second pair for XCTrack's own map zoom beside them. Avoid
-      bottom-left (the scale bar) and top-left (the status line).</li>
-    <li><b>Tap zones to change scale</b> — the top and bottom halves of the widget
-      become invisible zoom controls. Combines with the buttons. A tap on a marker
-      always opens its popup first, so the two never fight.</li>
+    <li><b>Popup timeout</b> — tap a marker for its last few hours, as small
+      arrows, oldest left. Tap anywhere to dismiss.</li>
+    <li><b>Show zoom buttons</b> — a <code>+</code>/<code>−</code> pair for the
+      overlay's own scale, placeable on any edge or corner.</li>
+    <li><b>Tap the screen to change scale</b> — the top and bottom halves become
+      invisible zoom controls. A tap on a marker opens its popup first, so the
+      two never fight.</li>
   </ol>
   <p class="note">
     Changing the overlay's scale does <b>not</b> change the map — nothing in
-    XCTrack's interface lets a web widget do that. So the widget says so at the
-    bottom until you set the map yourself, and the two scale bars are how you
-    confirm you got it right: <b>same length means correctly paired.</b>
-  </p>
-  <p class="note">
-    <b>Advanced settings → Scale bar → Scale bar height</b> nudges our bar up or
-    down so it sits just above
-    XCTrack's own. Our end ticks point <b>down</b> and XCTrack's point up, so the
-    two close on each other like facing brackets — when the ends line up
-    vertically, the scales match, and you never have to read either number. The
-    right height depends on your screen: set it once and forget it.
+    XCTrack lets a web widget do that. The overlay says so at the bottom until
+    you set the map yourself.
   </p>
 
+  <!-- The colour scale's middle - green/yellow/orange/red - is a hue-only
+       cluster, invisible to a significant fraction of male pilots, and yellow
+       is lighter than green so there is no luminance ramp to fall back on
+       either. The printed number is the fallback, which is why it stays
+       visible at every marker size. See AGENTS.md. -->
   <p class="warn">
-    <b>The colours are not a safety verdict.</b> They are a rough aid on a
-    supplied scale, not an assessment of whether a flight is safe. Everything
-    shown is measured — station altitude, speed, gust, direction — with no
-    interpolation between stations and no lee-side inference, because Alpine
-    terrain makes such guesses unreliable and a confident wrong answer is worse
-    than none. <b>Readings cannot work offline.</b> Anything marked stale is old
-    and must be treated as unknown.
+    <b>The colours are not a safety verdict.</b> They are a rough aid, not an
+    assessment of whether a flight is safe. Everything shown is measured —
+    altitude, speed, gust, direction — with no interpolation between stations and
+    no lee-side guesses. <b>Readings cannot work offline.</b> Anything marked
+    stale is old and must be treated as unknown.
   </p>
 
   <h2>Tools</h2>

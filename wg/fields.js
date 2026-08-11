@@ -63,7 +63,13 @@ function buildRow(sp, onInput) {
 
        The union across densities, not this device's ladder: built from one
        device the list omitted 6km entirely, which a Pixel 9a does print, so
-       that pilot could not choose what their own screen was showing. */
+       that pilot could not choose what their own screen was showing.
+
+       Capped at WG.SCALE_OFFER_MAX. Wider than that and the provider's 500
+       station limit turns the display into a thin arbitrary sample of half a
+       continent — measured, see scaleOptions() in core.js. A URL may still
+       ask for anything, which is what addExtra() below is for: a value with
+       no option would leave the select EMPTY, and that bug shipped once. */
     input = document.createElement("select");
     var opts = WG.scaleOptions(null), n;
     for (n = 0; n < opts.length; n++) {
@@ -92,25 +98,29 @@ function buildRow(sp, onInput) {
   input.id = "f_" + sp.k;
   row.appendChild(input);
 
-  /* The zoom row carries the XCTrack scale it pairs with, live, because the
-     whole point of the configurator is producing a widget that matches the
-     map underneath it. */
-  var pair = null;
-  if (sp.k === "scale") {
-    pair = document.createElement("b");
-    pair.className = "pair";
-    row.appendChild(pair);
+  /* A scale that arrived by URL and is not in the offered list still has to
+     select. Without this the control renders blank, which reads as broken —
+     and did, once, for a different reason. Marked so it is clear the value
+     came from outside the recommended range rather than being a normal
+     choice; picking anything else drops it. */
+  function addExtra(v) {
+    var x = document.createElement("option");
+    x.value = v;
+    x.textContent = WG.fmtScale(v) + " (from the URL)";
+    input.insertBefore(x, input.firstChild);
+    return x;
   }
+  var extra = null;
 
   function load() {
     var v = WG.getConfig()[sp.k];
-    if (isBool) input.checked = !!v; else input.value = v;
-    /* Approximate on purpose. The step this scale becomes depends on the
-       pilot's pixel density, which the launcher cannot know, so an exact-looking
-       "=" here would be the same false precision the scale list just stopped
-       claiming. */
-    if (pair) pair.textContent =
-      "≈ z" + WG.zoomForStep(WG.stepForScale(v, null)).toFixed(1);
+    if (isBool) { input.checked = !!v; return; }
+    input.value = v;
+    if (isLadder && input.value != v) {          /* nothing matched */
+      if (extra) input.removeChild(extra);
+      extra = addExtra(v);
+      input.value = v;
+    }
   }
 
   input.addEventListener("change", function () {

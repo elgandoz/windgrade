@@ -184,15 +184,40 @@ function stepForScale(metres, lat) {
    plausibly has, and let resolveStep sort out the rest on the device.
 
    Union, not a hand-written list of nice numbers: this stays bounded by what
-   the ladder can actually produce, so it cannot drift from the ladder. */
-var DPR_SPAN = [1.5, 1.75, 2, 2.25, 2.5, 2.625, 2.75, 3, 3.25, 3.5, 4];
+   the ladder can actually produce, so it cannot drift from the ladder.
 
-function scaleOptions(lat) {
+   BUT NOT ALL THE WAY UP. The full union runs to 1000 km, and past about
+   40 km the display stops being complete — winds.mobi caps a query at 500
+   stations, and the fetch box grows with the square of the scale. Measured
+   2026-08-11 over Interlaken, the densest area we serve:
+
+       scale   fetch box        returned   payload
+        8km     65 x   94 km       98       24.0 KB
+       15km     90 x  148 km      183       44.6 KB
+       30km    139 x  256 km      351       85.7 KB
+       40km    180 x  346 km      503      123.2 KB   <-- at the cap
+       50km    238 x  473 km      389       95.8 KB   <-- FEWER, from a bigger box
+      100km    437 x  906 km      265       66.1 KB
+      800km   2284 x 4939 km      478      121.3 KB
+
+   Past the cap a wider scale does not show more, it shows an arbitrary
+   thinner sample spread over half a continent — with almost nothing left
+   where the pilot is actually flying. That is a correctness problem before
+   it is a performance one, so 30 km is the widest the launcher OFFERS.
+
+   `scale` itself is unbounded to its SPEC limits: a URL may still ask for
+   anything, and the widget says BOX FULL when the answer came back
+   truncated. The list is a recommendation, not a restriction. */
+var DPR_SPAN = [1.5, 1.75, 2, 2.25, 2.5, 2.625, 2.75, 3, 3.25, 3.5, 4];
+var SCALE_OFFER_MAX = 30000;
+
+function scaleOptions(lat, maxMetres) {
   var seen = {}, out = [], i, v, m;
+  var cap = (maxMetres > 0) ? maxMetres : SCALE_OFFER_MAX;
   for (i = 0; i < DPR_SPAN.length; i++) {
     for (v = XCT_STEP_MIN; v <= XCT_STEP_MAX; v++) {
       m = scaleMetresAtDpr(v, lat, DPR_SPAN[i]);
-      if (m && !seen[m]) { seen[m] = 1; out.push(m); }
+      if (m && m <= cap && !seen[m]) { seen[m] = 1; out.push(m); }
     }
   }
   out.sort(function (a, b) { return b - a; });
@@ -238,103 +263,125 @@ var SPEC = [
   { k:"lng",   t:"num", d:null, ui:false,
     lab:"Longitude", help:"Overrides the position chain. XCTrack substitutes ${lng}." },
 
-  /* ── shown up front: no `grp` ─────────────────────────────────────── */
+  /* ── shown up front: no `grp` ───────────────────────────────────────
+     `help` IS THE PILOT'S TEXT, not ours. One or two short sentences, read
+     one-handed on a phone. Everything that explains *why* belongs in a
+     comment here or in docs/, where the next developer will look and the
+     pilot will not. */
+
+  /* The pilot picks a ground scale because a ladder step is not a scale —
+     the same step is 8km on one phone and 6km on another, so a launcher
+     running on a laptop cannot know which step to name. resolveStep() does
+     it on the device, at the real density and latitude; if that scale has
+     no step at all, it lands on the nearest and the overlay's bar says so.
+     See docs/findings.md 2026-08-11 and stepForScale() above. */
   { k:"scale", t:"scale", d:8000, min:100, max:2000000,
     lab:"Map scale",
-    help:"The ground scale you want, not a zoom number — the overlay picks the " +
-         "matching step on YOUR screen, since the same step is a different " +
-         "scale at a different pixel density. Set XCTrack's XC map to the same " +
-         "reading. If your phone has no such step the overlay takes the " +
-         "nearest and its own bar says what it really is." },
+    help:"Set XCTrack's XC map to the same value." },
+
   { k:"alt",   t:"int", d:0, min:0, max:1, only:"widget",
     lab:"Show station altitude",
-    help:"A second line under the speed. Whether a reading came from a valley " +
-         "floor or a ridge is the thing a station name cannot tell you — but it " +
-         "is one more number per marker, so it is off until you want it." },
+    help:"Adds each station's height under its speed." },
 
   /* ── behind Advanced, by group ────────────────────────────────────── */
+
+  /* `peaks` filters on the network's own flag — never a guess of ours. */
   { k:"peaks", t:"int", d:0, min:0, max:1, grp:"Which stations",
     lab:"Summits only",
-    help:"Provider-supplied fact, not a guess." },
+    help:"Hides everything the network does not mark as being on a summit." },
+  /* Applied AFTER the view cull in prepare(), so on a map it caps what could
+     be drawn rather than what happens to fall inside a radius. It was 40,
+     which cost half the drawable markers at wide scales — findings 2026-08-11. */
   { k:"max",   t:"int", d:120, min:1, max:400, grp:"Which stations",
-    lab:"Max stations",
-    help:"Cap AFTER the view cull, so on a map it limits what could be drawn, " +
-         "not what happens to be within a radius. 40 was cutting half the " +
-         "drawable markers at wide scales." },
+    lab:"Most stations at once",
+    help:"An upper limit on how many markers are considered. Overlapping ones " +
+         "are dropped as well." },
+  /* A cache radius, not a display radius: 20 km buys ~30 min of flight at
+     40 km/h, so movement never forces a refetch faster than the data
+     cadence does. */
   { k:"pad",   t:"int", d:20, min:0, max:60, grp:"Which stations",
-    lab:"Fetch margin (km)",
-    help:"Area fetched beyond the view. A cache radius, not a display radius." },
+    lab:"Extra area fetched (km)",
+    help:"Downloads a little beyond the screen, so flying on does not mean " +
+         "waiting for a new download." },
 
   { k:"warn",  t:"int", d:15, min:1, max:120, grp:"How old is too old",
-    lab:"Warn after (min)" },
+    lab:"Amber after (min)",
+    help:"A reading this old is still shown, but marked." },
   { k:"stale", t:"int", d:30, min:5, max:180, grp:"How old is too old",
-    lab:"Stale after (min)",
-    help:"Older readings go visibly red. Never silently shown as current." },
+    lab:"Red after (min)",
+    help:"Treat anything red as unknown, not as calm." },
+  /* Rule 3 of winds.mobi's terms is "do not overload"; the data itself only
+     moves on a ~10 min cadence, so a faster poll costs battery for nothing. */
   { k:"poll",  t:"int", d:600, min:300, max:3600, grp:"How old is too old",
-    lab:"Fetch interval (s)",
-    help:"Readings update about every 10 min. Do not poll faster." },
+    lab:"Download every (s)",
+    help:"Stations report about every 10 minutes. Faster costs battery and " +
+         "gets you the same numbers." },
 
   { k:"bar",   t:"int", d:1, min:0, max:1, only:"widget", grp:"Scale bar",
     lab:"Show scale bar",
-    help:"Draws our scale bar above XCTrack's own. Equal lengths = correctly paired." },
+    help:"Sits above XCTrack's own bar. Same length means the two maps match." },
+  /* Ours has its ticks pointing DOWN and XCTrack's point up, so the two close
+     on each other like facing brackets and the ends line up in one glance. */
   { k:"barY",  t:"int", d:46, min:0, max:200, only:"widget", grp:"Scale bar",
     lab:"Scale bar height (px)",
-    help:"Distance from the bottom. Tune so it sits just above XCTrack's own bar — " +
-         "the closer the two are, the easier they are to compare." },
+    help:"Moves our bar up or down. Set it once so it sits just above " +
+         "XCTrack's, then leave it." },
 
+  /* The exceptions are not negotiable: no position, OFFLINE, ALL STALE and
+     BOX FULL are the display admitting it cannot be trusted, and no display
+     setting may switch those off. `badge=0` was once inert — see plan.md 3f. */
   { k:"badge", t:"int", d:0, min:0, max:1, only:"widget", grp:"Status line",
-    lab:"Show status line",
-    help:"How many stations are drawn, and how many are stale. Off by default — " +
-         "it costs screen the map wants. Leaving it off hides the routine count " +
-         "ONLY: no position, OFFLINE, ALL STALE and BOX FULL appear either way, " +
-         "because those are the display admitting it cannot be trusted." },
+    lab:"Show station count",
+    help:"A line at the top: how many stations are drawn and how many are old. " +
+         "Warnings still appear when this is off." },
   { k:"debug", t:"int", d:0, min:0, max:1, only:"widget", grp:"Status line",
-    lab:"Debug in the status line",
-    help:"Adds the assumed scale, the heading and the in-view/fetched counts, and " +
-         "shows the status line whether or not it is switched on above. The scale " +
-         "bar already shows the scale against XCTrack's own, which is the " +
-         "comparison that matters, and north-up is required setup rather than " +
-         "news — hence off." },
+    lab:"Extra detail in that line",
+    help:"Adds the scale the overlay assumed and how many stations it received. " +
+         "For reporting a problem." },
 
   { k:"popup", t:"int", d:30, min:0, max:300, only:"widget", grp:"Tapping and zoom",
     lab:"Popup timeout (s)",
-    help:"Tap a marker for its recent trend. 0 keeps it open until dismissed." },
+    help:"Tap a marker to see its last few hours. 0 keeps it open until you " +
+         "tap again." },
   { k:"hours", t:"int", d:3, min:1, max:12, only:"widget", grp:"Tapping and zoom",
-    lab:"Trend length (h)" },
+    lab:"Trend length (h)",
+    help:"How far back that popup goes." },
   { k:"zbtn",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
-    lab:"Visible zoom buttons",
-    help:"A dedicated +/- pair. Can be combined with the invisible halves." },
+    lab:"Show zoom buttons",
+    help:"A + and − pair for the overlay's own scale." },
   { k:"zpos",  t:"enum", only:"widget", d:"bottom-right", grp:"Tapping and zoom",
     opts:["bottom-right", "bottom-left", "top-right", "top-left",
           "top-centre", "bottom-centre", "left-centre", "right-centre"],
-    lab:"Zoom button position",
-    help:"Bottom-left overlaps the scale bar and top-left the badge — pick a " +
-         "corner you are not already using." },
+    lab:"Where the buttons sit",
+    help:"Avoid bottom-left and top-left — the scale bar and the status line " +
+         "are already there." },
   { k:"zrow",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
-    lab:"Zoom buttons side by side",
-    help:"Lays the pair horizontally instead of stacked, so a second pair for " +
-         "XCTrack's own map can sit beside them." },
+    lab:"Buttons side by side",
+    help:"Horizontal instead of stacked, leaving room for XCTrack's own pair " +
+         "beside them." },
   { k:"ztap",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Tapping and zoom",
-    lab:"Tap zones to change scale",
-    help:"Needs XCTrack's zoom buttons moved OUTSIDE the widget, and the map " +
-         "re-zoomed by hand to match. Off for normal use." },
+    lab:"Tap the screen to change scale",
+    help:"The top and bottom halves become invisible zoom controls. Off for " +
+         "normal use." },
 
   { k:"size",  t:"int", d:50, min:0, max:100, grp:"Text and colour",
-    lab:"Size", help:"Scales text on the pages and markers in the overlay." },
+    lab:"Size", help:"Text on the pages, markers on the overlay." },
   { k:"theme", t:"enum", opts:["auto", "dark", "light"], d:"auto", grp:"Text and colour",
     lab:"Theme", help:"Auto follows your phone." },
 
+  /* XCTrack draws its map in DEVICE pixels, so the ground scale of every step
+     depends on density. The overlay reads its own and is always right; this
+     exists only so a laptop can preview a phone's scale. probe.html and
+     tools/ruler.html print the number. NEVER a per-device setting. */
   { k:"dpr",   t:"num", d:0, min:0, max:6, grp:"Calibration — you should not need these",
     lab:"Pixel density override",
-    help:"0 = use this device's own. XCTrack draws its map in DEVICE pixels, so " +
-         "the ground scale of every step depends on density; the overlay reads " +
-         "its own and is always right. Set a number only to preview another " +
-         "phone's scale from here — probe.html and tools/ruler.html print it." },
+    help:"Leave at 0. Only for previewing another phone's scale from this one." },
+  /* Residual override on top of the computed correction. If this ever needs
+     to move on a real device, that is a finding — re-run tools/ruler.html. */
   { k:"cal",   t:"num", d:1, min:0.5, max:2, only:"widget",
     grp:"Calibration — you should not need these",
     lab:"Scale correction",
-    help:"Leave at 1. Pixel density is already corrected for automatically; this " +
-         "is only for a residual the automatic correction does not cover." },
+    help:"Leave at 1. A last-resort nudge if the two scale bars still disagree." },
 
   /* No row anywhere, but kept in URLs and in storage — which is what
      separates `hidden` from `ui:false`, and it is NOT the same thing as the
@@ -868,6 +915,7 @@ return {
   scaleMetres: scaleMetres, scaleLabel: scaleLabel, fmtScale: fmtScale,
   stepForScale: stepForScale, resolveStep: resolveStep,
   scaleOptions: scaleOptions, scaleMetresAtDpr: scaleMetresAtDpr,
+  SCALE_OFFER_MAX: SCALE_OFFER_MAX,
   XCT_STEP_MIN: XCT_STEP_MIN, XCT_STEP_MAX: XCT_STEP_MAX,
   zoomForStep: zoomForStep, stepForZoom: stepForZoom,
   zoomOf: zoomOf,

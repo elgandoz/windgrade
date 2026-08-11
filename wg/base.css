@@ -25,6 +25,11 @@
   --dim:#5C7180;
   --chart:#1E6FA8;
   --amber:#A96608;
+  /* Emphasis INSIDE an amber panel. It has to move with the theme: the page
+     hardcoded a dark-theme tint, which put the safety warning's bold text at
+     roughly no contrast on the light background — the emphasised words were
+     the least legible ones in the box. */
+  --amber-str:#6E4103;
   --red:#B3271C;
   --green:#22794B;
   --amber-bg:#FDF3E0;
@@ -47,6 +52,7 @@
     --dim:#7B909F;
     --chart:#54A6DC;
     --amber:#E9A33C;
+    --amber-str:#F6D9A8;
     --red:#D6483C;
     --green:#4FB477;
     --amber-bg:#241A0B;
@@ -66,6 +72,7 @@
   --dim:#7B909F;
   --chart:#54A6DC;
   --amber:#E9A33C;
+  --amber-str:#F6D9A8;
   --red:#D6483C;
   --green:#4FB477;
   --amber-bg:#241A0B;
@@ -108,9 +115,6 @@ button,summary{cursor:pointer}
    never crowd the label off a narrow phone. */
 .field select{text-align:left;width:auto;min-width:calc(92px * var(--scale));max-width:45%}
 .field input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--chart)}
-/* the live XCTrack scale beside the zoom row: the pairing is the whole point */
-.field .pair{flex:none;font:600 .78em var(--mono);color:var(--chart);
-  min-width:calc(104px * var(--scale));text-align:right}
 
 /* ── the Advanced accordion, also from wg/fields.js ─────────────────────
    Everything a pilot does not need before their first flight lives in here,

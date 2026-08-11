@@ -725,6 +725,54 @@ concerned. Now `width:auto` with a floor and a 45% cap.
 `index.html#advanced` opens the accordion, so a note or a bug report can point
 straight at a setting.
 
+## Phase 3i — the scale list stops where the data does (2026-08-11)
+
+Follow-on from 3h, owner's review: the *Map scale* description was a
+paragraph, it carried a `≈ z11.0` badge that means nothing to a pilot, and the
+select offered scales up to 1000 km.
+
+**The list now stops at 30 km.** Not for rendering cost — for correctness.
+winds.mobi caps a query at 500 stations and the fetch box grows with the
+square of the scale, so past about 40 km a wider scale does not show *more*,
+it shows an arbitrary thinner sample spread over half a continent. Measured
+over Interlaken, the densest area we serve:
+
+| scale | fetch box | returned | payload |
+|---|---|---|---|
+| 8km | 65 × 94 km | 98 | 24.0 KB |
+| 15km | 90 × 148 km | 183 | 44.6 KB |
+| 30km | 139 × 256 km | 351 | 85.7 KB |
+| 40km | 180 × 346 km | **503** | 123.2 KB |
+| 50km | 238 × 473 km | **389** | 95.8 KB |
+| 100km | 437 × 906 km | **265** | 66.1 KB |
+| 800km | 2284 × 4939 km | 478 | 121.3 KB |
+
+Fewer stations from a bigger box, from 50 km up. 39 options became 24.
+
+`scale` itself is unchanged — a URL may still ask for 200 km, and the widget
+already says `BOX FULL` when the answer came back truncated. A value outside
+the offered list gets an extra option labelled *(from the URL)* so the select
+still shows it; without that it would render **empty**, which is the exact bug
+that shipped once before and was caught by a screenshot rather than a test.
+
+**The `≈ z` badge is gone.** It was the last place the configurator still spoke
+in ladder steps, and the number was approximate by construction — the launcher
+cannot know the pilot's pixel density. Nothing depended on it.
+
+**Every `help` string rewritten.** They were written for whoever was building
+the thing: "Cap AFTER the view cull", "resolves your scale into the right step
+on YOUR screen", "provider-supplied fact, not a guess". One or two short
+sentences each now, read one-handed on a phone. The reasoning did not go away
+— it moved into comments beside each SPEC entry, into HTML comments beside the
+page prose, and into this file. The `index.html` notes were cut the same way;
+the safety warning keeps its force but lost a clause.
+
+**FOUND while screenshotting it: the safety warning's bold text was
+unreadable in light theme.** `.warn b` was hardcoded `#F6D9A8`, a dark-theme
+tint, on a `#FDF3E0` panel — so the *emphasised* words in the one box that
+says "these colours are not a safety verdict" had the least contrast in it.
+Now `--amber-str`, defined per theme like everything else. Checked in both.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

@@ -217,10 +217,22 @@ head("the launcher's scale list covers every device");
     }
   }
   WG.setDpr(3);
-  eq("nothing either measured device can print is missing from the list",
+  /* The completeness rule only binds inside the offered range. Above it the
+     omission is deliberate: past ~40 km the provider's 500-station cap turns
+     the display into a thin arbitrary sample, so the list stops at 30 km and
+     the parameter carries on working from a URL. */
+  missing = missing.filter(function (m2) { return m2 <= WG.SCALE_OFFER_MAX; });
+  eq("nothing either measured device can print, up to the offered ceiling, is missing",
      missing.join(",") || "none", "none");
   eq("descending, so the select reads coarse to fine like XCTrack's",
      opts[0] > opts[opts.length - 1], true);
+  eq("the list stops where the data stops being complete",
+     opts[0] <= WG.SCALE_OFFER_MAX, true);
+  eq("30km is the widest offered", opts[0], 30000);
+  eq("but a wider scale still resolves to a real step from a URL",
+     WG.stepForScale(200000, 47.361) >= WG.XCT_STEP_MIN, true);
+  eq("and the SPEC ceiling is untouched, so a URL is not clamped to the list",
+     WG.cfg("?scale=200000").scale, 200000);
   /* Every offered scale must be a scale SOME device really prints, or the list
      has drifted from the ladder into invented numbers. */
   eq("no duplicates", opts.length, (function () {

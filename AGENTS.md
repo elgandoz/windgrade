@@ -202,6 +202,21 @@ height" buys nothing once the first has been paid. Empty groups are dropped, so
 `skipWidgetOnly` on `app.html` cannot leave a heading with nothing under it.
 `index.html#advanced` opens the accordion, so a note can point at a setting.
 
+**`help` is the pilot's text, not ours.** One or two short sentences, read
+one-handed on a phone in gloves. Anything that explains *why* — a measurement,
+a trap, a rejected alternative — goes in a comment beside the SPEC entry, an
+HTML comment beside the page prose, or `docs/`. Every string was rewritten this
+way on 2026-08-11; do not let "Cap AFTER the view cull" creep back in.
+
+**The scale list stops at `WG.SCALE_OFFER_MAX` (30 km), and that is a
+correctness bound, not a performance one.** winds.mobi caps a query at 500
+stations and the fetch box grows with the square of the scale, so past ~40 km a
+wider scale returns *fewer* stations spread over half a continent — measured,
+see `scaleOptions()` and `docs/plan.md` Phase 3i. `scale` itself is unbounded
+to its SPEC limits: a URL may ask for anything, `BOX FULL` reports truncation,
+and a value outside the list gets an extra *(from the URL)* option so the
+select never renders empty.
+
 The overlay's furniture is opt-in and mostly off: `alt=1` puts the station
 altitude under the speed, `badge=1` shows the station count, `debug=1` adds the
 assumed scale, the in-view/fetched counts and forces the line on. Nothing
