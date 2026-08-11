@@ -4,6 +4,43 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-11 — `${lat}` answers before a GPS fix; `getLocation()` does not
+
+**Verdict: every widget URL must carry `?lat=${lat}&lng=${lng}`.** Owner noticed it
+across two widgets running side by side: the one with the placeholders drew the
+wind layer immediately on the ground, the one without stayed blank until the fix
+arrived or the page was re-shown.
+
+The two sources are not equivalent before a lock:
+
+| Source | With no GPS fix |
+|---|---|
+| `XCTrack.getLocation()` | returns the string `"null"` — nothing usable |
+| `${lat}` / `${lng}` | filled with XCTrack's **last known position** |
+
+That is the same position XCTrack's own map is centred on, so an overlay using it
+is consistent with what the pilot is looking at. And it is safe by the rule
+already recorded: remembering a *position* costs nothing because terrain does not
+move, unlike remembering a *reading*.
+
+The chain already preferred the URL when `getLocation()` returned `"null"` — the
+gap was that `buildUrl()` never emitted the placeholders, so a URL copied from the
+launcher had no fallback at all. Fixed.
+
+**They are appended raw, never percent-encoded.** `%24%7Blat%7D` would leave
+XCTrack looking for a literal it can no longer find, and the widget would lose the
+fallback silently. An unsubstituted token still parses to `NaN` and is ignored, so
+a browser opening the same URL falls through to geolocation rather than rendering
+a wrong position — `hx-call` measured that trap and it is covered by tests.
+
+**Not a reload risk at refresh rate 0.** The periodic page reload `hx-call`
+documents is the *refresh rate* doing its job; with it set to 0 the substitution
+happens once at load, which is all a bootstrap needs. Worth confirming on device
+that a placeholder URL at refresh 0 really never reloads — if it did, the canvas
+would be discarded periodically.
+
+---
+
 ### 2026-08-11 — station history exists, is CORS-open, and is tiny
 
 **Verdict: the detail popup is buildable.** winds.mobi exposes per-station history

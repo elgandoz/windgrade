@@ -270,15 +270,29 @@ function resetConfig() {
 }
 
 /* Only non-default values reach the URL, so a shared link stays short and
-   a later change of default reaches everyone who did not override it. */
-function buildUrl(page) {
+   a later change of default reaches everyone who did not override it.
+
+   `opts.placeholders` appends XCTrack's ${lat}/${lng} substitution tokens, and
+   a widget URL should always have them. XCTrack fills them with its LAST KNOWN
+   position even when there is no GPS fix, whereas getLocation() returns the
+   string "null" in that case — so the placeholders are the only source that
+   answers before a lock, which is exactly when the pilot is on the ground
+   waiting and the screen would otherwise be blank.
+
+   They are appended RAW. Percent-encoding them would leave XCTrack looking for
+   a literal it can no longer find, and the widget would silently lose its
+   fallback. An unsubstituted token parses to NaN and is ignored, so the chain
+   falls through rather than rendering a wrong position. */
+function buildUrl(page, opts) {
   if (!config) initConfig("");
   var q = [], i, sp, v;
   for (i = 0; i < SPEC.length; i++) {
     sp = SPEC[i]; v = config[sp.k];
+    if (sp.ui === false) continue;              /* lat/lng are handled below */
     if (v === null || v === undefined || v === sp.d) continue;
     q.push(encodeURIComponent(sp.k) + "=" + encodeURIComponent(v));
   }
+  if (opts && opts.placeholders) q.push("lat=${lat}", "lng=${lng}");
   return page + (q.length ? "?" + q.join("&") : "");
 }
 

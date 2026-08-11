@@ -207,6 +207,19 @@ eq("provider network named for attribution", st.provider, "meteoswiss.ch");
 eq("peak flag preserved", st.peak, false);
 eq("status preserved as a separate axis from age", st.status, "green");
 
+head("widget URL carries the XCTrack placeholders");
+WG.initConfig("");
+var wurl = WG.buildUrl("widget.html", { placeholders: true });
+eq("lat placeholder present and RAW", wurl.indexOf("lat=${lat}") !== -1, true);
+eq("lng placeholder present and RAW", wurl.indexOf("lng=${lng}") !== -1, true);
+eq("not percent-encoded, or XCTrack would never match it",
+   wurl.indexOf("%24%7B") === -1, true);
+eq("omitted unless asked for", WG.buildUrl("app.html").indexOf("${") === -1, true);
+/* The whole point: a substituted value is used, an unsubstituted one is not. */
+eq("substituted -> a usable position", WG.cfg("?lat=47.05&lng=8.64").lat, 47.05);
+eq("unsubstituted -> ignored, chain falls through",
+   WG.cfg("?lat=${lat}&lng=${lng}").lat, null);
+
 head("provider: history");
 var hu = P2.historicUrl("meteoswiss-DIS", { duration: 10800 });
 eq("station id is in the path", hu.indexOf("/meteoswiss-DIS/historic/") !== -1, true);

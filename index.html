@@ -106,7 +106,7 @@ a{color:var(--chart)}
     <li>Add a <b>Web page</b> widget <b>over the same area</b>, on top, and paste
       the URL.</li>
     <li>Turn on <b>Allow web page to access XCTrack data</b> — this is what gives
-      it your position.</li>
+      it your position once the GPS has a fix.</li>
     <li>Set <b>refresh rate to 0</b>. Anything else makes XCTrack reload the page
       every minute or two and throw away everything it has drawn.</li>
     <li>Leave <b>Allow tapping on the web page when locked</b> <b>OFF</b>. The
@@ -127,8 +127,13 @@ a{color:var(--chart)}
   </p>
 
   <p class="note">
-    <b>An empty overlay is normal</b> while the GPS is still getting a fix. The
-    list page never goes blank, because there a blank page just reads as broken.
+    <b>Keep the <code>?lat=${lat}&amp;lng=${lng}</code> on the end of the URL.</b>
+    XCTrack fills those in with its last known position even before the GPS has a
+    fix — which is the one moment <code>getLocation()</code> returns nothing at
+    all. Without them the overlay stays blank on the ground until a lock; with
+    them it draws immediately, from the same position XCTrack's own map is using.
+    They are only a starting point: once there is a fix, the live position takes
+    over.
   </p>
 
   <h2>Interactive mode (optional)</h2>
@@ -229,7 +234,7 @@ function drawQr(url){
 }
 
 function refreshLinks(){
-  var w = WG.buildUrl("widget.html");
+  var w = WG.buildUrl("widget.html", { placeholders: true });
   var a = WG.buildUrl("app.html");
   document.getElementById("towidget").href = w;
   document.getElementById("toapp").href = a;
