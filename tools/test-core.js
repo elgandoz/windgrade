@@ -405,10 +405,11 @@ head("marker layout: place, then rotate, then stack");
   function it(x, y, tw) { return { x:x, y:y, tw:tw }; }
   function dist(p) { return Math.sqrt(Math.pow(p.x - p.tx, 2) + Math.pow(p.y - p.ty, 2)); }
 
-  /* THE RULE THAT OUTRANKS CLOSENESS: no number may be covered, by another
-     number or by an arrow. Checked over every pair of every result below. */
-  function anyTextCovered(r, items) {
-    var aw = BOX * MK.ARROW_TOL, t0 = BOX - 1, t1 = t0 + TH, p, q, A, B, atw, btw;
+  /* THE ONE HARD RULE: two speed labels may not overlap. Arrows may — over each
+     other and, when there is nowhere else, over a number, which is what the
+     fade is for. Checked over every pair of every result below. */
+  function anyLabelClash(r, items) {
+    var t0 = BOX - 1, t1 = t0 + TH, p, q, A, B, atw, btw;
     function cross(a0,a1,b0,b1){ return a0 < b1 && b0 < a1; }
     for (p = 0; p < r.length; p++)
       for (q = p + 1; q < r.length; q++) {
@@ -416,10 +417,6 @@ head("marker layout: place, then rotate, then stack");
         atw = items[A.i].tw || TW; btw = items[B.i].tw || TW;
         if (cross(A.x-atw, A.x+atw, B.x-btw, B.x+btw) &&
             cross(A.y+t0, A.y+t1, B.y+t0, B.y+t1)) return true;
-        if (cross(A.x-atw, A.x+atw, B.x-aw, B.x+aw) &&
-            cross(A.y+t0, A.y+t1, B.y-aw, B.y+aw)) return true;
-        if (cross(B.x-btw, B.x+btw, A.x-aw, A.x+aw) &&
-            cross(B.y+t0, B.y+t1, A.y-aw, A.y+aw)) return true;
       }
     return false;
   }
@@ -435,17 +432,37 @@ head("marker layout: place, then rotate, then stack");
   eq("the nearer one keeps its true position", pair[0].moved, false);
   eq("the second is moved", pair[1].moved, true);
   eq("and it is the first displaced, so depth 1", pair[1].depth, 1);
-  eq("no number is covered", anyTextCovered(pair, [it(100,100), it(105,108)]), false);
+  eq("the two speed labels do not overlap", anyLabelClash(pair, [it(100,100), it(105,108)]), false);
 
-  /* Closeness is bounded by the text, not by the arrow: two 46 px columns need
-     48 px of clearance to sit level, and that is what it uses. Narrow labels —
-     "3/7" rather than "14/22", the common case in light valley wind — get much
-     closer, which is the whole reason text is measured per marker. */
-  eq("a wide-label pair lands at the level-clearance distance", dist(pair[1]), 48, 1);
+  /* ARROWS MAY OVERLAP — the owner's call, and it is what makes this close.
+     While arrow-vs-arrow was forbidden the same pair landed 48 px away and
+     nothing ever actually overlapped, so the fade was announcing a collision
+     that was not happening. */
+  eq("a wide-label pair now lands on the innermost ring", dist(pair[1]), 23, 1);
   var narrow = MK.layout([it(100, 100, 12), it(105, 108, 12)], opt());
-  eq("a narrow-label pair gets much closer", dist(narrow[1]) < 26, true);
-  eq("still with nothing covered",
-     anyTextCovered(narrow, [it(100,100,12), it(105,108,12)]), false);
+  eq("so does a narrow-label pair", dist(narrow[1]) < 26, true);
+  eq("still with no label clash",
+     anyLabelClash(narrow, [it(100,100,12), it(105,108,12)]), false);
+
+  /* THE FADE NOW MEANS SOMETHING. It marks an arrow that is genuinely on top of
+     another, not merely a marker that was moved — the leader line already says
+     "moved". Most displaced markers find clear air and are drawn at full
+     strength, which is exactly the observation that prompted this. */
+  eq("a displaced marker that landed in clear air is NOT faded", pair[1].over, 0);
+  (function () {
+    var apart = MK.layout([it(100,100), it(160,100)], opt());
+    eq("two markers that never collided are not faded", apart[0].over + apart[1].over, 0);
+    /* 26 px apart vertically: the labels clear (24 px tall) but the arrow boxes
+       (28.8 px) do not — so BOTH are drawn where they belong, arrows crossing,
+       and the overlap is reported. Under the old arrow-vs-arrow rule the second
+       would have been displaced ~50 px for nothing. */
+    var tight = MK.layout([it(100,100), it(100,126)], opt());
+    eq("two markers 26 px apart both keep their true positions",
+       tight.length === 2 && !tight[0].moved && !tight[1].moved, true);
+    eq("their labels still do not overlap",
+       anyLabelClash(tight, [it(100,100), it(100,126)]), false);
+    eq("but their arrows do, and that is reported", tight[0].over, 1);
+  })();
 
   /* Depth drives the fade, and only two depths exist. */
   eq("first displaced is 0.6", MK.nudgeAlpha(1), 0.6);
@@ -456,7 +473,7 @@ head("marker layout: place, then rotate, then stack");
   var r3 = MK.layout(three, opt());
   eq("three overlapping are all drawn", r3.length, 3);
   eq("depths run 0, 1, 2", r3.map(function(p){ return p.depth; }).join(","), "0,1,2");
-  eq("nothing covered with three", anyTextCovered(r3, three), false);
+  eq("no label clash with three", anyLabelClash(r3, three), false);
 
   /* "more than 3 they get lost" */
   var four = [it(100,100), it(104,104), it(108,108), it(112,112)];
@@ -478,7 +495,22 @@ head("marker layout: place, then rotate, then stack");
     eq("a later marker keeps its true position", third.moved, false);
     eq("the displaced one is the only thing that moved",
        r.filter(function (p) { return p.moved; }).length, 1);
-    eq("nothing covered", anyTextCovered(r, set), false);
+    eq("no label clash", anyLabelClash(r, set), false);
+  })();
+
+  /* THE KNOCK-ON THE OWNER REPORTED. At Zermatt, scale 12000, ZFC: Blauherd
+     moved 54 px SOUTH onto Gornergratsee's TRUE position — which had not been
+     placed yet, so the ring scored south as empty — and Gornergratsee then had
+     to move 47 px itself. The scoring now includes markers still waiting to be
+     placed, so a displaced marker stops walking into the next one's spot. */
+  (function () {
+    var A = it(100, 100), B = it(104, 104), C = it(104, 158);
+    var r = MK.layout([A, B, C], opt());
+    var pb = r.filter(function (p) { return p.i === 1; })[0];
+    var pc = r.filter(function (p) { return p.i === 2; })[0];
+    eq("the displaced marker does not land on the pending one's position",
+       Math.abs(pb.y - C.y) > BOX || Math.abs(pb.x - C.x) > BOX, true);
+    eq("so the pending one keeps its true position", pc.moved, false);
   })();
 
   /* Keep-out rectangles and the canvas edge are respected everywhere. */
@@ -497,7 +529,7 @@ head("marker layout: place, then rotate, then stack");
   eq("separate clusters are laid out independently", r2.length, 4);
   eq("each keeps one marker in place",
      r2.filter(function (p) { return !p.moved; }).length, 2);
-  eq("nothing covered across the whole scene", anyTextCovered(r2, two), false);
+  eq("no label clash across the whole scene", anyLabelClash(r2, two), false);
 })();
 
 head("station altitude line");

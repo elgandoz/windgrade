@@ -276,10 +276,20 @@ exactly what the widget draws. Two phases:
   narrow text column under it (`x ± tw`, from `y+box-1`). A single rectangle
   round the whole thing had to be as wide as the label and as tall as
   arrow+label+altitude, so every escape cost ~50 px whichever way it went.
-- **Arrows may overlap a tad; TEXT NEVER MAY** — not with another number, not
-  under an arrow, and the stack is no exception (its step is `t1 + aw`, exactly
-  where the lower arrow stops touching the upper number). `ARROW_TOL` is the
-  tolerance and it applies to arrows only.
+- **ONE HARD RULE: two speed labels may not overlap.** Arrows may cross each
+  other freely, and an arrow may lie across a number when there is nowhere else
+  — the ring scores that down (`overText`, ×0.45) rather than forbidding it.
+  Forbidding arrow-on-arrow is what kept markers ~50 px apart AND made the fade
+  meaningless: nothing ever actually overlapped, so a faded marker was
+  announcing a collision that was not happening.
+- **The fade marks REAL OVERLAP, not displacement.** Results carry `over`, the
+  number of arrows this one crosses; the caller fades only when `over` is
+  non-zero. The leader line is what says "moved" — the fade is so the arrow
+  underneath stays visible, and in clear air there is nothing to see through.
+- **The ring scores against markers NOT YET PLACED too**, at their true
+  positions. Without that a displaced marker walks into the spot the next one
+  needs: measured at Zermatt `scale=12000`, ZFC: Blauherd went 54 px south onto
+  Gornergratsee's true position and Gornergratsee then moved 47 px itself.
 - **Text width is measured PER MARKER** (`items[i].tw`), label and altitude both.
   `3/7` is barely half of `14/22`: a wide-label pair needs 48 px of clearance,
   a narrow-label pair gets away with 23. That difference is most of what makes

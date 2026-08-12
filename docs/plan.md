@@ -1248,6 +1248,62 @@ stationary. The ring search runs only for markers that did not fit and scores
 only neighbours inside a bounded radius, so the added work is a few hundred
 comparisons a few times a minute.
 
+## Phase 3s — arrows may overlap, and the search looks ahead (2026-08-12)
+
+Owner, on `?scale=12000&lat=46.0207&lng=7.7491`: *"why does ZFC: Blauherd go
+south, forcing Gornergratsee to move away: it could have been pushed north. As a
+general rule, the opacity was changed only if the arrow actually overlaps, but
+in the end they never overlap now. The arrows are allowed to be closer than
+that: even if an arrow overlaps, the important part is that the wind speed label
+doesn't overlap, but the arrow can."*
+
+Two separate faults, both reproduced before touching anything.
+
+#### 1. The search could not see what was coming
+
+`ZFC: Blauherd` at (256,492) moved **54 px south** to (256,546).
+`Gornergratsee`'s true position is (257,536) — 10 px away. Gornergratsee had not
+been *placed* yet, and the ring only scored against markers already drawn, so
+south read as empty. Gornergratsee then had to move 47 px itself.
+
+The scoring now includes markers **still waiting to be placed**, at their true
+positions, drained as each is handled. Blauherd goes east instead, and
+Gornergratsee stays put to within 22 px.
+
+#### 2. Arrows were forbidden from overlapping, so nothing ever did
+
+The conflict test forbade arrow-vs-arrow and arrow-vs-text as well as
+text-vs-text. That is what kept markers ~50 px apart — and it is why the fade
+never meant anything: no two arrows ever actually overlapped, so a faded marker
+was announcing a collision that was not happening.
+
+**One hard rule now: two speed labels may not overlap.** Arrows may cross each
+other freely. An arrow may lie across a number when there is nowhere else to
+go — the ring scores that down (×0.45) rather than forbidding it.
+
+**And the fade marks real overlap, not displacement.** Results carry `over`, the
+number of arrows a marker crosses; the caller fades only when it is non-zero.
+The leader line is what says *moved* — the fade exists so the arrow underneath
+stays visible, and in clear air there is nothing to see through.
+
+| Zermatt, scale 12000 | before | after |
+|---|---|---|
+| drawn | 27 of 36 | **30 of 36** |
+| Gornergratsee displacement | 47 px SE | **22 px NE** |
+| typical displacement | 47–54 px | **22 px** |
+
+| Zermatt, scale 3000 | before | after |
+|---|---|---|
+| markers moved | 4 | **2** |
+| badge | `12 stations ↓4` | `11 stations ↓1` |
+
+`tools/nudge.html`: **8 of 8 drawn, 3 moved, 0 faded** — and `nudge=0` now draws
+5 of 8 rather than 4, because the relaxed rule lets more fit without any nudging
+at all.
+
+A fourth ring radius (3.0 reaches) was added when a marker in a dense corner
+still stacked 54 px straight down while there was room to rotate.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

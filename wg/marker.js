@@ -186,9 +186,13 @@ function svg(st, px, opts) {
       b. If no angle at any tried radius keeps the text clear, STACK IT BELOW
          the marker it collided with, fading by depth.
 
-   Opacity comes from depth, not from the placement method: the first displaced
-   marker of a pile is `NUDGE_ALPHA[0]`, the second `NUDGE_ALPHA[1]`. At most
-   `maxPerCluster` markers end up in one pile.
+   OPACITY IS FOR ACTUAL OVERLAP, not for displacement. A displaced marker
+   whose arrow ends up in clear air is drawn at full strength — its leader line
+   already says it was moved, and the fade exists so the arrow underneath stays
+   visible. Where something IS underneath, the amount comes from depth:
+   `NUDGE_ALPHA[0]` for the first displaced marker of a pile, `NUDGE_ALPHA[1]`
+   for the second. Results carry `over`, the number of arrows this one covers.
+   At most `maxPerCluster` markers end up in one pile.
 
    A DISPLACED MARKER NEVER PUSHES ONE THAT WAS NOT. Every normal placement is
    finished in phase 1, before anything is moved. Displaced markers do join the
@@ -213,8 +217,9 @@ var ARROW_TOL = 0.72;              /* arrows may overlap by about a quarter */
    stack step, so a rotational placement always wins when one exists — measured:
    a level pair needs 48 px of clearance for two 46 px text columns, a stack
    needs 57. Two radii were not enough and every pair fell through to the
-   stack, which is how this got found. */
-var RING = [1.15, 1.75, 2.4];
+   stack, which is how this got found; a fourth was added when a marker in a
+   dense corner still stacked 54 px straight down while north was empty. */
+var RING = [1.15, 1.75, 2.4, 3.0];
 var RING_ANGLES = 16;
 
 function layout(items, o) {
@@ -236,26 +241,25 @@ function layout(items, o) {
 
   function cross(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
 
-  /* Does this marker's TEXT touch anything of the other's? The number is the
-     fallback for a colour scale many pilots cannot separate, so it is the one
-     thing that may never be covered — not by another number, not by an arrow. */
-  function textHit(ax, ay, atw, bx, by, btw) {
-    /* a's text vs b's text */
-    if (cross(ax - atw, ax + atw, bx - btw, bx + btw) &&
-        cross(ay + t0, ay + t1, by + t0, by + t1)) return true;
-    /* a's text vs b's arrow, and the other way round */
-    if (cross(ax - atw, ax + atw, bx - aw, bx + aw) &&
-        cross(ay + t0, ay + t1, by - aw, by + aw)) return true;
-    if (cross(bx - btw, bx + btw, ax - aw, ax + aw) &&
-        cross(by + t0, by + t1, ay - aw, ay + aw)) return true;
-    return false;
-  }
-  function arrowHit(ax, ay, bx, by) {
-    return cross(ax - aw, ax + aw, bx - aw, bx + aw) &&
-           cross(ay - aw, ay + aw, by - aw, by + aw);
-  }
+  /* THE ONE HARD RULE: two speed labels may not overlap. Everything else is a
+     preference, expressed through the score below.
+
+     ARROWS ARE ALLOWED TO OVERLAP, and that is the owner's call: "even if an
+     arrow overlaps, the important part is that the wind speed label doesn't
+     overlap, but the arrow can". Forbidding it is what kept markers ~50 px
+     apart and made the fade meaningless — nothing ever actually overlapped, so
+     a faded marker was announcing a collision that was not happening. */
   function conflict(ax, ay, atw, bx, by, btw) {
-    return arrowHit(ax, ay, bx, by) || textHit(ax, ay, atw, bx, by, btw);
+    return cross(ax - atw, ax + atw, bx - btw, bx + btw) &&
+           cross(ay + t0, ay + t1, by + t0, by + t1);
+  }
+  /* Separate, because the ring PREFERS not to lay an arrow across a number even
+     though it is allowed to when there is nowhere else to go. */
+  function overText(ax, ay, atw, bx, by, btw) {
+    return (cross(ax - atw, ax + atw, bx - aw, bx + aw) &&
+            cross(ay + t0, ay + t1, by - aw, by + aw)) ||
+           (cross(bx - btw, bx + btw, ax - aw, ax + aw) &&
+            cross(by + t0, by + t1, ay - aw, ay + aw));
   }
   function free(x, y, tw) {
     var k;
@@ -279,17 +283,26 @@ function layout(items, o) {
     else if (!(o.blocked && o.blocked(items[i].x, items[i].y)) &&
              !(o.inBounds && !o.inBounds(items[i].x, items[i].y))) hidden.push(i);
   }
-  if (!o.nudge || !hidden.length) return out;
-
   var nPlaced = placed.length;               /* everything up to here is fixed */
 
   /* Neighbours worth scoring against — a bounded set, so the ring search stays
-     cheap however many markers are on screen. */
+     cheap however many markers are on screen.
+
+     IT INCLUDES MARKERS NOT YET PLACED, at their true positions. Without that,
+     a marker searching for room sees only what has already been drawn and
+     moves happily into the spot a later one is about to need. Measured at
+     Zermatt, scale 12000: ZFC: Blauherd went 54 px SOUTH onto Gornergratsee's
+     true position, which had not been placed yet, and Gornergratsee then had to
+     move 47 px itself. North was empty the whole time. */
+  var pending = [];
   function nearby(x, y) {
     var k, r = [];
     for (k = 0; k < placed.length; k++)
       if (Math.abs(placed[k][0] - x) < NEAR && Math.abs(placed[k][1] - y) < NEAR)
         r.push(placed[k]);
+    for (k = 0; k < pending.length; k++)
+      if (Math.abs(pending[k][0] - x) < NEAR && Math.abs(pending[k][1] - y) < NEAR)
+        r.push(pending[k]);
     return r;
   }
 
@@ -302,6 +315,9 @@ function layout(items, o) {
       p = near[k];
       dx = Math.abs(x - p[0]); dy = Math.abs(y - p[1]);
       s = Math.max(dx / (tw + p[2]), dy / (th + aw));
+      /* An arrow laid across someone's number is permitted but never
+         preferred, so it costs score rather than disqualifying the angle. */
+      if (overText(x, y, tw, p[0], p[1], p[2])) s *= 0.45;
       if (s < best) best = s;
     }
     return best;
@@ -324,7 +340,12 @@ function layout(items, o) {
      marker's arrow stops touching the upper marker's number. Arrows may overlap
      each other — text may not, and the stack is no exception. */
   var depthAt = {}, step = t1 + aw;
-  for (i = 0; i < hidden.length; i++) {
+  /* Seeded with every hidden marker's true position and drained as each is
+     placed, so the scoring always knows about the ones still to come. */
+  for (i = 0; i < hidden.length; i++)
+    pending.push([items[hidden[i]].x, items[hidden[i]].y, twOf(items[hidden[i]])]);
+  for (i = 0; o.nudge && i < hidden.length; i++) {
+    pending.shift();                          /* this one is being placed now */
     var it = items[hidden[i]], tw = twOf(it);
     var host = hostOf(it, tw);
     var key = (host < 0) ? "-" : String(host);
@@ -345,22 +366,46 @@ function layout(items, o) {
         if (o.blocked && o.blocked(cx, cy)) continue;
         near = nearby(cx, cy);
         for (j = 0; j < near.length; j++)
-          if (textHit(cx, cy, tw, near[j][0], near[j][1], near[j][2])) break;
-        if (j < near.length) continue;          /* a number would be covered */
+          if (conflict(cx, cy, tw, near[j][0], near[j][1], near[j][2])) break;
+        if (j < near.length) continue;          /* two numbers would collide */
         sc = roominess(cx, cy, tw, near);
         if (sc > bestSc) { bestSc = sc; bx = cx; by = cy; got = true; }
       }
     }
 
-    /* (b) nowhere rotationally: stack below the host and let the fade carry it */
+    /* (b) nowhere rotationally: stack below the host and let the fade carry it.
+       Still verified — the step clears the host's own text by construction, but
+       a third marker may be sitting where the stack wants to go. */
     if (!got && host >= 0) {
-      bx = it.x; by = placed[host][1] + step * depth;
-      if (!(o.inBounds && !o.inBounds(bx, by)) && !(o.blocked && o.blocked(bx, by))) got = true;
+      for (ri = depth; ri <= depth + 1 && !got; ri++) {
+        bx = it.x; by = placed[host][1] + step * ri;
+        if (o.inBounds && !o.inBounds(bx, by)) continue;
+        if (o.blocked && o.blocked(bx, by)) continue;
+        near = nearby(bx, by);
+        for (j = 0; j < near.length; j++)
+          if (conflict(bx, by, tw, near[j][0], near[j][1], near[j][2])) break;
+        if (j >= near.length) got = true;
+      }
     }
     if (!got) continue;
 
     put(hidden[i], bx, by, true, depth);
     depthAt[key] = depth;
+  }
+
+  /* WHICH MARKERS ACTUALLY OVERLAP. Now that arrows are allowed to, the fade
+     can mean what it says instead of being applied to every displaced marker
+     whether or not anything is underneath it. A displaced marker that landed
+     in clear air is drawn at full strength — its leader line still says it was
+     moved, which is the annotation that matters; the fade is there so you can
+     see the arrow beneath, and there is nothing beneath. */
+  for (i = 0; i < out.length; i++) {
+    out[i].over = 0;
+    for (j = 0; j < out.length; j++) {
+      if (i === j) continue;
+      if (Math.abs(out[i].x - out[j].x) < aw * 2 &&
+          Math.abs(out[i].y - out[j].y) < aw * 2) out[i].over++;
+    }
   }
   return out;
 }

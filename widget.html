@@ -385,7 +385,10 @@ function draw(fix, ranked){
       hits.push({ st: st, x: L.x, y: L.y, r: box });
       /* Only the ARROW fades. The number is the fallback for a colour scale a
          lot of pilots cannot separate, so it never pays for the annotation. */
-      if (L.moved) bctx.globalAlpha = WG.marker.nudgeAlpha(L.depth);
+      /* Faded only where an arrow is genuinely sitting on another one — the
+         leader line is what says "moved", the fade is what lets you see
+         through. A displaced marker in clear air needs no fade. */
+      if (L.moved && L.over) bctx.globalAlpha = WG.marker.nudgeAlpha(L.depth);
       WG.marker.canvas(bctx, st, L.x, L.y, scale);
       bctx.globalAlpha = 1;
       ly = WG.marker.label(bctx, st, L.x, L.y, scale, fs);
