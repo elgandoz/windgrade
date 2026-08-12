@@ -64,15 +64,26 @@ Email Yann, `info@winds.mobi`, and ask whether `Origin` suffices. Do not spoof t
 header and do not quietly ignore the rule — their terms end "blacklisted without any
 notice". Deferred by the owner pending overall feasibility; the API works meanwhile.
 
+**Ask for `ETag` in the same message.** Measured 2026-08-12: the API sends no
+`Cache-Control`, no `ETag`, no `Last-Modified` and no `Age` — just `date` and
+`server: uvicorn`. Two calls 3 s apart returned byte-identical payloads, but
+finding that out costs the full 118 KB. `ETag` + `If-None-Match` would turn most
+polls into a 304, which is bandwidth saved on both sides and squarely in the
+spirit of their "do not overload" rule. See `docs/findings.md` 2026-08-12, which
+also records why there is no generation cycle to synchronise our poll with.
+
 ---
 
 ## Verification debts
 
 Things believed but not measured. Each says how to settle it.
 
-- **`widget.html` on device.** Marker layout, label placement, decluttering and the
-  new scale bar have never been seen on a phone. Headless cannot capture an
-  asynchronously drawn canvas, so this can only be checked in XCTrack.
+- **`widget.html` in flight.** Narrower than it was: the scale pairing, marker
+  layout and decluttering have now been checked on an emulator at Zermatt across
+  several scales, and `tools/nudge.html` renders the same calls synchronously so
+  they *can* be screenshotted. What has still never happened is a real flight —
+  legibility in sunlight, and whether the battery cost is what the profiling
+  says it is.
 - **Latitude independence of the 0.942 calibration.** Confirmed at 47.36°N only;
   Switzerland spans 3.7% of cos variation. The scale bar now makes this passive —
   fly to Valais or Ticino and see whether the two bars still agree.
@@ -91,6 +102,14 @@ Things believed but not measured. Each says how to settle it.
   the speed size is the smallest text this tool draws, so it is where the white
   casing fails first — worth a look in bright sunlight, which is the condition
   no screenshot reproduces.
+- **The Pixel 9a scale list.** A report that twelve scale values are missing from
+  XCTrack's map scale setting cannot be reconciled with a 23-step √2 ladder: at
+  three of the four disputed steps, *both* candidate labels are on the missing
+  list, so no label could satisfy it, and no bar width in 60–400 dp against any
+  dpr in 1.50–4.00 fits either. Settle it with the **full ordered list of all 23
+  values read straight off the device** — a photo of the setting does it. Until
+  then `BAR_MAX_DP = 150` stands; it reproduces both recorded label lists 46/46.
+  Full analysis in `docs/findings.md` 2026-08-12. No live defect either way.
 - **`.pmtiles` byte ranges.** Cannot be tested until a real pack exists. Pass = 206,
   **no** `content-encoding`, and a `content-range` total equal to the real file
   size. If it fails, packs go to R2 — which is why Phase 3 keeps absolute pack URLs.
@@ -102,13 +121,11 @@ Things believed but not measured. Each says how to settle it.
 
 ## Deferred features
 
-- **A history strip** — SeeYou shows 15-minute steps of `avg/gust`, which makes
-  "building or easing" readable at a glance. Purely descriptive, so it breaks no
-  rule, and `winds.mobi` already exposes `/stations/{id}/historic/`. Out of scope
-  until the basics are proven on device.
 - **Selected-station highlight** — SeeYou draws a white circle behind the selected
-  marker. Cheap, costs no colour. Needs a selection concept first, which needs
-  tapping, which currently costs the pilot their zoom buttons.
+  marker. Cheap, costs no colour. Tapping now exists on both pages, so the
+  selection concept is there; what still blocks it on the overlay is that
+  tapping requires *"Allow tapping on the web page when locked"*, which costs
+  the pilot their own zoom buttons. Free on `app.html` whenever wanted.
 - **Own basemap (Phase 3)** — still the durable answer for the standalone page.
 - **Zoom sync** — rejected 2026-08-11, see `plan.md` Phase 3c. Becomes buildable
   only if XCTrack ships the read above, or if a future build lets touches fall
