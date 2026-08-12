@@ -459,28 +459,30 @@ head("marker layout: place, then rotate, then stack");
   eq("still with nothing covered",
      anyLabelCovered(narrow, [it(100,100,12), it(105,108,12)]), false);
 
-  /* THE FADE NOW MEANS SOMETHING. It marks an arrow that is genuinely on top of
-     another, not merely a marker that was moved — the leader line already says
-     "moved". Most displaced markers find clear air and are drawn at full
-     strength, which is exactly the observation that prompted this. */
-  eq("a displaced marker that landed in clear air is NOT faded", pair[1].over, 0);
-  (function () {
-    var apart = MK.layout([it(100,100), it(160,100)], opt());
-    eq("two markers that never collided are not faded", apart[0].over + apart[1].over, 0);
-    /* Arrows partially overlapping is reported, so the fade can mean that rather
-       than merely "this was moved". Two markers 30 px apart horizontally: the
-       constraint keeps centres 2*aw = 24 px apart, so this is legal, and they
-       are within 2*box = 40 px, so they visibly cross. */
-    var tight = MK.layout([it(100,100,12), it(130,100,12)], opt());
-    eq("a legal partial overlap is reported", tight[0].over, 1);
-    eq("and nothing is covered by it",
-       anyLabelCovered(tight, [it(100,100,12), it(130,100,12)]), false);
-  })();
+  /* NOTHING FADES any more — the leader line is the annotation. Two attempts at
+     tying opacity to something (displacement, then real overlap) both made
+     markers paler for reasons a pilot could not read off the screen. */
+  eq("no alpha helper survives", typeof MK.nudgeAlpha, "undefined");
 
-  /* Depth drives the fade, and only two depths exist. */
-  eq("first displaced is 0.6", MK.nudgeAlpha(1), 0.6);
-  eq("second is 0.3", MK.nudgeAlpha(2), 0.3);
-  eq("and it never goes fainter than that", MK.nudgeAlpha(9), 0.3);
+  /* THE BOUND. Nothing may be drawn further than one stack row from where it
+     belongs — a marker 104 px out at 225 m/px is 23 km from its station, which
+     no leader line rescues. The ring radii are generated up to the SAME bound,
+     which is what stops the fallback being worse than the search: it stopped at
+     58 px while the stack went to 195, and that was "the stations at the bottom
+     are so far apart". */
+  (function () {
+    var t0 = BOX - 1, t1 = t0 + TH, aw = BOX * MK.ARROW_TOL, row = t1 + aw;
+    var far = MK.layout([it(100,100), it(104,104), it(108,108), it(96,112),
+                         it(112,96), it(100,116), it(116,100)], opt());
+    var worst = 0;
+    far.forEach(function (p) {
+      var d = Math.sqrt(Math.pow(p.x-p.tx,2) + Math.pow(p.y-p.ty,2));
+      if (d > worst) worst = d;
+    });
+    eq("nothing is moved further than one stack row", worst <= row + 1, true);
+    eq("and a marker that cannot fit inside it is dropped, not misplaced",
+       far.length < 7, true);
+  })();
 
   var three = [it(100,100), it(105,108), it(97,112)];
   var r3 = MK.layout(three, opt());

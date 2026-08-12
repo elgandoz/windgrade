@@ -186,13 +186,11 @@ function svg(st, px, opts) {
       b. If no angle at any tried radius keeps the text clear, STACK IT BELOW
          the marker it collided with, fading by depth.
 
-   OPACITY IS FOR ACTUAL OVERLAP, not for displacement. A displaced marker
-   whose arrow ends up in clear air is drawn at full strength — its leader line
-   already says it was moved, and the fade exists so the arrow underneath stays
-   visible. Where something IS underneath, the amount comes from depth:
-   `NUDGE_ALPHA[0]` for the first displaced marker of a pile, `NUDGE_ALPHA[1]`
-   for the second. Results carry `over`, the number of arrows this one covers.
-   At most `maxPerCluster` markers end up in one pile.
+   NOTHING FADES. Every marker is drawn at full strength, moved or not — the
+   LEADER LINE is the annotation, and it is unambiguous where a fade was not:
+   two attempts at tying opacity to displacement and then to actual overlap both
+   produced markers that were paler for reasons a pilot could not read off the
+   screen. At most `maxPerCluster` markers end up in one pile.
 
    A DISPLACED MARKER NEVER PUSHES ONE THAT WAS NOT. Every normal placement is
    finished in phase 1, before anything is moved. Displaced markers do join the
@@ -203,23 +201,21 @@ function svg(st, px, opts) {
    position. The earlier "highest on top, stale to the bottom" ordering was
    dropped at the owner's request while this placement is evaluated.
    ─────────────────────────────────────────────────────────────────── */
-/* How pale a moved marker's ARROW is drawn, BY DEPTH: the first displaced
-   marker of a pile, then the second. The number and the altitude always stay at
-   full strength — the number is the fallback for a colour scale a lot of pilots
-   cannot separate, so it never pays for the annotation. Fading the whole marker
-   was measured as marginal against dark forest even at 0.6. */
-var NUDGE_ALPHA = [0.6, 0.3];
-function nudgeAlpha(depth) {
-  return NUDGE_ALPHA[Math.min(Math.max(depth, 1), NUDGE_ALPHA.length) - 1];
-}
 var ARROW_TOL = 0.6;             /* arrows may overlap by about 40% */
-/* Search radii, in marker reaches. The largest is still under the height of a
-   stack step, so a rotational placement always wins when one exists — measured:
-   a level pair needs 48 px of clearance for two 46 px text columns, a stack
-   needs 57. Two radii were not enough and every pair fell through to the
-   stack, which is how this got found; a fourth was added when a marker in a
-   dense corner still stacked 54 px straight down while north was empty. */
-var RING = [1.15, 1.75, 2.4, 3.0];
+/* THE ONE BOUND, and everything else derives from it: no marker may be drawn
+   further than MAX_ROWS stack rows from where it really is. Past that a reading
+   is filed under the wrong ridge and is better omitted than misplaced.
+
+   The ring radii are GENERATED up to that bound rather than hand-written, which
+   is what stops the two halves drifting apart — and they had. The ring stopped
+   at 3.0 reaches (58 px) while the stack routinely landed at 106-195 px, so the
+   FALLBACK WAS TWO TO THREE TIMES WORSE than the thing it fell back from.
+   Measured at Zermatt, scale 30000: every ring placement in that scene was
+   <= 58 px and every stack placement >= 106 px, which is what "the stations at
+   the bottom are so far apart" was. */
+var MAX_ROWS = 1;
+var RING_FROM = 1.15;              /* first radius, in marker reaches */
+var RING_GAP = 0.6;                /* gap between radii, same units */
 var RING_ANGLES = 16;
 
 function layout(items, o) {
@@ -231,8 +227,13 @@ function layout(items, o) {
   var t1 = t0 + th;
   var maxPer = o.maxPerCluster || 3;
   var n = items.length, i, j, out = [], placed = [];
+  /* One stack row, and the furthest anything may ever be moved. */
+  var step = t1 + aw, maxMove = step * MAX_ROWS;
+  /* Radii, closest first, generated up to the same bound the stack uses. */
+  var RING = [], rr;
+  for (rr = box * RING_FROM; rr <= maxMove; rr += box * RING_GAP) RING.push(rr);
   /* Nothing beyond this can possibly interact, so the ring search skips it. */
-  var NEAR = (t1 + aw) * 2 + box * RING[RING.length - 1];
+  var NEAR = (t1 + aw) * 2 + maxMove;
 
   /* PER MARKER, because "3/7" is barely half the width of "14/22" and using
      the widest possible label for everyone was costing about 10 px of needless
@@ -345,7 +346,7 @@ function layout(items, o) {
      aw the arrow's half-height, so this is exactly the point where the lower
      marker's arrow stops touching the upper marker's number. Arrows may overlap
      each other — text may not, and the stack is no exception. */
-  var depthAt = {}, step = t1 + aw;
+  var depthAt = {};
   /* Seeded with every hidden marker's true position and drained as each is
      placed, so the scoring always knows about the ones still to come. */
   for (i = 0; i < hidden.length; i++)
@@ -360,9 +361,9 @@ function layout(items, o) {
 
     /* (a) ring search: closest radius that keeps every number readable, and at
        that radius the angle furthest from everything already drawn. */
-    var got = false, bx = 0, by = 0, ri, ai, ang, cx, cy, near, sc, bestSc;
+    var got = false, bx = 0, by = 0, ri, ai, ang, cx, cy, near, sc, bestSc, ring = false, got2 = null;
     for (ri = 0; ri < RING.length && !got; ri++) {
-      var R = box * RING[ri];
+      var R = RING[ri];
       bestSc = -1;
       for (ai = 0; ai < RING_ANGLES; ai++) {
         ang = (ai / RING_ANGLES) * Math.PI * 2;
@@ -375,44 +376,33 @@ function layout(items, o) {
           if (conflict(cx, cy, tw, near[j][0], near[j][1], near[j][2])) break;
         if (j < near.length) continue;          /* a label would be covered */
         sc = roominess(cx, cy, tw, near);
-        if (sc > bestSc) { bestSc = sc; bx = cx; by = cy; got = true; }
+        if (sc > bestSc) { bestSc = sc; bx = cx; by = cy; got = true; ring = true; }
       }
     }
 
-    /* (b) nowhere rotationally: stack below the host and let the fade carry it.
-       Still verified — the step clears the host's own text by construction, but
-       a third marker may be sitting where the stack wants to go. */
-    if (!got && host >= 0) {
-      for (ri = depth; ri <= depth + 1 && !got; ri++) {
-        bx = it.x; by = placed[host][1] + step * ri;
-        if (o.inBounds && !o.inBounds(bx, by)) continue;
-        if (o.blocked && o.blocked(bx, by)) continue;
-        near = nearby(bx, by);
-        for (j = 0; j < near.length; j++)
-          if (conflict(bx, by, tw, near[j][0], near[j][1], near[j][2])) break;
-        if (j >= near.length) got = true;
-      }
+    /* (b) nowhere rotationally: straight down, a row at a time, FROM ITS OWN
+       POSITION rather than the host's. Anchoring to the host and multiplying by
+       depth compounded — Mottec's host sat 85 px BELOW it and a depth-2 stack
+       then added 110 px on top, putting a station 195 px from where it was
+       measured. Rows from the marker's own place are bounded by construction,
+       and since the pile collided in the first place they still land together. */
+    for (ri = 1; ri <= MAX_ROWS && !got; ri++) {
+      bx = it.x; by = it.y + step * ri;
+      if (o.inBounds && !o.inBounds(bx, by)) continue;
+      if (o.blocked && o.blocked(bx, by)) continue;
+      near = nearby(bx, by);
+      for (j = 0; j < near.length; j++)
+        if (conflict(bx, by, tw, near[j][0], near[j][1], near[j][2])) break;
+      if (j >= near.length) got = true;
     }
     if (!got) continue;
 
     put(hidden[i], bx, by, true, depth);
+    out[out.length-1].how = got2 || (ring ? 'ring' : 'stack');
+    out[out.length-1].host = host;
     depthAt[key] = depth;
   }
 
-  /* WHICH ARROWS ACTUALLY OVERLAP, so the fade can mean that rather than merely
-     "this was moved" — the leader line already says moved. Measured against the
-     FULL arrow (box), not the tolerated half-extent (aw): the constraint keeps
-     centres 2*aw apart, and anything between 2*aw and 2*box is the partial
-     overlap the owner asked for, which is exactly when seeing through the top
-     arrow helps. */
-  for (i = 0; i < out.length; i++) {
-    out[i].over = 0;
-    for (j = 0; j < out.length; j++) {
-      if (i === j) continue;
-      if (Math.abs(out[i].x - out[j].x) < box * 2 &&
-          Math.abs(out[i].y - out[j].y) < box * 2) out[i].over++;
-    }
-  }
   return out;
 }
 
@@ -530,8 +520,7 @@ WG.marker = {
   label: labelCanvas, labelText: labelText, fmt: fmt,
   alt: altCanvas, altText: altText, altSize: altSize,
   svg: svg, trendHtml: trendHtml, trendScroll: trendScroll,
-  leader: leader, layout: layout,
-  NUDGE_ALPHA: NUDGE_ALPHA, nudgeAlpha: nudgeAlpha, ARROW_TOL: ARROW_TOL,
+  leader: leader, layout: layout, ARROW_TOL: ARROW_TOL,
   hhmm: hhmm, esc: esc
 };
 

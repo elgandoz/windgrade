@@ -1312,6 +1312,59 @@ still stacked 54 px straight down while there was room to rotate.
 rather than a uniform 22. That is the honest price of never covering a number,
 and it is the right side to err on.
 
+## Phase 3t — the fallback was worse than the search (2026-08-12)
+
+Owner, on `?scale=30000&…`: *"why are the stations at the bottom so far apart?"*,
+naming ZFC: Blauherd, Corne de Sorebois and Chesselhorn — and separately,
+*"the opacity sometimes applies but it doesn't make any sense. remove the
+opacity change."*
+
+#### The measurement that found it
+
+Instrumented which path each displaced marker took, at Zermatt scale 30000:
+
+```
+  every RING placement   <=  58 px
+  every STACK placement  >= 106 px      Blauherd 106, Tracuit 127,
+                                        Chesselhorn 185, Mottec 195
+```
+
+**The fallback was two to three times worse than the thing it fell back from.**
+Two causes, both structural:
+
+- The ring stopped at a hand-written 3.0 marker reaches (58 px) while the stack
+  had no bound at all. The radii are now **generated up to the same bound the
+  stack uses**, so the two cannot drift apart again.
+- The stack stepped down from its **host's** position and multiplied by depth.
+  Mottec's host sat 85 px *below* it, and a depth-2 stack added 110 more — 195 px
+  from where the station actually is. It now steps from the marker's own
+  position, one row at a time.
+
+#### One bound, and it is deliberately tight
+
+`MAX_ROWS = 1`. Nothing is drawn further than one stack row from where it
+belongs; anything that cannot fit is **dropped**. At 225 m per pixel a 104 px
+displacement is **23 km** from the real station, and no leader line rescues that.
+
+| `MAX_ROWS` | moved | max move | mean | drawn |
+|---|---|---|---|---|
+| **1** | 14 | **46 px** | 38 px | 42 of 118 |
+| 2 | 26 | 104 px | 80 px | 54 of 118 |
+| 3 | 34 | 162 px | 123 px | 62 of 118 |
+
+Closer and fewer beats further and more — the badge says `45 of 120` so the
+omission is never silent.
+
+#### The opacity is gone
+
+Removed entirely, as asked. It was tried twice — first tied to displacement
+(Phase 3o–3r), then to actual arrow overlap (3s) — and both times it made
+markers paler for reasons a pilot could not read off the screen. **The leader
+line is the annotation**, and it says where a marker came from without needing
+to be interpreted. `NUDGE_ALPHA`, `nudgeAlpha()` and the `over` pass are gone;
+`tools/nudge.html` lost its fade slider and now reports the furthest
+displacement instead.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

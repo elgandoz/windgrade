@@ -256,10 +256,10 @@ clear and the vertical requirement is the larger, so in a north-south valley the
 overlay declutters hardest along the valley. Full numbers in `docs/findings.md`
 2026-08-11.
 
-**`nudge=1` (default) moves markers aside instead of dropping them**, faded, with
-a leader line back to their true position. That is allowed to coexist with "an
-arrow sits on its own terrain" only because it is ANNOTATED: the fade says it has
-been moved and the line says where from. Never displace a marker silently.
+**`nudge=1` (default) moves markers aside instead of dropping them**, with a
+leader line back to their true position. That is allowed to coexist with "an
+arrow sits on its own terrain" only because it is ANNOTATED: the leader line
+says it has been moved and where from. Never displace a marker silently.
 
 **`WG.marker.layout()` owns the placement.** It is pure arithmetic — no DOM —
 so `tools/test-core.js` asserts the rules directly and `tools/nudge.html` draws
@@ -283,11 +283,22 @@ exactly what the widget draws. Two phases:
   so neither swallows the other. Both halves were tried the other way round and
   both were wrong — forbidding arrow-on-arrow put markers ~50 px apart, allowing
   it without limit was too cluttered.
-- **The fade marks REAL OVERLAP, not displacement.** Results carry `over`, the
-  number of arrows this one partially crosses (measured against the full `box`,
-  not the tolerated `aw`); the caller fades only when it is non-zero. The leader
-  line is what says "moved" — the fade is so the arrow underneath stays visible,
-  and in clear air there is nothing to see through.
+- **NOTHING FADES.** Every marker is drawn at full strength, moved or not; the
+  leader line is the annotation and it needs no interpreting. Opacity was tried
+  twice — tied to displacement, then to real overlap — and both made markers
+  paler for reasons a pilot could not read off the screen. Do not reintroduce it.
+- **`MAX_ROWS` bounds everything.** No marker may be drawn further than one
+  stack row from where it belongs, and **the ring radii are GENERATED up to that
+  same bound** — which is what stops the fallback being worse than the search.
+  It was: the ring stopped at 58 px while the stack landed at 106–195 px, and
+  that was "the stations at the bottom are so far apart". A marker that cannot
+  fit inside the bound is DROPPED. At 225 m/px a 104 px displacement is 23 km
+  from the real station and no leader line rescues that. Measured at Zermatt
+  `scale=30000`: 1 row → 46 px max, 42 of 118 drawn; 2 rows → 104 px, 54 drawn;
+  3 rows → 162 px, 62 drawn. Closer and fewer beats further and more.
+- **The stack steps down from the marker's OWN position, not its host's.**
+  Anchoring to the host and multiplying by depth compounded — one station ended
+  up 195 px out because its host sat 85 px below it and the stack added 110 more.
 - **The ring scores against markers NOT YET PLACED too**, at their true
   positions. Without that a displaced marker walks into the spot the next one
   needs: measured at Zermatt `scale=12000`, ZFC: Blauherd went 54 px south onto
@@ -296,9 +307,7 @@ exactly what the widget draws. Two phases:
   `3/7` is barely half of `14/22`: a wide-label pair needs 48 px of clearance,
   a narrow-label pair gets away with 23. That difference is most of what makes
   the result look tight rather than scattered.
-- **Depth drives the fade**, not the placement method: `WG.marker.nudgeAlpha()`
-  gives 0.6 for the first displaced marker of a pile and 0.3 for the second.
-  At most three end up in one pile — past that they are lost anyway.
+- **At most three end up in one pile** — past that they are lost anyway.
 - **A DISPLACED MARKER NEVER PUSHES ONE THAT WAS NOT.** Phase 1 finishes before
   anything moves. Do not merge the phases.
 - **No altitude or staleness sorting.** Phase 1 is plain nearest-first; the
@@ -317,16 +326,13 @@ Three drawing rules, each of which cost a screenshot to find:
   Painting as you place puts the next leader line straight through the previous
   marker's speed number. Markers paint in REVERSE layout order so the
   undisplaced one ends up on top.
-- **Only the arrow fades.** The number and the altitude stay at full strength;
-  the number is the fallback for a colour scale many pilots cannot separate, so
-  it never pays for the annotation.
 - A nudged marker always prints its altitude, whatever `alt` says — displaced
   markers are the one case where the pilot cannot tell which reading is which,
   and 1648 m vs 2600 m is the whole point in a valley wind.
 
 The badge reads `12 stations ↓4` when markers were moved and `9 of 12 stations`
 when any were dropped; a bare count means nothing was hidden. Keep both.
-`tools/nudge.html` is how the fade gets judged — **a canvas drawn asynchronously
+`tools/nudge.html` is how the placement gets judged — **a canvas drawn asynchronously
 does not survive a headless screenshot**, so the widget's own markers cannot be
 checked that way and that page draws the same calls synchronously.
 

@@ -29,7 +29,7 @@ a{color:#54A6DC}
   canvas agree exactly on those. Then each marker that did <b>not</b> fit is
   ring-searched at a small radius around where it really is, taking the angle
   <b>furthest from the markers already there</b>. If no angle keeps the numbers
-  readable it is <b>stacked below</b> instead, fading by depth. Placement is
+  readable it is <b>stacked below</b> instead. Placement is
   <code>WG.marker.layout()</code>. This page exists because
   <b>a canvas drawn asynchronously does not survive a headless screenshot</b>,
   so the widget's own markers cannot be checked that way. Here the same
@@ -41,24 +41,21 @@ a{color:#54A6DC}
   label, not by an arrow — where "label" means the speed line and the altitude
   line together. <b>Arrows may overlap, but only partially:</b>
   <code>ARROW_TOL</code> keeps two centres far enough apart that neither
-  swallows the other. Letting them overlap without limit was tried and measured
-  as too cluttered. Only the arrow ever fades; text is always drawn at full
-  strength, because the number is the fallback for a colour scale many pilots
-  cannot separate.
+  swallows the other. <b>Nothing fades</b> — the leader line is the annotation,
+  and it says where a marker came from without needing to be interpreted.
 </p>
 <p>
-  <b>Fading marks real overlap, not displacement.</b> A moved marker that landed
-  in clear air is drawn at full strength — its leader line already says it was
-  moved, and the fade exists so an arrow underneath stays visible. Where one
-  arrow does sit on another, depth decides the amount: 0.6 for the first
-  displaced marker of a pile, 0.3 for the second, and at most three end up in
-  one pile. Positions are the real Zermatt cluster at <code>scale=3000</code>,
-  plus a stale 3345 m station dropped into the tightest pair.
-  <a href="../tools.html">← Tools</a>
-</p>
+  <b>Nothing is ever drawn further than one stack row from where it belongs.</b>
+  The ring radii are generated up to that same bound, so the fallback can no
+  longer be worse than the search — it was, by three times, and that is what
+  "the stations at the bottom are so far apart" turned out to be. A marker that
+  cannot fit inside the bound is dropped rather than filed under the wrong
+  ridge: at 225 m per pixel, 104 px is 23 km from the real station and no leader
+  line rescues that. Positions are the real Zermatt cluster at
+  <code>scale=3000</code>. <a href="../tools.html">← Tools</a>
+  </p>
 
 <label>marker size <input id="sz" type="range" min="0" max="100" value="50"></label>
-<label>arrow fade <input id="fa" type="range" min="20" max="100" value="55"></label>
 <label><input id="al" type="checkbox" checked> altitude line</label>
 
 <div class="row">
@@ -99,7 +96,6 @@ function terrain(g, W, H){
 function render(cv, nudge){
   var g = cv.getContext("2d"), W = cv.width, H = cv.height;
   var size = +document.getElementById("sz").value;
-  var alpha = +document.getElementById("fa").value / 100;
   var wantAlt = document.getElementById("al").checked;
   var scale = 0.55 + (size/100)*0.75, fs = Math.round(9 + (size/100)*7);
   var box = WG.REACH * scale;
@@ -138,9 +134,7 @@ function render(cv, nudge){
 
   for (i = lay.length - 1; i >= 0; i--){
     L = lay[i];
-    if (L.moved && L.over) g.globalAlpha = alpha * (WG.marker.nudgeAlpha(L.depth) / WG.marker.NUDGE_ALPHA[0]);
     WG.marker.canvas(g, items[L.i].st, L.x, L.y, scale);
-    g.globalAlpha = 1;
     var ly = WG.marker.label(g, items[L.i].st, L.x, L.y, scale, fs);
     if (wantAlt || L.moved) WG.marker.alt(g, items[L.i].st, L.x, ly, fs);
   }
@@ -150,7 +144,9 @@ function render(cv, nudge){
   document.getElementById(cv.id + "n").textContent =
     lay.length + " of " + CLUSTER.length + " drawn" +
     (moved ? ", " + moved + " moved, " +
-       lay.filter(function(p){ return p.moved && p.over; }).length + " faded" : "") +
+       "furthest " + Math.round(Math.max.apply(null,
+         lay.filter(function(p){ return p.moved; })
+            .map(function(p){ return Math.sqrt(Math.pow(p.x-p.tx,2)+Math.pow(p.y-p.ty,2)); }))) + " px" : "") +
     (lost ? ", " + lost + " lost" : "");
 }
 
@@ -158,7 +154,7 @@ function all(){
   render(document.getElementById("on"), true);
   render(document.getElementById("off"), false);
 }
-["sz","fa","al"].forEach(function(id){
+["sz","al"].forEach(function(id){
   document.getElementById(id).addEventListener("input", all);
 });
 all();
