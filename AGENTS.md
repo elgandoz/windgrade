@@ -209,8 +209,9 @@ URLs.
 with no `grp` is on the front page; everything else lands in one collapsed
 `<details>` under its group's heading, rendered by `wg/fields.js` in SPEC order.
 Ungrouped are the rows a pilot picks BEFORE a first flight, not ones they tune
-afterwards: `scale`, `alt`, `nudge`, `peaks`, `range` — declared widget-first so
-the launcher does not interleave the two views. **A new parameter has to argue
+afterwards: `scale`, `alt`, `peaks`, `nudge` — with `nudge` last, because it
+changes where a marker sits rather than whether it appears. `range` heads the
+first group, so it is the first row inside the accordion. **A new parameter has to argue
 for the front page, not be demoted off it** — and `tools/test-core.js` asserts
 the ungrouped set exactly, so adding one without a group fails the suite rather
 than quietly lengthening the page.

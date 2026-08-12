@@ -37,19 +37,26 @@ for (gi = 0; gi < WG.SPEC.length; gi++) {
   if (gs.ui === false || gs.hidden) continue;
   (gs.grp ? noGrp : front).push(gs.k);
 }
-/* The ungrouped rows are what a pilot picks BEFORE a first flight. Declared
-   widget rows first, then the shared one, then the list's, so the launcher does
-   not interleave the two views. */
+/* The ungrouped rows are what a pilot picks BEFORE a first flight, and `nudge`
+   is deliberately last: it changes where a marker sits rather than whether it
+   appears at all. */
 eq("only these are shown before the accordion",
-   front.join(","), "scale,alt,nudge,peaks,range");
+   front.join(","), "scale,alt,peaks,nudge");
 eq("the overlay's front page", front.filter(function (k) {
      var s = WG.SPEC.filter(function (x) { return x.k === k; })[0];
      return s.only !== "app";
-   }).join(","), "scale,alt,nudge,peaks");
+   }).join(","), "scale,alt,peaks,nudge");
 eq("the list's front page", front.filter(function (k) {
      var s = WG.SPEC.filter(function (x) { return x.k === k; })[0];
      return s.only !== "widget";
-   }).join(","), "peaks,range");
+   }).join(","), "peaks");
+/* Groups render in first-appearance order, so the first grouped SPEC entry is
+   the first row inside the accordion — `range`, the list's own catchment. */
+eq("range heads the accordion", (function () {
+  var i2; for (i2 = 0; i2 < WG.SPEC.length; i2++)
+    if (WG.SPEC[i2].grp && WG.SPEC[i2].ui !== false && !WG.SPEC[i2].hidden)
+      return WG.SPEC[i2].k;
+})(), "range");
 /* Moving a marker draws a station somewhere it was not measured. Annotated or
    not that is a real cost, so the pilot opts in rather than out. */
 eq("nudging is OFF by default", WG.cfg("").nudge, 0);

@@ -254,11 +254,11 @@ var M_PER_DEG = EQ_CIRC / 360;              /* 111319.49 m per degree of lat */
 
    The ungrouped rows are the ones a pilot chooses BEFORE a first flight, not
    ones they tune afterwards: `scale`, which has to match XCTrack's own map;
-   `alt` and `nudge`, which change what the overlay draws; `peaks`, which
-   changes which stations count; and `range`, the list's own catchment. Groups
-   are rendered in first-appearance order, so SPEC order is the UI order — and
-   these are declared widget rows first, then the shared one, then the list's,
-   so the launcher does not interleave the two views. ──────────────── */
+   `alt` and `peaks`, which decide what is drawn and which stations count; and
+   `nudge` LAST, because it changes where a marker sits rather than whether it
+   appears. Groups render in first-appearance order and SPEC order is the UI
+   order, so `range` heads the first group and is therefore the first row inside
+   the accordion. ─────────────────────────────────────────────────── */
 var SPEC = [
   { k:"lat",   t:"num", d:null, ui:false,
     lab:"Latitude",  help:"Overrides the position chain. XCTrack substitutes ${lat}." },
@@ -285,6 +285,11 @@ var SPEC = [
     lab:"Show station altitude",
     help:"Adds each station's height under its speed." },
 
+  /* The network's own flag — never a guess of ours. */
+  { k:"peaks", t:"int", d:0, min:0, max:1,
+    lab:"Summits only",
+    help:"Only stations on a summit." },
+
   /* OFF by default. It draws a station somewhere it was not measured, which is
      a real cost even annotated, so the pilot opts in. Zermatt is why it exists
      at all: ZFC: Landing at 2600 m and Zermatt at 1648 m are 387 m apart on the
@@ -295,10 +300,7 @@ var SPEC = [
     help:"Shows stations hidden behind a closer one, with a line back to where " +
          "they belong." },
 
-  /* The network's own flag — never a guess of ours. */
-  { k:"peaks", t:"int", d:0, min:0, max:1,
-    lab:"Summits only",
-    help:"Only stations on a summit." },
+  /* ── behind Advanced, by group ────────────────────────────────────── */
 
   /* THE LIST HAS NO MAP, so it has no scale. `scale` on that page did exactly
      one thing — feed zoomOf() and a nominal 448x978 widget to bboxAround —
@@ -306,13 +308,11 @@ var SPEC = [
      tall, while the list itself sorts purely by distance. A radius in km is the
      same control said honestly, in a unit that survives having no viewport.
      40 km is close to what the old default reached and is a sensible XC number:
-     an hour of glide at 40 km/h. */
-  { k:"range", t:"int", d:40, min:5, max:200, only:"app",
+     an hour of glide at 40 km/h. Heads the first group, so it is the first row
+     inside the accordion. */
+  { k:"range", t:"int", d:40, min:5, max:200, only:"app", grp:"Which stations",
     lab:"How far to look (km)",
-    help:"Stations further away than this are not shown. This is the list's " +
-         "own setting — the overlay uses the map scale above instead." },
-
-  /* ── behind Advanced, by group ────────────────────────────────────── */
+    help:"The list only, not the overlay." },
 
   /* Applied AFTER the view cull in prepare(), so on a map it caps what could
      be drawn rather than what happens to fall inside a radius. It was 40,

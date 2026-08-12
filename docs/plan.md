@@ -1384,12 +1384,17 @@ views:
 |---|---|
 | Map scale | overlay |
 | Show station altitude | overlay |
-| Move overlapping markers | overlay |
 | Summits only | both |
-| How far to look (km) | list |
+| Move overlapping markers | overlay |
 
-`tools/test-core.js` asserts that set exactly, per page, so a new parameter
-cannot quietly lengthen it.
+`nudge` is **last**, because it changes where a marker sits rather than whether
+it appears at all — every row above it answers "what do I see", it answers
+"where". `range` moved into the accordion and heads the first group, so it is
+the first row inside it; its help is down to *"The list only, not the overlay."*
+On `app.html` that leaves exactly one row before the accordion, **Summits only**.
+
+`tools/test-core.js` asserts that set exactly, per page, and that `range` heads
+the accordion — so neither the membership nor the order can drift.
 
 **Both help strings cut to one line:** *"Shows stations hidden behind a closer
 one, with a line back to where they belong."* and *"Only stations on a summit."*
