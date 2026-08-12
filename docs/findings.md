@@ -4,6 +4,81 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-12 — OPEN: a reported Pixel 9a "missing scales" list that no ladder can produce
+
+Reported as absent from XCTrack's map scale setting on a Pixel 9a at default
+density: **250m, 500m, 1km, 1500m, 2km, 4km, 8km, 12km, 15km, 25km, 30km,
+50km**. Separately confirmed as *present* on the same device: **400m, 800m,
+3km, 6km**, and the device has the full 23 steps.
+
+Unresolved. Recording the analysis so it is not redone.
+
+#### Eight of the twelve are expected, and would be on any device
+
+There are 23 ladder steps, each √2 = 1.414× apart in resolution. The nice-number
+ladder's own ratios are all **smaller** than that:
+
+```
+1 → 1.2 → 1.5 → 2 → 2.5 → 3 → 4 → 5 → 6 → 8 → 10
+  1.20  1.25  1.33 1.25 1.20 1.33 1.25 1.20 1.33 1.25
+```
+
+So consecutive steps always skip at least one nice number, and only about 13 of
+the ~23 nice numbers in the 150 m–60 km band can appear on a given device. A
+"missing" list is structural, not a defect. The model already predicts 250m,
+500m, 1km, 2km, 4km, 8km, 15km and 30km as absent.
+
+#### The other four are not a mis-tuned constant
+
+`1500m, 12km, 25km, 50km` sit at steps 29, 23, 21, 19 and are nowhere near a
+boundary — each occupies 81–85% of its bar span and would need the bar ~20%
+shorter to drop to the next nice number:
+
+| step | bar spans | picks | next down needs |
+|---|---|---|---|
+| 29 | 1849 m | 1500m | bar ×0.80 |
+| 23 | 14791 m | 12km | ×0.83 |
+| 21 | 29582 m | 25km | ×0.80 |
+| 19 | 59164 m | 50km | ×0.80 |
+
+Swept bar width **60–400 dp** against dpr **1.50–4.00**, scoring all 16
+constraints (4 present + 12 absent). **Best fit still violates 3** — it always
+prints 1500m, 15km and 30km. `BAR_MAX_DP = 150` violates 4. No setting of the
+existing model satisfies the report.
+
+#### And the report is internally inconsistent with a √2 ladder
+
+A step sits between its neighbours, √2 either side, so only the nice numbers in
+that gap are available to it:
+
+| step | between | candidates | not on the missing list |
+|---|---|---|---|
+| 29 | 1200m … 2500m | 1500m, 2km | **none** |
+| 23 | 10km … 20km | 12km, 15km | **none** |
+| 21 | 20km … 40km | 25km, 30km | **none** |
+| 19 | 40km … 80km | 50km, 60km | 60km |
+
+Three of the four steps have **no label that would satisfy the report**. Either
+the neighbours (1200m, 2500m, 10km, 20km, 40km) are also not what the model
+says — a larger error than a constant — or the list is not exactly what
+XCTrack's scale setting offers on that device.
+
+#### What would settle it
+
+The **full ordered list** of scale values XCTrack offers on the Pixel 9a, all 23
+of them, read straight off the setting. Same method that settled pixel density:
+one device, one measurement, no model of ours in the way. Until then
+`BAR_MAX_DP = 150` stands, because it reproduces both recorded label lists 46/46
+and nothing better has been demonstrated.
+
+**No live defect either way.** The launcher offers a *union* across densities on
+purpose — a scale that a pilot's own screen shows but the list omits is a hard
+failure, an offered scale their screen cannot reach is not — and the overlay
+resolves to the nearest step it can and prints what that really is. This is
+about the accuracy of the label model, not about anything a pilot cannot do.
+
+---
+
 ### 2026-08-11 — "missing" stations in Zermatt: decluttering, not the fetch
 
 Reported: `widget.html?scale=3000&alt=1&lat=46.0207&lng=7.7491` appears to omit
