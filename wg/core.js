@@ -252,11 +252,13 @@ var M_PER_DEG = EQ_CIRC / 360;              /* 111319.49 m per degree of lat */
    parameter should have to argue for the front page, and the front page is
    what a pilot sees before their first flight with this.
 
-   Only two rows are ungrouped today, and both because a wrong answer makes
-   the overlay useless rather than merely unpolished: `scale`, which has to
-   match XCTrack's own map, and `alt`, which is the one piece of context a
-   station name cannot carry. Groups are rendered in first-appearance order,
-   so SPEC order is the UI order. ──────────────────────────────────── */
+   The ungrouped rows are the ones a pilot chooses BEFORE a first flight, not
+   ones they tune afterwards: `scale`, which has to match XCTrack's own map;
+   `alt` and `nudge`, which change what the overlay draws; `peaks`, which
+   changes which stations count; and `range`, the list's own catchment. Groups
+   are rendered in first-appearance order, so SPEC order is the UI order — and
+   these are declared widget rows first, then the shared one, then the list's,
+   so the launcher does not interleave the two views. ──────────────── */
 var SPEC = [
   { k:"lat",   t:"num", d:null, ui:false,
     lab:"Latitude",  help:"Overrides the position chain. XCTrack substitutes ${lat}." },
@@ -283,6 +285,21 @@ var SPEC = [
     lab:"Show station altitude",
     help:"Adds each station's height under its speed." },
 
+  /* OFF by default. It draws a station somewhere it was not measured, which is
+     a real cost even annotated, so the pilot opts in. Zermatt is why it exists
+     at all: ZFC: Landing at 2600 m and Zermatt at 1648 m are 387 m apart on the
+     ground, and under strong valley winds those two readings are the question,
+     not near-duplicates. See draw() in widget.html and findings 2026-08-11. */
+  { k:"nudge", t:"int", d:0, min:0, max:1, only:"widget",
+    lab:"Move overlapping markers",
+    help:"Shows stations hidden behind a closer one, with a line back to where " +
+         "they belong." },
+
+  /* The network's own flag — never a guess of ours. */
+  { k:"peaks", t:"int", d:0, min:0, max:1,
+    lab:"Summits only",
+    help:"Only stations on a summit." },
+
   /* THE LIST HAS NO MAP, so it has no scale. `scale` on that page did exactly
      one thing — feed zoomOf() and a nominal 448x978 widget to bboxAround —
      which made its catchment a portrait rectangle roughly 65 km wide and 94 km
@@ -297,20 +314,6 @@ var SPEC = [
 
   /* ── behind Advanced, by group ────────────────────────────────────── */
 
-  /* `peaks` filters on the network's own flag — never a guess of ours. */
-  { k:"peaks", t:"int", d:0, min:0, max:1, grp:"Which stations",
-    lab:"Summits only",
-    help:"Hides everything the network does not mark as being on a summit." },
-  /* Zermatt is the case: ZFC: Landing at 2600 m and Zermatt at 1648 m are 387 m
-     apart on the ground, so the valley floor reading was being discarded for one
-     a kilometre above it. Under strong valley winds those are not near
-     duplicates, they are the question. Off restores the old drop-it behaviour
-     for comparison. See draw() in widget.html and findings 2026-08-11. */
-  { k:"nudge", t:"int", d:1, min:0, max:1, only:"widget", grp:"Which stations",
-    lab:"Move overlapping markers",
-    help:"Stations too close together to draw in place are moved aside, faded, " +
-         "with a line back to where they really are. Up to three per pile, " +
-         "highest station first and old readings last. Off hides them instead." },
   /* Applied AFTER the view cull in prepare(), so on a map it caps what could
      be drawn rather than what happens to fall inside a radius. It was 40,
      which cost half the drawable markers at wide scales — findings 2026-08-11. */

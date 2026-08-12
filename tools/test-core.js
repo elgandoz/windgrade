@@ -37,19 +37,22 @@ for (gi = 0; gi < WG.SPEC.length; gi++) {
   if (gs.ui === false || gs.hidden) continue;
   (gs.grp ? noGrp : front).push(gs.k);
 }
-/* Three, and each is view-specific: the overlay shows scale and alt, the list
-   shows range. No page has more than two rows before its accordion. */
-eq("only these are shown before the accordion", front.join(","), "scale,alt,range");
-eq("the overlay's front page is two rows",
-   front.filter(function (k) {
+/* The ungrouped rows are what a pilot picks BEFORE a first flight. Declared
+   widget rows first, then the shared one, then the list's, so the launcher does
+   not interleave the two views. */
+eq("only these are shown before the accordion",
+   front.join(","), "scale,alt,nudge,peaks,range");
+eq("the overlay's front page", front.filter(function (k) {
      var s = WG.SPEC.filter(function (x) { return x.k === k; })[0];
      return s.only !== "app";
-   }).join(","), "scale,alt");
-eq("the list's front page is one row",
-   front.filter(function (k) {
+   }).join(","), "scale,alt,nudge,peaks");
+eq("the list's front page", front.filter(function (k) {
      var s = WG.SPEC.filter(function (x) { return x.k === k; })[0];
      return s.only !== "widget";
-   }).join(","), "range");
+   }).join(","), "peaks,range");
+/* Moving a marker draws a station somewhere it was not measured. Annotated or
+   not that is a real cost, so the pilot opts in rather than out. */
+eq("nudging is OFF by default", WG.cfg("").nudge, 0);
 eq("every other UI row names a group", noGrp.indexOf(undefined), -1);
 eq("groups are few enough to scan", (function () {
   var seen = {}, n = 0, i2;

@@ -208,11 +208,12 @@ URLs.
 **The configurator shows two rows and hides the other seventeen.** A SPEC entry
 with no `grp` is on the front page; everything else lands in one collapsed
 `<details>` under its group's heading, rendered by `wg/fields.js` in SPEC order.
-Only `scale` and `alt` are ungrouped, because those are the two where a wrong
-answer makes the overlay useless rather than merely unpolished. **A new
-parameter has to argue for the front page, not be demoted off it** — and
-`tools/test-core.js` asserts the ungrouped set is exactly those two, so adding
-one without a group fails the suite rather than quietly lengthening the page.
+Ungrouped are the rows a pilot picks BEFORE a first flight, not ones they tune
+afterwards: `scale`, `alt`, `nudge`, `peaks`, `range` — declared widget-first so
+the launcher does not interleave the two views. **A new parameter has to argue
+for the front page, not be demoted off it** — and `tools/test-core.js` asserts
+the ungrouped set exactly, so adding one without a group fails the suite rather
+than quietly lengthening the page.
 Groups are headings, not nested accordions: a second click to reach "Scale bar
 height" buys nothing once the first has been paid. Empty groups are dropped, so
 `skipWidgetOnly` on `app.html` cannot leave a heading with nothing under it.
@@ -256,8 +257,10 @@ clear and the vertical requirement is the larger, so in a north-south valley the
 overlay declutters hardest along the valley. Full numbers in `docs/findings.md`
 2026-08-11.
 
-**`nudge=1` (default) moves markers aside instead of dropping them**, with a
-leader line back to their true position. That is allowed to coexist with "an
+**`nudge` moves markers aside instead of dropping them**, with a leader line
+back to their true position. **OFF by default** — it draws a station somewhere
+it was not measured, and annotated or not that is a real cost, so the pilot opts
+in. It is on the configurator's front page, not in the accordion. That is allowed to coexist with "an
 arrow sits on its own terrain" only because it is ANNOTATED: the leader line
 says it has been moved and where from. Never displace a marker silently.
 

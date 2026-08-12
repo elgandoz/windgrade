@@ -1365,6 +1365,37 @@ to be interpreted. `NUDGE_ALPHA`, `nudgeAlpha()` and the `over` pass are gone;
 `tools/nudge.html` lost its fade slider and now reports the furthest
 displacement instead.
 
+## Phase 3u — nudging is opt-in (2026-08-12)
+
+Owner: *"better, but I'd rather have nudge=0 by default, the user can force it.
+Put the nudge option in the configurator outside the advanced one, along with
+Summits only. Reduce a lot the help text for both."*
+
+**`nudge` defaults to 0.** It draws a station somewhere it was not measured, and
+annotated or not that is a real cost — so the pilot opts in rather than out.
+At Zermatt `scale=30000`: `28 of 120 stations` off, `44 of 120 ↓16` on.
+
+**`nudge` and `peaks` moved out of the accordion.** The configurator's front page
+is now the five rows a pilot picks before a first flight rather than tunes
+afterwards, declared widget-first so the launcher does not interleave the two
+views:
+
+| row | applies to |
+|---|---|
+| Map scale | overlay |
+| Show station altitude | overlay |
+| Move overlapping markers | overlay |
+| Summits only | both |
+| How far to look (km) | list |
+
+`tools/test-core.js` asserts that set exactly, per page, so a new parameter
+cannot quietly lengthen it.
+
+**Both help strings cut to one line:** *"Shows stations hidden behind a closer
+one, with a line back to where they belong."* and *"Only stations on a summit."*
+The reasoning they used to carry — the Zermatt pair, the network's own peak
+flag — moved into comments beside the SPEC entries.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,
