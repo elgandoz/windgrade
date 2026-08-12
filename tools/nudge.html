@@ -45,6 +45,11 @@ a{color:#54A6DC}
   and it says where a marker came from without needing to be interpreted.
 </p>
 <p>
+  The <b>selection ring</b> marks the station the popup is describing — without
+  it the overlay answers a tap with a panel naming a station and no way to tell
+  which of a dozen arrows it came from. Blue because the rating palette is white,
+  green, yellow, orange, red and black, so it cannot be read as a wind strength.
+
   <b>Nothing is ever drawn further than one stack row from where it belongs.</b>
   The ring radii are generated up to that same bound, so the fallback can no
   longer be worse than the search — it was, by three times, and that is what
@@ -57,6 +62,7 @@ a{color:#54A6DC}
 
 <label>marker size <input id="sz" type="range" min="0" max="100" value="50"></label>
 <label><input id="al" type="checkbox" checked> altitude line</label>
+<label><input id="se" type="checkbox" checked> selection ring</label>
 
 <div class="row">
   <div class="col"><h2>nudge on</h2><canvas id="on" width="411" height="560"></canvas><p id="onn"></p></div>
@@ -97,6 +103,7 @@ function render(cv, nudge){
   var g = cv.getContext("2d"), W = cv.width, H = cv.height;
   var size = +document.getElementById("sz").value;
   var wantAlt = document.getElementById("al").checked;
+  var sel = document.getElementById("se").checked;
   var scale = 0.55 + (size/100)*0.75, fs = Math.round(9 + (size/100)*7);
   var box = WG.REACH * scale;
   g.font = "700 " + fs + "px ui-monospace, 'Roboto Mono', monospace";
@@ -128,9 +135,16 @@ function render(cv, nudge){
   });
 
   var i, L;
-  for (i = 0; i < lay.length; i++)
+  for (i = 0; i < lay.length; i++){
     if (lay[i].moved)
       WG.marker.leader(g, lay[i].tx, lay[i].ty, lay[i].x, lay[i].y, box);
+    /* The selection ring, drawn in the same pass and for the same reason —
+       under every marker. Here it marks Gornergratsee so the ring can be judged
+       against terrain; in the widget it marks whichever station the popup is
+       describing. */
+    if (sel && items[lay[i].i].st.name === "Gornergratsee")
+      WG.marker.ring(g, lay[i].x, lay[i].y, box);
+  }
 
   for (i = lay.length - 1; i >= 0; i--){
     L = lay[i];
@@ -154,7 +168,7 @@ function all(){
   render(document.getElementById("on"), true);
   render(document.getElementById("off"), false);
 }
-["sz","al"].forEach(function(id){
+["sz","al","se"].forEach(function(id){
   document.getElementById(id).addEventListener("input", all);
 });
 all();

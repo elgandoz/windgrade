@@ -364,13 +364,19 @@ function draw(fix, ranked){
 
     /* Every leader line first, under every marker. Painting each marker as it
        was placed put the next line straight through the previous marker's
-       speed number — caught by screenshotting it, not by reading it. */
+       speed number — caught by screenshotting it, not by reading it. The
+       selection ring goes in the same pass, for the same reason. */
     for (i = 0; i < lay.length; i++){
       L = lay[i];
       if (L.moved){
         nMoved++;
         WG.marker.leader(bctx, L.tx, L.ty, L.x, L.y, box);
       }
+      /* Which arrow the open popup is describing. Compared by id, not by
+         object: prepare() hands back the same station objects, but a refetch
+         replaces them wholesale. */
+      if (popStation && cand[L.i].st.id === popStation.id)
+        WG.marker.ring(bctx, L.x, L.y, box);
     }
 
     /* REVERSE order, so the highest-priority member of a cluster paints LAST
@@ -581,7 +587,8 @@ function tick(){
   var z = WG.zoomForStep(curStep);
   var key = Math.round(WG.lonToPx(fix.lon, z) * WG.getCal()) + "/" +
             Math.round(WG.latToPx(fix.lat, z) * WG.getCal()) + "/" +
-            W + "x" + H + "/" + curStep + "/" + lastFetch + "/" + Math.round(now / 60000);
+            W + "x" + H + "/" + curStep + "/" + lastFetch + "/" + Math.round(now / 60000) +
+            "/" + (popStation ? popStation.id : "");
 
   if (key !== drawKey){
     drawKey = key;
@@ -622,6 +629,7 @@ function closePop(){
   var p = document.getElementById("pop");
   p.hidden = true;
   p.innerHTML = "";
+  tick();                       /* and it has to come off again */
 }
 
 function openPop(st){
@@ -631,6 +639,10 @@ function openPop(st){
      that cadence, so a fresher call would return the same samples. */
   popHist = (c && Date.now() - c.at < C.poll * 1000) ? c.list : null;
   paintPop();
+  /* The selection ring lives on the canvas, and the draw key carries the open
+     station's id — so this is what puts the ring on. After paintPop, so the
+     panel and the ring appear in the same frame. */
+  tick();
   if (popTimer) clearTimeout(popTimer);
   /* 0 means keep it until dismissed. Otherwise it closes itself, because a
      popup left open over a moving map hides the thing it sits on. */

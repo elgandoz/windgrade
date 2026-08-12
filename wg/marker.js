@@ -465,6 +465,33 @@ function layout(items, o) {
   return out;
 }
 
+/* ── selection ring ───────────────────────────────────────────────────
+   Drawn UNDER the marker the pilot has open, so the popup and the arrow it
+   describes are visibly the same station. Without it the overlay answers a tap
+   with a panel naming a station and no way to tell which of a dozen arrows it
+   came from — which is worst exactly where it matters, in a cluster.
+
+   A RING, not SeeYou's filled disc: our markers already carry a white halo for
+   contrast against terrain, and a white disc behind one would swallow it.
+
+   Blue, and that is safe rather than decorative: the rating palette is white,
+   green, yellow, orange, red, black, so blue cannot be read as a wind strength.
+   The colour rule — "the colour belongs to the marker" — is about the SPACE
+   AROUND a reading not being coloured to imply a value there; this says
+   "you tapped this one" and implies nothing about the wind.
+
+   Cased in white like every other line on this canvas, because it has to
+   survive snow, rock and an airspace edge. */
+var RING_COLOUR = "#1E6FA8";
+
+function ring(g, x, y, box) {
+  var r = box * 1.45;
+  g.beginPath();
+  g.arc(x, y, r, 0, 6.2832);
+  g.strokeStyle = "#FFFFFF"; g.lineWidth = 5.5; g.stroke();
+  g.strokeStyle = RING_COLOUR; g.lineWidth = 2.4; g.stroke();
+}
+
 /* ── leader line, for a marker that had to be moved ───────────────────
    The overlay nudges a marker DOWN when it would overlap one already placed,
    rather than dropping the reading — see draw() in widget.html. This is what
@@ -579,7 +606,8 @@ WG.marker = {
   label: labelCanvas, labelText: labelText, fmt: fmt,
   alt: altCanvas, altText: altText, altSize: altSize,
   svg: svg, trendHtml: trendHtml, trendScroll: trendScroll,
-  leader: leader, layout: layout, ARROW_TOL: ARROW_TOL,
+  leader: leader, ring: ring, RING_COLOUR: RING_COLOUR,
+  layout: layout, ARROW_TOL: ARROW_TOL,
   hhmm: hhmm, esc: esc
 };
 

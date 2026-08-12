@@ -78,12 +78,12 @@ also records why there is no generation cycle to synchronise our poll with.
 
 Things believed but not measured. Each says how to settle it.
 
-- **`widget.html` in flight.** Narrower than it was: the scale pairing, marker
-  layout and decluttering have now been checked on an emulator at Zermatt across
-  several scales, and `tools/nudge.html` renders the same calls synchronously so
-  they *can* be screenshotted. What has still never happened is a real flight —
-  legibility in sunlight, and whether the battery cost is what the profiling
-  says it is.
+- **`widget.html` in flight.** Narrower again: the owner set the emulator's
+  position to Zermatt and reports the overlay looked right there, across several
+  scales, and `tools/nudge.html` renders the same calls synchronously so the
+  marker work *can* be screenshotted. What has still never happened is a real
+  flight — legibility in sunlight, and whether the battery cost is what the
+  profiling says. **Owner flying 2026-08-12 evening and checking visibility.**
 - **Latitude independence of the 0.942 calibration.** Confirmed at 47.36°N only;
   Switzerland spans 3.7% of cos variation. The scale bar now makes this passive —
   fly to Valais or Ticino and see whether the two bars still agree.
@@ -121,11 +121,6 @@ Things believed but not measured. Each says how to settle it.
 
 ## Deferred features
 
-- **Selected-station highlight** — SeeYou draws a white circle behind the selected
-  marker. Cheap, costs no colour. Tapping now exists on both pages, so the
-  selection concept is there; what still blocks it on the overlay is that
-  tapping requires *"Allow tapping on the web page when locked"*, which costs
-  the pilot their own zoom buttons. Free on `app.html` whenever wanted.
 - **Own basemap (Phase 3)** — still the durable answer for the standalone page.
 - **Zoom sync** — rejected 2026-08-11, see `plan.md` Phase 3c. Becomes buildable
   only if XCTrack ships the read above, or if a future build lets touches fall
