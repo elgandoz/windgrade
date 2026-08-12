@@ -54,23 +54,33 @@ widget never reaches a background widget underneath, even with
 pilot's own zoom buttons. An option to let unhandled touches fall through would fix
 that. Measured 2026-08-11; log in `docs/findings.md`.
 
-### 2. winds.mobi: the `User-Agent` term
+### 2. winds.mobi: the `User-Agent` term  ✉️ SENT 2026-08-12, awaiting reply
 
-Their terms require identifying calls with a `User-Agent` header. Browsers forbid
-`fetch()` from setting it, so **we cannot comply as written**. The automatic
-`Origin` header does identify the deployment.
+**Do not re-draft this.** The owner emailed Yann at `info@winds.mobi` on
+2026-08-12 asking both questions below. Nothing to do until he replies.
 
-Email Yann, `info@winds.mobi`, and ask whether `Origin` suffices. Do not spoof the
-header and do not quietly ignore the rule — their terms end "blacklisted without any
-notice". Deferred by the owner pending overall feasibility; the API works meanwhile.
+**The problem.** Their terms require identifying calls with a `User-Agent`
+header. Browsers forbid `fetch()` from setting it, so **we cannot comply as
+written**. The automatic `Origin` header does identify the deployment
+(`https://elgandoz.github.io`), and the email asks whether that suffices.
 
-**Ask for `ETag` in the same message.** Measured 2026-08-12: the API sends no
+Whatever comes back: do not spoof the header and do not quietly ignore the rule
+— their terms end "blacklisted without any notice". The API works meanwhile, and
+our usage is one bounding-box call per pilot per ~10 min, with history fetched
+only on a tap and cached for one poll interval.
+
+**The same email asks for `ETag`.** Measured 2026-08-12: the API sends no
 `Cache-Control`, no `ETag`, no `Last-Modified` and no `Age` — just `date` and
 `server: uvicorn`. Two calls 3 s apart returned byte-identical payloads, but
 finding that out costs the full 118 KB. `ETag` + `If-None-Match` would turn most
 polls into a 304, which is bandwidth saved on both sides and squarely in the
 spirit of their "do not overload" rule. See `docs/findings.md` 2026-08-12, which
 also records why there is no generation cycle to synchronise our poll with.
+
+**If he says yes to `ETag`:** the provider is the only file that changes. Keep
+the last `ETag` per bbox, send `If-None-Match`, and treat 304 as "keep what is
+on screen and refresh `lastFetch`" — the staleness clock must still advance, or
+a 304 would make readings look newer than they are.
 
 ---
 
