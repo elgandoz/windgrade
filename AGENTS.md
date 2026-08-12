@@ -320,10 +320,21 @@ exactly what the widget draws. Two phases:
   in phase 1's order, not in the displacement.
 
 **Cost: `draw()` runs when its key changes, not per frame** — about 0.5 Hz in
-flight (one device pixel of movement) and once a minute parked. `layout()` is
-the only expensive thing in it, measured at **0.71 ms for 118 markers** against
-JSON.parse 607 µs (once per poll), `prepare()` 67 µs and `svg()` 0.8 µs. Two
-things keep it there and both are easy to undo by accident:
+flight (one device pixel of movement) and once a minute parked. Over 118 markers
+in view: `layout()` **29 µs with nudging off (the default)** and **0.71 ms with
+it on**, against JSON.parse 607 µs (once per poll), `prepare()` 67 µs and
+`svg()` 0.8 µs. So in the default configuration `prepare()` is the larger of the
+two and none of it is measurable.
+
+**`layout()` returns early on `!o.nudge`, and that early return is load-bearing,
+not tidiness** — the ring search is 94% of the nudge-on cost and a pilot who has
+not asked for it pays none of it. Everything after the return serves phase 2
+only; do not hoist anything above it. The `pending` seeding used to sit there
+and allocated 92 arrays per draw, at Zermatt `scale=30000`, for a loop that then
+never ran.
+
+Two more things keep the nudge-on path where it is, both easy to undo by
+accident:
 
 - **The neighbourhood is scanned ONCE PER HIDDEN MARKER, not per candidate.**
   Every candidate sits within `maxMove` of the marker's true position and
