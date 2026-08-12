@@ -1270,39 +1270,47 @@ The scoring now includes markers **still waiting to be placed**, at their true
 positions, drained as each is handled. Blauherd goes east instead, and
 Gornergratsee stays put to within 22 px.
 
-#### 2. Arrows were forbidden from overlapping, so nothing ever did
+#### 2. Arrows were forbidden from overlapping — but the first fix went too far
 
 The conflict test forbade arrow-vs-arrow and arrow-vs-text as well as
 text-vs-text. That is what kept markers ~50 px apart — and it is why the fade
 never meant anything: no two arrows ever actually overlapped, so a faded marker
 was announcing a collision that was not happening.
 
-**One hard rule now: two speed labels may not overlap.** Arrows may cross each
-other freely. An arrow may lie across a number when there is nowhere else to
-go — the ring scores that down (×0.45) rather than forbidding it.
+The first attempt dropped **all three** constraints — arrow-vs-arrow,
+arrow-vs-text and the tolerance — leaving only text-vs-text. Markers got very
+close, and the owner's verdict was immediate: *"now it's too cluttered, you're
+right. the idea was to allow the arrow to be partially overlap, but do not allow
+to overlap the labels (which include altitude)."*
 
-**And the fade marks real overlap, not displacement.** Results carry `over`, the
-number of arrows a marker crosses; the caller fades only when it is non-zero.
-The leader line is what says *moved* — the fade exists so the arrow underneath
-stays visible, and in clear air there is nothing to see through.
+**The settled rule, and the two halves are different on purpose:**
 
-| Zermatt, scale 12000 | before | after |
-|---|---|---|
-| drawn | 27 of 36 | **30 of 36** |
-| Gornergratsee displacement | 47 px SE | **22 px NE** |
-| typical displacement | 47–54 px | **22 px** |
+| | rule |
+|---|---|
+| label vs anything | **never** — not another label, not an arrow. `t0..t1` spans the speed line and the altitude line together, because both are the label. |
+| arrow vs arrow | **partially**, bounded by `ARROW_TOL` (0.6) so neither swallows the other |
 
-| Zermatt, scale 3000 | before | after |
-|---|---|---|
-| markers moved | 4 | **2** |
-| badge | `12 stations ↓4` | `11 stations ↓1` |
+Both halves were tried the other way round and both were wrong: forbidding
+arrow-on-arrow put markers ~50 px apart, and allowing it without limit was too
+cluttered. With the label rule restored, `ARROW_TOL` barely changes the outcome
+at all — 27 of 36 drawn at 0.72, 0.6 and 0.5 — because the label is what sets
+the distance. That is the right thing to be bound by.
 
-`tools/nudge.html`: **8 of 8 drawn, 3 moved, 0 faded** — and `nudge=0` now draws
-5 of 8 rather than 4, because the relaxed rule lets more fit without any nudging
-at all.
+**The fade marks real overlap, not displacement.** Results carry `over`, the
+number of arrows a marker partially crosses, measured against the full `box`
+rather than the tolerated `aw`; the caller fades only when it is non-zero. The
+leader line is what says *moved* — the fade exists so the arrow underneath stays
+visible, and in clear air there is nothing to see through. This is why
+`tools/nudge.html` reports **8 of 8 drawn, 4 moved, 0 faded**: everything found
+clear air, so nothing needed fading.
 
 A fourth ring radius (3.0 reaches) was added when a marker in a dense corner
 still stacked 54 px straight down while there was room to rotate.
+
+**What the label rule costs**, measured on the same 36 stations at scale 12000:
+27 drawn against 30 with the loose rule, and displacements back at 22–58 px
+rather than a uniform 22. That is the honest price of never covering a number,
+and it is the right side to err on.
 
 ## Phase 4 — polish
 

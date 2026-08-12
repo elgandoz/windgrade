@@ -37,11 +37,12 @@ a{color:#54A6DC}
   for snow, rock, forest, a river and an airspace edge.
 </p>
 <p>
-  What to judge: <b>the number and the altitude must stay fully legible</b>.
-  <b>Two speed labels may never overlap</b> — that is the one hard rule.
-  Everything else is allowed: arrows may cross each other freely, and an arrow
-  may lie across a number when there is nowhere else to go, which the search
-  avoids when it can. Only the arrow ever fades; text is always drawn at full
+  What to judge: <b>a label is never overlapped by anything</b> — not by another
+  label, not by an arrow — where "label" means the speed line and the altitude
+  line together. <b>Arrows may overlap, but only partially:</b>
+  <code>ARROW_TOL</code> keeps two centres far enough apart that neither
+  swallows the other. Letting them overlap without limit was tried and measured
+  as too cluttered. Only the arrow ever fades; text is always drawn at full
   strength, because the number is the fallback for a colour scale many pilots
   cannot separate.
 </p>

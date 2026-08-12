@@ -405,11 +405,12 @@ head("marker layout: place, then rotate, then stack");
   function it(x, y, tw) { return { x:x, y:y, tw:tw }; }
   function dist(p) { return Math.sqrt(Math.pow(p.x - p.tx, 2) + Math.pow(p.y - p.ty, 2)); }
 
-  /* THE ONE HARD RULE: two speed labels may not overlap. Arrows may — over each
-     other and, when there is nowhere else, over a number, which is what the
-     fade is for. Checked over every pair of every result below. */
-  function anyLabelClash(r, items) {
-    var t0 = BOX - 1, t1 = t0 + TH, p, q, A, B, atw, btw;
+  /* THE RULE: a LABEL — speed line and altitude line together — may not be
+     overlapped by anything, another label or an arrow. Arrows may overlap each
+     other, but only partially: ARROW_TOL bounds it. Checked over every pair of
+     every result below. */
+  function anyLabelCovered(r, items) {
+    var aw = BOX * MK.ARROW_TOL, t0 = BOX - 1, t1 = t0 + TH, p, q, A, B, atw, btw;
     function cross(a0,a1,b0,b1){ return a0 < b1 && b0 < a1; }
     for (p = 0; p < r.length; p++)
       for (q = p + 1; q < r.length; q++) {
@@ -417,7 +418,19 @@ head("marker layout: place, then rotate, then stack");
         atw = items[A.i].tw || TW; btw = items[B.i].tw || TW;
         if (cross(A.x-atw, A.x+atw, B.x-btw, B.x+btw) &&
             cross(A.y+t0, A.y+t1, B.y+t0, B.y+t1)) return true;
+        if (cross(A.x-atw, A.x+atw, B.x-aw, B.x+aw) &&
+            cross(A.y+t0, A.y+t1, B.y-aw, B.y+aw)) return true;
+        if (cross(B.x-btw, B.x+btw, A.x-aw, A.x+aw) &&
+            cross(B.y+t0, B.y+t1, A.y-aw, A.y+aw)) return true;
       }
+    return false;
+  }
+  function arrowsSwallowed(r) {
+    var aw = BOX * MK.ARROW_TOL, p, q;
+    for (p = 0; p < r.length; p++)
+      for (q = p + 1; q < r.length; q++)
+        if (Math.abs(r[p].x - r[q].x) < aw * 2 &&
+            Math.abs(r[p].y - r[q].y) < aw * 2) return true;
     return false;
   }
 
@@ -432,17 +445,19 @@ head("marker layout: place, then rotate, then stack");
   eq("the nearer one keeps its true position", pair[0].moved, false);
   eq("the second is moved", pair[1].moved, true);
   eq("and it is the first displaced, so depth 1", pair[1].depth, 1);
-  eq("the two speed labels do not overlap", anyLabelClash(pair, [it(100,100), it(105,108)]), false);
+  eq("no label is covered by anything", anyLabelCovered(pair, [it(100,100), it(105,108)]), false);
+  eq("and no arrow is swallowed by another", arrowsSwallowed(pair), false);
 
-  /* ARROWS MAY OVERLAP — the owner's call, and it is what makes this close.
-     While arrow-vs-arrow was forbidden the same pair landed 48 px away and
-     nothing ever actually overlapped, so the fade was announcing a collision
-     that was not happening. */
-  eq("a wide-label pair now lands on the innermost ring", dist(pair[1]), 23, 1);
+  /* WHAT SETS THE DISTANCE is the label, not the arrow. A wide-label pair has to
+     clear two 46 px text columns; a narrow one ("3/7" rather than "14/22", the
+     common case in light valley wind) gets away with far less. Letting arrows
+     overlap without limit made this much closer and was measured as too
+     cluttered — partial overlap only. */
+  eq("a wide-label pair clears its text columns", dist(pair[1]), 48, 1);
   var narrow = MK.layout([it(100, 100, 12), it(105, 108, 12)], opt());
-  eq("so does a narrow-label pair", dist(narrow[1]) < 26, true);
-  eq("still with no label clash",
-     anyLabelClash(narrow, [it(100,100,12), it(105,108,12)]), false);
+  eq("a narrow-label pair gets much closer", dist(narrow[1]) < 26, true);
+  eq("still with nothing covered",
+     anyLabelCovered(narrow, [it(100,100,12), it(105,108,12)]), false);
 
   /* THE FADE NOW MEANS SOMETHING. It marks an arrow that is genuinely on top of
      another, not merely a marker that was moved — the leader line already says
@@ -452,16 +467,14 @@ head("marker layout: place, then rotate, then stack");
   (function () {
     var apart = MK.layout([it(100,100), it(160,100)], opt());
     eq("two markers that never collided are not faded", apart[0].over + apart[1].over, 0);
-    /* 26 px apart vertically: the labels clear (24 px tall) but the arrow boxes
-       (28.8 px) do not — so BOTH are drawn where they belong, arrows crossing,
-       and the overlap is reported. Under the old arrow-vs-arrow rule the second
-       would have been displaced ~50 px for nothing. */
-    var tight = MK.layout([it(100,100), it(100,126)], opt());
-    eq("two markers 26 px apart both keep their true positions",
-       tight.length === 2 && !tight[0].moved && !tight[1].moved, true);
-    eq("their labels still do not overlap",
-       anyLabelClash(tight, [it(100,100), it(100,126)]), false);
-    eq("but their arrows do, and that is reported", tight[0].over, 1);
+    /* Arrows partially overlapping is reported, so the fade can mean that rather
+       than merely "this was moved". Two markers 30 px apart horizontally: the
+       constraint keeps centres 2*aw = 24 px apart, so this is legal, and they
+       are within 2*box = 40 px, so they visibly cross. */
+    var tight = MK.layout([it(100,100,12), it(130,100,12)], opt());
+    eq("a legal partial overlap is reported", tight[0].over, 1);
+    eq("and nothing is covered by it",
+       anyLabelCovered(tight, [it(100,100,12), it(130,100,12)]), false);
   })();
 
   /* Depth drives the fade, and only two depths exist. */
@@ -473,7 +486,7 @@ head("marker layout: place, then rotate, then stack");
   var r3 = MK.layout(three, opt());
   eq("three overlapping are all drawn", r3.length, 3);
   eq("depths run 0, 1, 2", r3.map(function(p){ return p.depth; }).join(","), "0,1,2");
-  eq("no label clash with three", anyLabelClash(r3, three), false);
+  eq("no label clash with three", anyLabelCovered(r3, three), false);
 
   /* "more than 3 they get lost" */
   var four = [it(100,100), it(104,104), it(108,108), it(112,112)];
@@ -495,7 +508,7 @@ head("marker layout: place, then rotate, then stack");
     eq("a later marker keeps its true position", third.moved, false);
     eq("the displaced one is the only thing that moved",
        r.filter(function (p) { return p.moved; }).length, 1);
-    eq("no label clash", anyLabelClash(r, set), false);
+    eq("no label clash", anyLabelCovered(r, set), false);
   })();
 
   /* THE KNOCK-ON THE OWNER REPORTED. At Zermatt, scale 12000, ZFC: Blauherd
@@ -529,7 +542,7 @@ head("marker layout: place, then rotate, then stack");
   eq("separate clusters are laid out independently", r2.length, 4);
   eq("each keeps one marker in place",
      r2.filter(function (p) { return !p.moved; }).length, 2);
-  eq("no label clash across the whole scene", anyLabelClash(r2, two), false);
+  eq("no label clash across the whole scene", anyLabelCovered(r2, two), false);
 })();
 
 head("station altitude line");

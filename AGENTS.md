@@ -276,16 +276,18 @@ exactly what the widget draws. Two phases:
   narrow text column under it (`x ± tw`, from `y+box-1`). A single rectangle
   round the whole thing had to be as wide as the label and as tall as
   arrow+label+altitude, so every escape cost ~50 px whichever way it went.
-- **ONE HARD RULE: two speed labels may not overlap.** Arrows may cross each
-  other freely, and an arrow may lie across a number when there is nowhere else
-  — the ring scores that down (`overText`, ×0.45) rather than forbidding it.
-  Forbidding arrow-on-arrow is what kept markers ~50 px apart AND made the fade
-  meaningless: nothing ever actually overlapped, so a faded marker was
-  announcing a collision that was not happening.
+- **A LABEL IS NEVER OVERLAPPED BY ANYTHING** — not by another label, not by an
+  arrow — and "label" means the speed line and the altitude line together
+  (`t0..t1` spans both). This is what sets how close two markers can get, and it
+  should be. **ARROWS may overlap, but only PARTIALLY:** `ARROW_TOL` bounds it
+  so neither swallows the other. Both halves were tried the other way round and
+  both were wrong — forbidding arrow-on-arrow put markers ~50 px apart, allowing
+  it without limit was too cluttered.
 - **The fade marks REAL OVERLAP, not displacement.** Results carry `over`, the
-  number of arrows this one crosses; the caller fades only when `over` is
-  non-zero. The leader line is what says "moved" — the fade is so the arrow
-  underneath stays visible, and in clear air there is nothing to see through.
+  number of arrows this one partially crosses (measured against the full `box`,
+  not the tolerated `aw`); the caller fades only when it is non-zero. The leader
+  line is what says "moved" — the fade is so the arrow underneath stays visible,
+  and in clear air there is nothing to see through.
 - **The ring scores against markers NOT YET PLACED too**, at their true
   positions. Without that a displaced marker walks into the spot the next one
   needs: measured at Zermatt `scale=12000`, ZFC: Blauherd went 54 px south onto

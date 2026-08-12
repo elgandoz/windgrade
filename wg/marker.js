@@ -212,7 +212,7 @@ var NUDGE_ALPHA = [0.6, 0.3];
 function nudgeAlpha(depth) {
   return NUDGE_ALPHA[Math.min(Math.max(depth, 1), NUDGE_ALPHA.length) - 1];
 }
-var ARROW_TOL = 0.72;              /* arrows may overlap by about a quarter */
+var ARROW_TOL = 0.6;             /* arrows may overlap by about 40% */
 /* Search radii, in marker reaches. The largest is still under the height of a
    stack step, so a rotational placement always wins when one exists — measured:
    a level pair needs 48 px of clearance for two 46 px text columns, a stack
@@ -241,25 +241,34 @@ function layout(items, o) {
 
   function cross(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
 
-  /* THE ONE HARD RULE: two speed labels may not overlap. Everything else is a
-     preference, expressed through the score below.
+  /* THE RULE, owner's words: "allow the arrow to partially overlap, but do not
+     allow to overlap the labels (which include altitude)".
 
-     ARROWS ARE ALLOWED TO OVERLAP, and that is the owner's call: "even if an
-     arrow overlaps, the important part is that the wind speed label doesn't
-     overlap, but the arrow can". Forbidding it is what kept markers ~50 px
-     apart and made the fade meaningless — nothing ever actually overlapped, so
-     a faded marker was announcing a collision that was not happening. */
+     So there are two different tolerances, and getting them the same way round
+     is the whole game:
+
+       ARROWS may overlap, but only PARTIALLY. `aw` is the arrow's half-extent
+       scaled by ARROW_TOL, so two centres must stay 2*aw apart — anything
+       closer and one arrow swallows the other. Letting them overlap without
+       limit was measured as too cluttered.
+
+       LABELS may not be overlapped BY ANYTHING — not by another label, not by
+       an arrow. `t0..t1` spans the speed line and the altitude line together,
+       because the owner counts both as the label. This is the constraint that
+       sets how close two markers can get, and it should be: the number is the
+       fallback for a colour scale many pilots cannot separate. */
   function conflict(ax, ay, atw, bx, by, btw) {
-    return cross(ax - atw, ax + atw, bx - btw, bx + btw) &&
-           cross(ay + t0, ay + t1, by + t0, by + t1);
-  }
-  /* Separate, because the ring PREFERS not to lay an arrow across a number even
-     though it is allowed to when there is nowhere else to go. */
-  function overText(ax, ay, atw, bx, by, btw) {
-    return (cross(ax - atw, ax + atw, bx - aw, bx + aw) &&
-            cross(ay + t0, ay + t1, by - aw, by + aw)) ||
-           (cross(bx - btw, bx + btw, ax - aw, ax + aw) &&
-            cross(by + t0, by + t1, ay - aw, ay + aw));
+    /* label vs label */
+    if (cross(ax - atw, ax + atw, bx - btw, bx + btw) &&
+        cross(ay + t0, ay + t1, by + t0, by + t1)) return true;
+    /* label vs the other's arrow, both ways */
+    if (cross(ax - atw, ax + atw, bx - aw, bx + aw) &&
+        cross(ay + t0, ay + t1, by - aw, by + aw)) return true;
+    if (cross(bx - btw, bx + btw, ax - aw, ax + aw) &&
+        cross(by + t0, by + t1, ay - aw, ay + aw)) return true;
+    /* arrow vs arrow, tolerated up to ARROW_TOL */
+    return cross(ax - aw, ax + aw, bx - aw, bx + aw) &&
+           cross(ay - aw, ay + aw, by - aw, by + aw);
   }
   function free(x, y, tw) {
     var k;
@@ -315,9 +324,6 @@ function layout(items, o) {
       p = near[k];
       dx = Math.abs(x - p[0]); dy = Math.abs(y - p[1]);
       s = Math.max(dx / (tw + p[2]), dy / (th + aw));
-      /* An arrow laid across someone's number is permitted but never
-         preferred, so it costs score rather than disqualifying the angle. */
-      if (overText(x, y, tw, p[0], p[1], p[2])) s *= 0.45;
       if (s < best) best = s;
     }
     return best;
@@ -367,7 +373,7 @@ function layout(items, o) {
         near = nearby(cx, cy);
         for (j = 0; j < near.length; j++)
           if (conflict(cx, cy, tw, near[j][0], near[j][1], near[j][2])) break;
-        if (j < near.length) continue;          /* two numbers would collide */
+        if (j < near.length) continue;          /* a label would be covered */
         sc = roominess(cx, cy, tw, near);
         if (sc > bestSc) { bestSc = sc; bx = cx; by = cy; got = true; }
       }
@@ -393,18 +399,18 @@ function layout(items, o) {
     depthAt[key] = depth;
   }
 
-  /* WHICH MARKERS ACTUALLY OVERLAP. Now that arrows are allowed to, the fade
-     can mean what it says instead of being applied to every displaced marker
-     whether or not anything is underneath it. A displaced marker that landed
-     in clear air is drawn at full strength — its leader line still says it was
-     moved, which is the annotation that matters; the fade is there so you can
-     see the arrow beneath, and there is nothing beneath. */
+  /* WHICH ARROWS ACTUALLY OVERLAP, so the fade can mean that rather than merely
+     "this was moved" — the leader line already says moved. Measured against the
+     FULL arrow (box), not the tolerated half-extent (aw): the constraint keeps
+     centres 2*aw apart, and anything between 2*aw and 2*box is the partial
+     overlap the owner asked for, which is exactly when seeing through the top
+     arrow helps. */
   for (i = 0; i < out.length; i++) {
     out[i].over = 0;
     for (j = 0; j < out.length; j++) {
       if (i === j) continue;
-      if (Math.abs(out[i].x - out[j].x) < aw * 2 &&
-          Math.abs(out[i].y - out[j].y) < aw * 2) out[i].over++;
+      if (Math.abs(out[i].x - out[j].x) < box * 2 &&
+          Math.abs(out[i].y - out[j].y) < box * 2) out[i].over++;
     }
   }
   return out;
