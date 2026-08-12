@@ -4,6 +4,41 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-12 — winds.mobi has no generation cycle to sync to, and no cache validator
+
+Asked whether the 10 minute poll could be aligned to winds.mobi's own update
+cycle. **There is no such cycle.** Timestamps across 310 stations, 14 networks,
+one fetch:
+
+| network | n | reports at |
+|---|---|---|
+| slf.ch | 101 | **:00** — 100 of 101 on the hour |
+| meteoswiss.ch | 65 | :20 and :30, split |
+| holfuy.com | 57 | :22–:24 |
+| openwindmap.org | 40 | :17–:22, scattered per station |
+| aviationweather.gov | 12 | :50, hourly METAR |
+
+Every response is a *mixture of ages*. Whenever you ask, slf is up to 60 min old
+and openwindmap is minutes old; no instant makes the whole answer fresh. The
+10 minute figure is not enforced by them either — it is rule 3 of their terms
+("do not overload… minimise your number of calls") plus the data not moving
+faster.
+
+**And there is no cache validator.** Response headers are `date` and
+`server: uvicorn`, nothing else — no `Cache-Control`, no `ETag`, no
+`Last-Modified`, no `Age`. Two calls 3 s apart returned byte-identical payloads,
+but discovering that costs the full 118 KB.
+
+So the largest saving available is upstream: **`ETag` + `If-None-Match` would
+turn most polls into a 304**. Add it to the email to Yann already pending over
+the `User-Agent` term — see `docs/todo.md`.
+
+Rejected: aligning our poll to wall-clock (:00, :10, :20) so it lands just after
+MeteoSwiss and Holfuy publish. It would also make every Windgrade instance hit
+them on the same second, which is the opposite of "do not overload".
+
+---
+
 ### 2026-08-12 — OPEN: a reported Pixel 9a "missing scales" list that no ladder can produce
 
 Reported as absent from XCTrack's map scale setting on a Pixel 9a at default

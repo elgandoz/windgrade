@@ -347,7 +347,18 @@ function toggleOpen(id){
   PROV.fetchHistoric(id, { duration: C.hours * 3600 }, function (err, list){
     if (openId !== id) return;                      /* closed meanwhile */
     if (err) histErr = "no connection";
-    else { hist = list; histCache[id] = { at: Date.now(), list: list }; }
+    else {
+      hist = list;
+      /* Sweep on insert. An entry is only ever REUSED inside one poll interval
+         — the check above enforces that — so anything older is dead weight
+         that would otherwise be held until the next settings change. A pilot
+         tapping their way down a long list was accumulating a few hundred
+         samples per station for no one. */
+      var cut = Date.now() - C.poll * 1000, k;
+      for (k in histCache)
+        if (histCache.hasOwnProperty(k) && histCache[k].at < cut) delete histCache[k];
+      histCache[id] = { at: Date.now(), list: list };
+    }
     paintDetail();
   });
 }

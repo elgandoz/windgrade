@@ -320,9 +320,23 @@ exactly what the widget draws. Two phases:
   in phase 1's order, not in the displacement.
 
 **Cost: `draw()` runs when its key changes, not per frame** — about 0.5 Hz in
-flight (one device pixel of movement) and once a minute parked. The ring search
-only runs for markers that did not fit, and only scores neighbours inside a
-bounded radius.
+flight (one device pixel of movement) and once a minute parked. `layout()` is
+the only expensive thing in it, measured at **0.71 ms for 118 markers** against
+JSON.parse 607 µs (once per poll), `prepare()` 67 µs and `svg()` 0.8 µs. Two
+things keep it there and both are easy to undo by accident:
+
+- **The neighbourhood is scanned ONCE PER HIDDEN MARKER, not per candidate.**
+  Every candidate sits within `maxMove` of the marker's true position and
+  `NEARX`/`NEARY` already include `maxMove`, so one scan is a superset of all
+  48. It was per candidate: 3,875 scans over 287,823 entries with 3,875 array
+  allocations, against 87 scans over ~7,000 entries into a REUSED buffer now.
+- **`conflict()` rejects on `XMAX`/`YMAX` first.** They are the exact reach of
+  the four rectangle tests, and they differ per axis — a marker reaches
+  `t1 + aw` (~55 px) in y but only `2·maxTw` (~40 px) in x. One radius for both
+  scanned a band 1.7× wider than anything could touch.
+
+Together: 4.65 ms → 0.71 ms, with byte-identical output. If you change the
+conflict model, re-derive `XMAX`/`YMAX` from it or the reject stops being exact.
 
 Three drawing rules, each of which cost a screenshot to find:
 
