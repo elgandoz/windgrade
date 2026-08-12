@@ -230,18 +230,24 @@ window.addEventListener("resize", resize);
    lost the reading, and either half alone is worse than omitting the station —
    see the SeeYou decluttering bug in handover.md.
 
-   NUDGE (`nudge=1`, on): a marker that will not fit is MOVED rather than
-   dropped — drawn at WG.marker.NUDGE_ALPHA with a leader line back to where it
-   really is. The clustering, the ordering and the placement are all in
-   WG.marker.layout(), which is pure arithmetic and therefore unit-tested.
+   NUDGE (`nudge=1`, on) puts back the readings that would otherwise be
+   dropped. WG.marker.layout() does it in two phases:
 
-   The case that forced it, from Zermatt: ZFC: Landing at 2600 m and Zermatt at
-   1648 m are 387 m apart on the ground — 16 px at scale 3000 — so the valley
-   floor station was being discarded in favour of one nearly a kilometre above
-   it. With strong valley winds those two readings are not near-duplicates,
-   they are the whole question, and the same is true of Gornergrat over
-   Gornergratsee and Schwarzsee over Stafelalp. Dropping one was throwing away
-   the more interesting half of a pair.
+     1. place everything that fits, nearest first — byte for byte what nudge=0
+        draws, so turning it on never MOVES a marker that was already fine
+     2. for each one that did not fit, ring-search a small radius around its
+        true position and take the angle furthest from the markers already
+        there; if no angle keeps the numbers readable, stack it below the
+        marker it collided with
+
+   Displaced markers fade by DEPTH — WG.marker.nudgeAlpha(): 0.6 for the first
+   of a pile, 0.3 for the second, and at most three end up in one pile.
+
+   The case that forced all this, from Zermatt: ZFC: Landing at 2600 m and
+   Zermatt at 1648 m are 387 m apart on the ground — 16 px at scale 3000 — so
+   the valley floor station was being discarded in favour of one nearly a
+   kilometre above it. With strong valley winds those two readings are not
+   near-duplicates, they are the whole question.
 
    Why this does not break "an arrow sits on its own terrain": a nudged marker
    is not claiming to be where it is drawn. The fade says it has been moved and
@@ -379,7 +385,7 @@ function draw(fix, ranked){
       hits.push({ st: st, x: L.x, y: L.y, r: box });
       /* Only the ARROW fades. The number is the fallback for a colour scale a
          lot of pilots cannot separate, so it never pays for the annotation. */
-      if (L.moved) bctx.globalAlpha = WG.marker.NUDGE_ALPHA;
+      if (L.moved) bctx.globalAlpha = WG.marker.nudgeAlpha(L.depth);
       WG.marker.canvas(bctx, st, L.x, L.y, scale);
       bctx.globalAlpha = 1;
       ly = WG.marker.label(bctx, st, L.x, L.y, scale, fs);

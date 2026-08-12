@@ -1186,6 +1186,68 @@ true position and the displaced one gives way instead.
 `tools/nudge.html` drives the same layout and its prose was rewritten to
 describe the two-box model rather than the old "sideways is cheaper".
 
+## Phase 3r — place, then rotate, then stack (2026-08-12)
+
+Owner: *"there's something odd about the placement of the nudged arrow still.
+Sometimes they move in an area that renders the visual busy. Forgetting about
+the priority/sorting let's try this: render the arrows normally… then for the
+hidden one, try to place them as close as possible to the original location for
+the distance, and rotationally as far as possible from the nearby arrows.
+Overlapping is accepted, but the arrow can't be too far from the original
+location. if this is not possible simply reduce the opacity and put them below
+(max 3) first layer below has opacity 0.6, the second below opacity 0.3."*
+
+Implemented as described. `WG.marker.layout()` is now two phases:
+
+1. **Place everything that fits, nearest first** — byte for byte what `nudge=0`
+   draws. Turning nudging on never moves a marker that was already fine, which
+   is what was making the result look busy: the previous version reordered and
+   re-placed whole clusters.
+2. For each one that did not fit: **ring-search a small radius** and take the
+   angle **furthest from the markers already there**. If no angle keeps the
+   numbers readable, **stack it below** the marker it collided with.
+
+**Depth drives the fade** — 0.6, then 0.3, at most three in a pile — rather than
+one alpha for anything displaced.
+
+**The priority sorting is gone**, as asked. Phase 1 is plain nearest-first, so
+"highest station on top" and "stale to the bottom" no longer apply. Recorded
+here because it was a deliberate removal, not an oversight: if it returns it
+belongs in phase 1's ordering, not in the displacement.
+
+#### Two radii were not enough, and the tests said so
+
+The first cut used radii of 1.15 and 1.75 marker reaches — 23 and 35 px. Every
+realistic pair fell straight through to the stack, because two 46 px text
+columns need **48 px** of clearance to sit level and the ring could not reach
+it. Added a third radius at 2.4 (48 px), still under the stack step of 57, so a
+rotational placement wins whenever one exists.
+
+The measured spread is the point of measuring text per marker:
+
+| pair | displacement |
+|---|---|
+| wide labels (`14/22`) | 48 px, level |
+| narrow labels (`3/7`) | **23 px**, the innermost ring |
+
+Light valley wind means single-digit readings, so the narrow case is the common
+one — which is most of why the result now looks tight rather than scattered.
+
+**The stack step became `t1 + aw`** — exactly where the lower marker's arrow
+stops touching the upper marker's number. Arrows may overlap; numbers may not,
+and the stack is not an exception. A test now checks every pair of every result
+for a covered number.
+
+#### Cost, since it was asked
+
+`draw()` runs when its key changes, not per frame: position quantised to a
+device pixel, the widget size, the ladder step, the last fetch, or the minute.
+A glider at 40 km/h crosses one pixel every ~5 s at 8 km scale and ~2 s at 3 km;
+parked, the minute term fires once a minute. Measured earlier: 2 draws per 40 s
+stationary. The ring search runs only for markers that did not fit and scores
+only neighbours inside a bounded radius, so the added work is a few hundred
+comparisons a few times a minute.
+
 ## Phase 4 — polish
 
 `size` / `theme` / `range` / `max` parameters, radar orientation, README,

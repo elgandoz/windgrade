@@ -261,46 +261,53 @@ a leader line back to their true position. That is allowed to coexist with "an
 arrow sits on its own terrain" only because it is ANNOTATED: the fade says it has
 been moved and the line says where from. Never displace a marker silently.
 
-**`WG.marker.layout()` owns the clustering, the ordering and the placement.** It
-is pure arithmetic — no DOM — so `tools/test-core.js` asserts the rules directly
-and `tools/nudge.html` draws exactly what the widget draws. The rules:
+**`WG.marker.layout()` owns the placement.** It is pure arithmetic — no DOM —
+so `tools/test-core.js` asserts the rules directly and `tools/nudge.html` draws
+exactly what the widget draws. Two phases:
+
+1. **Place everything that fits, nearest first** — byte for byte what `nudge=0`
+   draws. Turning nudging on never moves a marker that was already fine.
+2. For each one that did not fit: **ring-search a small radius** around its true
+   position and take the angle **furthest from the markers already there**; if
+   no angle keeps the numbers readable, **stack it below** the marker it
+   collided with.
 
 - **A marker is TWO boxes, not one** — the arrow (`x ± box·ARROW_TOL`) and the
-  narrow text column under it (`x ± tw`, `y+box-1` down). A single rectangle
+  narrow text column under it (`x ± tw`, from `y+box-1`). A single rectangle
   round the whole thing had to be as wide as the label and as tall as
-  arrow+label+altitude, so every escape cost ~50 px. Two boxes let a neighbour
-  sit diagonally close: arrows overlap a little, text columns land at different
-  heights. Measured 51 px → 34 px on the Zermatt pair.
+  arrow+label+altitude, so every escape cost ~50 px whichever way it went.
 - **Arrows may overlap a tad; TEXT NEVER MAY** — not with another number, not
-  under an arrow. `ARROW_TOL` is the tolerance and it applies to arrows only.
-- **Text width is measured PER MARKER** (`items[i].tw`), label and altitude line
-  both. `3/7` is barely half of `14/22`, and using the widest possible label for
-  everyone cost ~10 px of needless displacement on every short one.
-- **Candidates are rings of increasing radius**, generated not hand-written, so
-  the first hit is genuinely the closest placement — not the closest entry
-  someone remembered to add.
-- **Order:** stale sinks to the bottom of its cluster whatever its altitude;
-  everything fresher is equal priority and the highest station keeps its true
-  position. Enforced by a priority floor, because a stale marker can start out
-  above everything and candidates alone cannot fix that.
-- **At most three per cluster** — past that a pile stops being readable and the
-  extras are dropped rather than put somewhere they read as another station.
-- Clusters are connected components of the overlap relation on TRUE positions.
-- **A NUDGED MARKER NEVER PUSHES AN UNNUDGED ONE.** Every cluster's anchor is
-  placed in one pass BEFORE anything is displaced, so a cluster laid out early
-  cannot spend space a later cluster's anchor needs. Two anchors cannot conflict
-  by construction — if they did they would be one cluster. Do not go back to
-  finishing one cluster at a time.
+  under an arrow, and the stack is no exception (its step is `t1 + aw`, exactly
+  where the lower arrow stops touching the upper number). `ARROW_TOL` is the
+  tolerance and it applies to arrows only.
+- **Text width is measured PER MARKER** (`items[i].tw`), label and altitude both.
+  `3/7` is barely half of `14/22`: a wide-label pair needs 48 px of clearance,
+  a narrow-label pair gets away with 23. That difference is most of what makes
+  the result look tight rather than scattered.
+- **Depth drives the fade**, not the placement method: `WG.marker.nudgeAlpha()`
+  gives 0.6 for the first displaced marker of a pile and 0.3 for the second.
+  At most three end up in one pile — past that they are lost anyway.
+- **A DISPLACED MARKER NEVER PUSHES ONE THAT WAS NOT.** Phase 1 finishes before
+  anything moves. Do not merge the phases.
+- **No altitude or staleness sorting.** Phase 1 is plain nearest-first; the
+  earlier "highest on top, stale to the bottom" ordering was dropped at the
+  owner's request while this placement is evaluated. If it comes back it belongs
+  in phase 1's order, not in the displacement.
 
-Three drawing rules go with it, each of which cost a screenshot to find:
+**Cost: `draw()` runs when its key changes, not per frame** — about 0.5 Hz in
+flight (one device pixel of movement) and once a minute parked. The ring search
+only runs for markers that did not fit, and only scores neighbours inside a
+bounded radius.
+
+Three drawing rules, each of which cost a screenshot to find:
 
 - `draw()` is three passes — lay out, then every leader line, then every marker.
   Painting as you place puts the next leader line straight through the previous
-  marker's speed number. Markers paint in REVERSE layout order so a cluster's
-  anchor ends up on top.
-- **Only the arrow fades** (`WG.marker.NUDGE_ALPHA`, 0.6). The number and the
-  altitude stay at full strength; the number is the fallback for a colour scale
-  many pilots cannot separate, so it never pays for the annotation.
+  marker's speed number. Markers paint in REVERSE layout order so the
+  undisplaced one ends up on top.
+- **Only the arrow fades.** The number and the altitude stay at full strength;
+  the number is the fallback for a colour scale many pilots cannot separate, so
+  it never pays for the annotation.
 - A nudged marker always prints its altitude, whatever `alt` says — displaced
   markers are the one case where the pilot cannot tell which reading is which,
   and 1648 m vs 2600 m is the whole point in a valley wind.

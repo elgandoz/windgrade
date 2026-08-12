@@ -25,11 +25,11 @@ a{color:#54A6DC}
 <div class="wrap">
 <h1>Nudged markers over terrain</h1>
 <p>
-  The overlay <b>moves</b> a marker that will not fit rather than dropping the
-  reading, and moves it <b>as little as possible</b>. A marker is treated as two
-  boxes — the arrow, and the narrow column of text under it — so a neighbour can
-  sit diagonally close: the arrows overlap a little and the two text columns land
-  at different heights. Clustering, ordering and placement are
+  Everything that fits is drawn normally first — the left canvas and the right
+  canvas agree exactly on those. Then each marker that did <b>not</b> fit is
+  ring-searched at a small radius around where it really is, taking the angle
+  <b>furthest from the markers already there</b>. If no angle keeps the numbers
+  readable it is <b>stacked below</b> instead, fading by depth. Placement is
   <code>WG.marker.layout()</code>. This page exists because
   <b>a canvas drawn asynchronously does not survive a headless screenshot</b>,
   so the widget's own markers cannot be checked that way. Here the same
@@ -45,12 +45,11 @@ a{color:#54A6DC}
   separate.
 </p>
 <p>
-  Order within a cluster: a <b>stale</b> reading sinks to the bottom whatever
-  its altitude; everything fresher is equal priority and the
-  <b>highest station keeps its true position</b>. At most three are drawn —
-  past that a pile stops being readable. Positions are the real Zermatt cluster
-  at <code>scale=3000</code>, plus a stale 3345 m station dropped into the
-  tightest pair to exercise all three rules at once.
+  <b>Depth drives the fade:</b> the first marker displaced from a pile is drawn
+  at 0.6, the second at 0.3, and there is no third — at most three markers end
+  up in one pile. Positions are the real Zermatt cluster at
+  <code>scale=3000</code>, plus a stale 3345 m station dropped into the tightest
+  pair so a three-deep pile is on screen.
   <a href="../tools.html">← Tools</a>
 </p>
 
@@ -135,7 +134,7 @@ function render(cv, nudge){
 
   for (i = lay.length - 1; i >= 0; i--){
     L = lay[i];
-    if (L.moved) g.globalAlpha = alpha;
+    if (L.moved) g.globalAlpha = alpha * (WG.marker.nudgeAlpha(L.depth) / WG.marker.NUDGE_ALPHA[0]);
     WG.marker.canvas(g, items[L.i].st, L.x, L.y, scale);
     g.globalAlpha = 1;
     var ly = WG.marker.label(g, items[L.i].st, L.x, L.y, scale, fs);
@@ -146,7 +145,10 @@ function render(cv, nudge){
   var moved = lay.filter(function(p){ return p.moved; }).length;
   document.getElementById(cv.id + "n").textContent =
     lay.length + " of " + CLUSTER.length + " drawn" +
-    (moved ? ", " + moved + " moved" : "") + (lost ? ", " + lost + " lost" : "");
+    (moved ? ", " + moved + " moved (depths " +
+       lay.filter(function(p){ return p.moved; })
+          .map(function(p){ return p.depth; }).join(",") + ")" : "") +
+    (lost ? ", " + lost + " lost" : "");
 }
 
 function all(){

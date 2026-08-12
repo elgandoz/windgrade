@@ -383,106 +383,121 @@ eq("0.5/0.4 rounds to 1/0, so it is NOT calm",
 eq("no direction is always calm", MK.isCalm({ avg:9, gust:12, dir:NaN }), true);
 eq("a real reading is not calm", MK.isCalm({ avg:9, gust:12, dir:200 }), false);
 
-/* WG.marker.layout — clustering, priority and placement for markers too close
-   to draw in place. Pure arithmetic on purpose, so the rules the owner gave are
-   asserted here rather than judged from a screenshot. */
-head("marker layout: clusters, priority, and how close is close");
+/* WG.marker.layout — where markers go when they will not all fit. Pure
+   arithmetic on purpose, so the rules are asserted here rather than judged from
+   a screenshot.
+
+   THE CONTRACT, owner's design:
+     1. place everything normally, nearest first — exactly what nudge=0 draws
+     2. for each one that did not fit, ring-search at a small radius and take
+        the angle FURTHEST from the markers already there
+     3. if no angle keeps the numbers readable, stack it below the marker it
+        collided with, fading by depth
+   Arrows may overlap. Numbers may never be covered — by anything. */
+head("marker layout: place, then rotate, then stack");
 (function () {
-  var BOX = 20, LW = 46, TH = 24;
+  var BOX = 20, LW = 46, TH = 24, TW = LW / 2;
   function opt(extra) {
     var o = { box:BOX, labelW:LW, textH:TH, nudge:true, maxPerCluster:3 }, k;
     for (k in extra) if (extra.hasOwnProperty(k)) o[k] = extra[k];
     return o;
   }
-  function it(x, y, alt, stale) { return { x:x, y:y, alt:alt, stale:stale || "fresh" }; }
+  function it(x, y, tw) { return { x:x, y:y, tw:tw }; }
   function dist(p) { return Math.sqrt(Math.pow(p.x - p.tx, 2) + Math.pow(p.y - p.ty, 2)); }
 
-  eq("a marker on its own is never moved",
-     MK.layout([it(100, 100, 2000)], opt())[0].moved, false);
-
-  var pair = MK.layout([it(100, 100, 2600), it(105, 108, 1648)], opt());
-  eq("both of an overlapping pair are drawn", pair.length, 2);
-  eq("the first keeps its true position", pair[0].moved, false);
-  eq("the second is moved", pair[1].moved, true);
-
-  /* THE POINT OF THE TWO-BOX MODEL. One rectangle round the whole marker had
-     to be as wide as the label and as tall as arrow+label+altitude, so every
-     escape cost ~50 px. Treating the arrow and the text column separately lets
-     a marker sit diagonally close: the arrows overlap a little and the two text
-     columns land at different heights. */
-  eq("and it moves a SHORT way — under a marker's own width",
-     dist(pair[1]) < BOX * 2, true);
-  eq("diagonally, not along an axis",
-     Math.abs(pair[1].x - pair[1].tx) > 1 && Math.abs(pair[1].y - pair[1].ty) > 1, true);
-
-  /* The text is what may never be covered — by another number or by an arrow.
-     Arrows are allowed to overlap "a tad", which is what ARROW_TOL buys. */
-  (function () {
-    var A = pair[0], B = pair[1];
-    var t0 = BOX - 1, t1 = t0 + TH, tw = LW / 2, aw = BOX * MK.ARROW_TOL;
+  /* THE RULE THAT OUTRANKS CLOSENESS: no number may be covered, by another
+     number or by an arrow. Checked over every pair of every result below. */
+  function anyTextCovered(r, items) {
+    var aw = BOX * MK.ARROW_TOL, t0 = BOX - 1, t1 = t0 + TH, p, q, A, B, atw, btw;
     function cross(a0,a1,b0,b1){ return a0 < b1 && b0 < a1; }
-    eq("the two text columns never touch",
-       cross(A.x-tw, A.x+tw, B.x-tw, B.x+tw) &&
-       cross(A.y+t0, A.y+t1, B.y+t0, B.y+t1), false);
-    eq("nor does either arrow cover the other's number",
-       (cross(A.x-aw, A.x+aw, B.x-tw, B.x+tw) && cross(A.y-aw, A.y+aw, B.y+t0, B.y+t1)) ||
-       (cross(B.x-aw, B.x+aw, A.x-tw, A.x+tw) && cross(B.y-aw, B.y+aw, A.y+t0, A.y+t1)), false);
-    eq("but the arrows are allowed within a tad of each other",
-       Math.abs(A.x - B.x) < BOX * 2, true);
-  })();
+    for (p = 0; p < r.length; p++)
+      for (q = p + 1; q < r.length; q++) {
+        A = r[p]; B = r[q];
+        atw = items[A.i].tw || TW; btw = items[B.i].tw || TW;
+        if (cross(A.x-atw, A.x+atw, B.x-btw, B.x+btw) &&
+            cross(A.y+t0, A.y+t1, B.y+t0, B.y+t1)) return true;
+        if (cross(A.x-atw, A.x+atw, B.x-aw, B.x+aw) &&
+            cross(A.y+t0, A.y+t1, B.y-aw, B.y+aw)) return true;
+        if (cross(B.x-btw, B.x+btw, A.x-aw, A.x+aw) &&
+            cross(B.y+t0, B.y+t1, A.y-aw, A.y+aw)) return true;
+      }
+    return false;
+  }
 
-  /* Owner's rule: fresh readings are equal priority and the HIGHEST station is
-     on top; a stale one goes to the bottom whatever its altitude. */
-  var byAlt = MK.layout([it(100, 100, 1648), it(104, 106, 2600)], opt());
-  eq("the higher station takes the anchor, not the nearer one", byAlt[0].i, 1);
-  eq("and the lower one is the one displaced", byAlt[1].i, 0);
+  eq("a marker on its own is never moved",
+     MK.layout([it(100, 100)], opt())[0].moved, false);
 
-  var withStale = MK.layout(
-    [it(100, 100, 3000, "stale"), it(104, 104, 1000), it(108, 108, 2000)], opt());
-  eq("stale sinks below both fresher ones however high it is",
-     withStale[withStale.length - 1].i, 0);
-  eq("and among the fresh ones the higher anchors", withStale[0].i, 2);
-  eq("a stale marker is never placed above the one that outranks it",
-     withStale[2].y >= withStale[0].y, true);
+  /* Phase 1 is plain nearest-first, so the FIRST of a pair keeps its place.
+     Altitude and staleness no longer decide this — dropped at the owner's
+     request while the placement is being evaluated. */
+  var pair = MK.layout([it(100, 100), it(105, 108)], opt());
+  eq("both of an overlapping pair are drawn", pair.length, 2);
+  eq("the nearer one keeps its true position", pair[0].moved, false);
+  eq("the second is moved", pair[1].moved, true);
+  eq("and it is the first displaced, so depth 1", pair[1].depth, 1);
+  eq("no number is covered", anyTextCovered(pair, [it(100,100), it(105,108)]), false);
+
+  /* Closeness is bounded by the text, not by the arrow: two 46 px columns need
+     48 px of clearance to sit level, and that is what it uses. Narrow labels —
+     "3/7" rather than "14/22", the common case in light valley wind — get much
+     closer, which is the whole reason text is measured per marker. */
+  eq("a wide-label pair lands at the level-clearance distance", dist(pair[1]), 48, 1);
+  var narrow = MK.layout([it(100, 100, 12), it(105, 108, 12)], opt());
+  eq("a narrow-label pair gets much closer", dist(narrow[1]) < 26, true);
+  eq("still with nothing covered",
+     anyTextCovered(narrow, [it(100,100,12), it(105,108,12)]), false);
+
+  /* Depth drives the fade, and only two depths exist. */
+  eq("first displaced is 0.6", MK.nudgeAlpha(1), 0.6);
+  eq("second is 0.3", MK.nudgeAlpha(2), 0.3);
+  eq("and it never goes fainter than that", MK.nudgeAlpha(9), 0.3);
+
+  var three = [it(100,100), it(105,108), it(97,112)];
+  var r3 = MK.layout(three, opt());
+  eq("three overlapping are all drawn", r3.length, 3);
+  eq("depths run 0, 1, 2", r3.map(function(p){ return p.depth; }).join(","), "0,1,2");
+  eq("nothing covered with three", anyTextCovered(r3, three), false);
 
   /* "more than 3 they get lost" */
-  var four = MK.layout([it(100,100,4000), it(104,104,3000),
-                        it(108,108,2000), it(112,112,1000)], opt());
-  eq("a cluster draws at most three", four.length, 3);
-  eq("and it is the LOWEST that is dropped",
-     four.map(function(p){ return p.i; }).sort().join(","), "0,1,2");
+  var four = [it(100,100), it(104,104), it(108,108), it(112,112)];
+  eq("a fourth in one pile is dropped", MK.layout(four, opt()).length, 3);
 
-  eq("nudge off restores drop-the-loser",
-     MK.layout([it(100,100,2600), it(105,108,1648)], opt({ nudge:false })).length, 1);
+  eq("nudge off draws only what fits, which is phase 1 on its own",
+     MK.layout([it(100,100), it(105,108)], opt({ nudge:false })).length, 1);
+  eq("and phase 1 is identical either way",
+     MK.layout([it(100,100), it(105,108)], opt({ nudge:false }))[0].x,
+     MK.layout([it(100,100), it(105,108)], opt())[0].x);
 
-  /* A NUDGED MARKER MUST NOT PUSH AN UNNUDGED ONE. Anchors are all placed
-     before anything is displaced, so a cluster laid out early cannot spend the
-     space a later cluster's anchor needs. Before this, clusters were finished
-     one at a time and the second anchor got shoved. */
+  /* A DISPLACED MARKER MUST NOT PUSH ONE THAT WAS NOT. Every normal placement
+     is finished before anything is moved, so a marker laid out early cannot
+     spend space a later one needs at its true position. */
   (function () {
-    var far = 3 * BOX;                    /* just past the first cluster's spill */
-    var r = MK.layout([it(100,100,2600), it(104,106,1648),
-                       it(100 + far, 100, 2800)], opt());
+    var set = [it(100,100), it(104,106), it(160,100)];
+    var r = MK.layout(set, opt());
     var third = r.filter(function (p) { return p.i === 2; })[0];
-    eq("a later cluster's anchor keeps its true position", third.moved, false);
-    eq("the nudged marker is the one that gave way",
+    eq("a later marker keeps its true position", third.moved, false);
+    eq("the displaced one is the only thing that moved",
        r.filter(function (p) { return p.moved; }).length, 1);
+    eq("nothing covered", anyTextCovered(r, set), false);
   })();
 
-  /* Placement must respect the keep-out rectangles the widget passes in, and
-     must not put a marker off the edge of the canvas. */
-  eq("nowhere to go at all means the marker is dropped, not drawn wrong",
-     MK.layout([it(100,100,2600), it(105,108,1648)],
-       opt({ inBounds: function (x, y) { return x === 100 && y === 100; } })).length, 1);
-  eq("a blocked anchor is dropped rather than moved off its terrain",
-     MK.layout([it(100,100,2600)], opt({ blocked: function () { return true; } })).length, 0);
+  /* Keep-out rectangles and the canvas edge are respected everywhere. */
+  eq("a blocked marker is dropped rather than drawn somewhere wrong",
+     MK.layout([it(100,100)], opt({ blocked: function () { return true; } })).length, 0);
+  (function () {
+    var set = [it(100,100), it(105,108)];
+    var r = MK.layout(set, opt({ blocked: function (x) { return x > 120; } }));
+    eq("a blocked half of the ring pushes the search the other way",
+       r.length === 2 && r[1].x <= 120, true);
+  })();
 
   /* Two clusters far apart must not interfere. */
-  var two = MK.layout([it(100,100,2600), it(105,108,1648),
-                       it(400,400,2600), it(405,408,1648)], opt());
-  eq("separate clusters are laid out independently", two.length, 4);
-  eq("each keeps one anchor in place",
-     two.filter(function (p) { return !p.moved; }).length, 2);
+  var two = [it(100,100), it(105,108), it(400,400), it(405,408)];
+  var r2 = MK.layout(two, opt());
+  eq("separate clusters are laid out independently", r2.length, 4);
+  eq("each keeps one marker in place",
+     r2.filter(function (p) { return !p.moved; }).length, 2);
+  eq("nothing covered across the whole scene", anyTextCovered(r2, two), false);
 })();
 
 head("station altitude line");

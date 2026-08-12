@@ -161,59 +161,73 @@ function svg(st, px, opts) {
 }
 
 /* ── laying out markers that will not all fit ─────────────────────────
-   Pure arithmetic, no DOM, so tools/test-core.js exercises it directly. Given
-   projected positions it returns where each marker should actually be drawn.
+   Pure arithmetic, no DOM, so tools/test-core.js exercises it directly.
 
-   WHAT A MARKER OCCUPIES, and why it is two boxes and not one. A single
-   rectangle sized to the whole thing is what made the first two versions push
-   markers so far: it had to be as wide as the LABEL and as tall as the arrow
-   plus the label plus the altitude line, so any escape cost ~50 px whichever
-   way it went. In fact a marker is an arrow with a narrow column of text
-   hanging below it, and the gap between two of them is mostly empty:
+   COST. draw() only runs when its key changes — position quantised to a whole
+   device pixel, the widget size, the ladder step, the last fetch, or the
+   minute. A glider at 40 km/h crosses one pixel every ~5 s at 8 km scale and
+   ~2 s at 3 km scale; parked, the minute term fires once a minute. So this runs
+   at roughly 0.5 Hz in the air and 1/min on the ground, not per frame. It is
+   still written to stay cheap: phase 1 is the plain greedy pass, and the ring
+   search in phase 2 only runs for markers that did not fit and only compares
+   against neighbours inside a bounded radius.
 
-       arrow   x +- box*ARROW_TOL,  y +- box*ARROW_TOL
-       text    x +- labelW/2,       y + box-1 .. y + box-1 + textH
+   ── the two phases ──────────────────────────────────────────────────
+   1. PLACE NORMALLY, nearest first, exactly as if nudging were off. Whatever
+      fits at its true position is drawn there, unfaded. Everything else is
+      hidden — and hidden is where the interesting part starts.
 
-   Two markers conflict if any of those four rectangles cross. So a marker can
-   be placed DIAGONALLY very close indeed — the arrows overlap a little and the
-   two text columns sit at different heights, which is exactly what the eye
-   needs and nothing more.
+   2. For each hidden marker, try to put it back on screen:
+      a. RING SEARCH. Stay at a small fixed radius from where it really is —
+         close is the whole point — and rotate: score every angle and take the
+         one that sits FURTHEST from the markers already there. Overlapping
+         arrows are accepted; a covered NUMBER is not, so an angle is only
+         eligible if its text stays clear.
+      b. If no angle at any tried radius keeps the text clear, STACK IT BELOW
+         the marker it collided with, fading by depth.
 
-   ARROW_TOL < 1 is the owner's "even if they overlap a tad is not an issue".
-   The TEXT boxes are never allowed to touch anything: the number is the
-   fallback for a colour scale many pilots cannot separate, so it is the one
-   thing that may not be covered — not by another number, and not by an arrow.
+   Opacity comes from depth, not from the placement method: the first displaced
+   marker of a pile is `NUDGE_ALPHA[0]`, the second `NUDGE_ALPHA[1]`. At most
+   `maxPerCluster` markers end up in one pile.
 
-   A NUDGED MARKER NEVER PUSHES ANOTHER ONE. Anchors — the highest-priority
-   member of each cluster — are all placed FIRST, at their true positions, in
-   one pass over every cluster. Only then is anything displaced. So a marker
-   that has been moved can never take territory a marker that has not been
-   moved was going to use. Two anchors cannot conflict with each other by
-   construction: if they did, they would be one cluster.
+   A DISPLACED MARKER NEVER PUSHES ONE THAT WAS NOT. Every normal placement is
+   finished in phase 1, before anything is moved. Displaced markers do join the
+   obstacle set afterwards, so two of them cannot land on the same spot.
 
-   ORDER WITHIN A CLUSTER, owner's rule:
-     stale readings go to the bottom, whatever their altitude
-     everything fresher is equal priority, and the HIGHEST STATION IS ON TOP
-   So a stack reads as a vertical profile of the valley — which is the point,
-   since 1648 m and 2600 m 390 m apart is the whole question in a valley wind.
-
-   AT MOST `maxPerCluster` (3) ARE DRAWN. Past three, a pile stops being
-   readable and the extras are dropped rather than shuffled somewhere they
-   would be read as a different station's reading. ─────────────────────── */
-var ARROW_TOL = 0.72;              /* arrows may overlap by about a quarter */
-
-function prioOf(it) {
-  return (it.stale === "stale") ? 2 : (it.stale === "warn" ? 1 : 0);
+   NOTE: this pass deliberately does NOT sort by altitude or staleness. Phase 1
+   is plain nearest-first, so the nearest station of a pair keeps its true
+   position. The earlier "highest on top, stale to the bottom" ordering was
+   dropped at the owner's request while this placement is evaluated.
+   ─────────────────────────────────────────────────────────────────── */
+/* How pale a moved marker's ARROW is drawn, BY DEPTH: the first displaced
+   marker of a pile, then the second. The number and the altitude always stay at
+   full strength — the number is the fallback for a colour scale a lot of pilots
+   cannot separate, so it never pays for the annotation. Fading the whole marker
+   was measured as marginal against dark forest even at 0.6. */
+var NUDGE_ALPHA = [0.6, 0.3];
+function nudgeAlpha(depth) {
+  return NUDGE_ALPHA[Math.min(Math.max(depth, 1), NUDGE_ALPHA.length) - 1];
 }
+var ARROW_TOL = 0.72;              /* arrows may overlap by about a quarter */
+/* Search radii, in marker reaches. The largest is still under the height of a
+   stack step, so a rotational placement always wins when one exists — measured:
+   a level pair needs 48 px of clearance for two 46 px text columns, a stack
+   needs 57. Two radii were not enough and every pair fell through to the
+   stack, which is how this got found. */
+var RING = [1.15, 1.75, 2.4];
+var RING_ANGLES = 16;
 
 function layout(items, o) {
   var box = o.box || 20;
   var aw = box * ARROW_TOL;                 /* arrow half-extent, tolerant */
   var dtw = (o.labelW || box * 2) / 2;      /* fallback text half-width */
   var t0 = box - 1;                         /* label top, as labelCanvas draws */
-  var t1 = t0 + (o.textH || box);
+  var th = (o.textH || box);
+  var t1 = t0 + th;
   var maxPer = o.maxPerCluster || 3;
   var n = items.length, i, j, out = [], placed = [];
+  /* Nothing beyond this can possibly interact, so the ring search skips it. */
+  var NEAR = (t1 + aw) * 2 + box * RING[RING.length - 1];
 
   /* PER MARKER, because "3/7" is barely half the width of "14/22" and using
      the widest possible label for everyone was costing about 10 px of needless
@@ -221,17 +235,27 @@ function layout(items, o) {
   function twOf(it) { return (it.tw > 0) ? it.tw : dtw; }
 
   function cross(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
-  function boxes(x, y, tw) {
-    return [[x - aw, y - aw, x + aw, y + aw],       /* arrow */
-            [x - tw, y + t0, x + tw, y + t1]];      /* text */
+
+  /* Does this marker's TEXT touch anything of the other's? The number is the
+     fallback for a colour scale many pilots cannot separate, so it is the one
+     thing that may never be covered — not by another number, not by an arrow. */
+  function textHit(ax, ay, atw, bx, by, btw) {
+    /* a's text vs b's text */
+    if (cross(ax - atw, ax + atw, bx - btw, bx + btw) &&
+        cross(ay + t0, ay + t1, by + t0, by + t1)) return true;
+    /* a's text vs b's arrow, and the other way round */
+    if (cross(ax - atw, ax + atw, bx - aw, bx + aw) &&
+        cross(ay + t0, ay + t1, by - aw, by + aw)) return true;
+    if (cross(bx - btw, bx + btw, ax - aw, ax + aw) &&
+        cross(by + t0, by + t1, ay - aw, ay + aw)) return true;
+    return false;
+  }
+  function arrowHit(ax, ay, bx, by) {
+    return cross(ax - aw, ax + aw, bx - aw, bx + aw) &&
+           cross(ay - aw, ay + aw, by - aw, by + aw);
   }
   function conflict(ax, ay, atw, bx, by, btw) {
-    var A = boxes(ax, ay, atw), B = boxes(bx, by, btw), p, q;
-    for (p = 0; p < 2; p++)
-      for (q = 0; q < 2; q++)
-        if (cross(A[p][0], A[p][2], B[q][0], B[q][2]) &&
-            cross(A[p][1], A[p][3], B[q][1], B[q][3])) return true;
-    return false;
+    return arrowHit(ax, ay, bx, by) || textHit(ax, ay, atw, bx, by, btw);
   }
   function free(x, y, tw) {
     var k;
@@ -242,105 +266,101 @@ function layout(items, o) {
     return true;
   }
 
-  /* Candidates on rings of increasing radius, so the FIRST hit is the closest
-     placement there is — not the closest entry someone remembered to add to a
-     hand-written list. Angles are measured from straight down and never exceed
-     90 degrees, so dy >= 0 and a marker is never pushed above its own true
-     position; the priority floor below handles the rest of the ordering.
-     Diagonals come first at a given radius because that is where the two text
-     columns land at different heights, which is what lets them sit close. */
-  var ANG = [45, -45, 30, -30, 60, -60, 90, -90, 0];
-  var STEP = Math.max(2, box * 0.28), RMAX = (t1 + box) * 2.2;
-  var CAND = [], r, a, rad;
-  for (r = STEP; r <= RMAX; r += STEP)
-    for (a = 0; a < ANG.length; a++) {
-      rad = ANG[a] * Math.PI / 180;
-      CAND.push([r * Math.sin(rad), r * Math.cos(rad)]);
-    }
-
-  /* clusters: connected components of "these two conflict where they really
-     are", so membership is a fact about the stations, not about the layout */
-  var parent = [];
-  for (i = 0; i < n; i++) parent[i] = i;
-  function find(a2) { while (parent[a2] !== a2) { parent[a2] = parent[parent[a2]]; a2 = parent[a2]; } return a2; }
-  for (i = 0; i < n; i++)
-    for (j = i + 1; j < n; j++)
-      if (conflict(items[i].x, items[i].y, twOf(items[i]),
-                   items[j].x, items[j].y, twOf(items[j]))) {
-        var ra = find(i), rb = find(j);
-        if (ra !== rb) parent[rb] = ra;
-      }
-
-  /* Grouped in first-appearance order, and `items` arrives nearest-first, so
-     the nearest cluster gets first pick of the screen. */
-  var groups = [], byRoot = {}, root;
-  for (i = 0; i < n; i++) {
-    root = find(i);
-    if (byRoot[root] === undefined) { byRoot[root] = groups.length; groups.push([]); }
-    groups[byRoot[root]].push(i);
-  }
-
-  for (i = 0; i < groups.length; i++) {
-    groups[i].sort(function (a2, b2) {
-      var pa = prioOf(items[a2]), pb = prioOf(items[b2]);
-      if (pa !== pb) return pa - pb;                  /* stale sinks */
-      var aa = items[a2].alt, ab = items[b2].alt;     /* then highest on top */
-      var na = !(aa === aa), nb = !(ab === ab);       /* no altitude sorts last */
-      if (na !== nb) return na ? 1 : -1;
-      if (!na && aa !== ab) return ab - aa;
-      return a2 - b2;                                 /* else nearest first */
-    });
-  }
-
-  function put(idx, x, y, moved) {
+  function put(idx, x, y, moved, depth) {
     placed.push([x, y, twOf(items[idx])]);
-    out.push({ i: idx, x: x, y: y, tx: items[idx].x, ty: items[idx].y, moved: moved });
+    out.push({ i: idx, x: x, y: y, tx: items[idx].x, ty: items[idx].y,
+               moved: moved, depth: depth || 0 });
   }
 
-  /* ── pass A: every anchor, before anything is displaced ── */
-  var anchored = [];
-  for (i = 0; i < groups.length; i++) {
-    var top = groups[i][0];
-    if (o.blocked && o.blocked(items[top].x, items[top].y)) { anchored[i] = false; continue; }
-    if (o.inBounds && !o.inBounds(items[top].x, items[top].y)) { anchored[i] = false; continue; }
-    put(top, items[top].x, items[top].y, false);
-    anchored[i] = true;
+  /* ── phase 1: exactly what nudge=0 draws ── */
+  var hidden = [];
+  for (i = 0; i < n; i++) {
+    if (free(items[i].x, items[i].y, twOf(items[i]))) put(i, items[i].x, items[i].y, false, 0);
+    else if (!(o.blocked && o.blocked(items[i].x, items[i].y)) &&
+             !(o.inBounds && !o.inBounds(items[i].x, items[i].y))) hidden.push(i);
+  }
+  if (!o.nudge || !hidden.length) return out;
+
+  var nPlaced = placed.length;               /* everything up to here is fixed */
+
+  /* Neighbours worth scoring against — a bounded set, so the ring search stays
+     cheap however many markers are on screen. */
+  function nearby(x, y) {
+    var k, r = [];
+    for (k = 0; k < placed.length; k++)
+      if (Math.abs(placed[k][0] - x) < NEAR && Math.abs(placed[k][1] - y) < NEAR)
+        r.push(placed[k]);
+    return r;
   }
 
-  /* ── pass B: the rest, closest free spot ── */
-  for (i = 0; i < groups.length; i++) {
-    var g = groups[i], drawn = anchored[i] ? 1 : 0;
-    /* THE PRIORITY FLOOR. Candidates all have dy >= 0, which stops a marker
-       being pushed above its OWN true position — but that is not the rule. The
-       rule is about the arrangement: a stale reading goes to the bottom of the
-       cluster, and it may well start out above everything else. So a marker of
-       strictly lower priority is forbidden from landing above any higher-
-       priority one already placed. Equal priority may sit level, which is what
-       lets a same-tier pair go side by side at the cheapest distance. */
-    var floorY = anchored[i] ? items[g[0]].y : -Infinity;
-    var floorPrio = anchored[i] ? prioOf(items[g[0]]) : -1;
-    for (j = anchored[i] ? 1 : 0; j < g.length; j++) {
-      if (drawn >= maxPer) break;                     /* a pile of four is lost */
-      var it = items[g[j]], p = prioOf(it);
-      var lim = (p > floorPrio) ? floorY + 1 : -Infinity;
-      var px = 0, py = 0, got = false, c, cx, cy;
-      var tw = twOf(it);
-      if (it.y >= lim && free(it.x, it.y, tw)) { px = it.x; py = it.y; got = true; }
-      else if (o.nudge) {
-        for (c = 0; c < CAND.length; c++) {
-          cx = it.x + CAND[c][0]; cy = it.y + CAND[c][1];
-          if (cy >= lim && free(cx, cy, tw)) { px = cx; py = cy; got = true; break; }
-        }
-      }
-      if (!got) continue;                             /* nowhere to put it */
-      put(g[j], px, py, px !== it.x || py !== it.y);
-      /* floorY is the running maximum over everything placed in this cluster;
-         floorPrio the lowest priority tier reached so far. Together they mean
-         "the next tier down starts below all of this". */
-      if (py > floorY) floorY = py;
-      if (p > floorPrio) floorPrio = p;
-      drawn++;
+  /* How far apart, as a fraction of the distance at which they would touch.
+     >= 1 means clear. Normalised because the interaction is anisotropic: a
+     marker is much taller than it is wide once its text is counted. */
+  function roominess(x, y, tw, near) {
+    var k, best = Infinity, p, dx, dy, s;
+    for (k = 0; k < near.length; k++) {
+      p = near[k];
+      dx = Math.abs(x - p[0]); dy = Math.abs(y - p[1]);
+      s = Math.max(dx / (tw + p[2]), dy / (th + aw));
+      if (s < best) best = s;
     }
+    return best;
+  }
+
+  /* Which placed marker did this one collide with? Used as the pile's host, so
+     a stack goes below the thing it was hiding behind. */
+  function hostOf(it, tw) {
+    var k, best = -1, bd = Infinity, d;
+    for (k = 0; k < nPlaced; k++) {
+      if (!conflict(it.x, it.y, tw, placed[k][0], placed[k][1], placed[k][2])) continue;
+      d = Math.abs(it.x - placed[k][0]) + Math.abs(it.y - placed[k][1]);
+      if (d < bd) { bd = d; best = k; }
+    }
+    return best;
+  }
+
+  /* A stack step that leaves the number ALONE. t1 is the bottom of the text and
+     aw the arrow's half-height, so this is exactly the point where the lower
+     marker's arrow stops touching the upper marker's number. Arrows may overlap
+     each other — text may not, and the stack is no exception. */
+  var depthAt = {}, step = t1 + aw;
+  for (i = 0; i < hidden.length; i++) {
+    var it = items[hidden[i]], tw = twOf(it);
+    var host = hostOf(it, tw);
+    var key = (host < 0) ? "-" : String(host);
+    var depth = (depthAt[key] || 0) + 1;
+    if (depth >= maxPer) continue;             /* a pile of four is lost */
+
+    /* (a) ring search: closest radius that keeps every number readable, and at
+       that radius the angle furthest from everything already drawn. */
+    var got = false, bx = 0, by = 0, ri, ai, ang, cx, cy, near, sc, bestSc;
+    for (ri = 0; ri < RING.length && !got; ri++) {
+      var R = box * RING[ri];
+      bestSc = -1;
+      for (ai = 0; ai < RING_ANGLES; ai++) {
+        ang = (ai / RING_ANGLES) * Math.PI * 2;
+        cx = it.x + R * Math.sin(ang);
+        cy = it.y + R * Math.cos(ang);
+        if (o.inBounds && !o.inBounds(cx, cy)) continue;
+        if (o.blocked && o.blocked(cx, cy)) continue;
+        near = nearby(cx, cy);
+        for (j = 0; j < near.length; j++)
+          if (textHit(cx, cy, tw, near[j][0], near[j][1], near[j][2])) break;
+        if (j < near.length) continue;          /* a number would be covered */
+        sc = roominess(cx, cy, tw, near);
+        if (sc > bestSc) { bestSc = sc; bx = cx; by = cy; got = true; }
+      }
+    }
+
+    /* (b) nowhere rotationally: stack below the host and let the fade carry it */
+    if (!got && host >= 0) {
+      bx = it.x; by = placed[host][1] + step * depth;
+      if (!(o.inBounds && !o.inBounds(bx, by)) && !(o.blocked && o.blocked(bx, by))) got = true;
+    }
+    if (!got) continue;
+
+    put(hidden[i], bx, by, true, depth);
+    depthAt[key] = depth;
   }
   return out;
 }
@@ -378,12 +398,6 @@ function leader(g, tx, ty, x, y, box) {
   g.beginPath(); g.arc(tx, ty, 1.9, 0, 6.2832);
   g.fillStyle = "#3A4A56"; g.fill();
 }
-
-/* How pale a moved marker's ARROW is drawn. The number and the altitude stay at
-   full strength: the number is the fallback for a colour scale a lot of pilots
-   cannot separate, so it never pays for the annotation. 0.6 applied to the whole
-   marker was measured as marginal against dark forest. */
-var NUDGE_ALPHA = 0.6;
 
 /* ── the trend strip ──────────────────────────────────────────────────
    Recent history as a row of small markers, oldest left. Purely descriptive —
@@ -466,7 +480,7 @@ WG.marker = {
   alt: altCanvas, altText: altText, altSize: altSize,
   svg: svg, trendHtml: trendHtml, trendScroll: trendScroll,
   leader: leader, layout: layout,
-  NUDGE_ALPHA: NUDGE_ALPHA, ARROW_TOL: ARROW_TOL,
+  NUDGE_ALPHA: NUDGE_ALPHA, nudgeAlpha: nudgeAlpha, ARROW_TOL: ARROW_TOL,
   hhmm: hhmm, esc: esc
 };
 
