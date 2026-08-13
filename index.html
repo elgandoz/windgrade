@@ -85,6 +85,48 @@ a{color:var(--chart)}
   #reset:hover{border-color:var(--chart)}
   #copy:hover,.tryit:hover{filter:brightness(1.08)}
 }
+
+/* ── language switcher (GTranslate) ─────────────────────────────────
+   Setup page only. Never app.html or widget.html: those are read in the
+   air, and a third-party script there would put a network dependency
+   inside the offline behaviour.
+
+   Their widget ships its own stylesheet and sets the wrapper position
+   inline, so these need !important to land. Class names were read off
+   the rendered DOM rather than guessed. Everything here restyles markup
+   the script injects, so if the CDN is unreachable nothing appears and
+   the page stays exactly as it is in English. */
+#gt_float_wrapper{top:12px !important;right:12px !important;z-index:60 !important}
+.gt_float_switcher{
+  font-family:var(--sans) !important;
+  background:var(--panel) !important;
+  border:1px solid var(--rule) !important;
+  border-radius:4px !important;
+  box-shadow:var(--shadow) !important;
+  overflow:hidden !important;
+  color:var(--fg) !important;
+}
+.gt_float_switcher .gt-selected{border:0 !important;background:none !important}
+.gt_float_switcher .gt-selected .gt-current-lang{
+  padding:7px 10px !important;
+  font:600 11px/1 var(--mono) !important;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--fg) !important;
+}
+.gt_float_switcher img{width:15px !important;height:15px !important;border-radius:2px}
+.gt_float_switcher .gt_options{
+  background:var(--panel) !important;border-top:1px solid var(--rule) !important;
+}
+.gt_float_switcher .gt_options a{
+  color:var(--fg) !important;background:var(--panel) !important;
+  font:400 13px/1.2 var(--sans) !important;padding:9px 11px !important;
+}
+.gt_float_switcher .gt_options a:hover{background:var(--panel-hi) !important}
+.gt_float_switcher .gt_options a.gt-current{color:var(--chart) !important;font-weight:650 !important}
+/* their caret is a dark glyph, so it vanishes on the dark palette */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .gt_float_switcher-arrow{filter:invert(1) opacity(.75)}
+}
+[data-theme="dark"] .gt_float_switcher-arrow{filter:invert(1) opacity(.75)}
 </style>
 </head>
 <body>
@@ -124,7 +166,7 @@ a{color:var(--chart)}
     <b>On your phone:</b> tap Copy, then paste it into XCTrack in step 3.<br>
     <b>On a computer:</b> point your phone's camera at the QR code.
   </p>
-  <textarea id="url" rows="3" readonly></textarea>
+  <textarea id="url" rows="3" readonly translate="no"></textarea>
   <button id="copy" type="button">Copy link</button>
 
   <div class="qr">
@@ -186,7 +228,7 @@ a{color:var(--chart)}
        placeholders are XCTrack's last known position and cover that gap. An
        unsubstituted "${lat}" arrives as a literal and is ignored, not parsed. -->
   <p class="note">
-    <b>Don't shorten the link.</b> The <code>${lat}</code> and <code>${lng}</code>
+    <b>Don't shorten the link.</b> The <code translate="no">${lat}</code> and <code translate="no">${lng}</code>
     at the end let XCTrack hand over its last known position, so the arrows
     appear immediately instead of after the GPS locks on.
   </p>
@@ -323,5 +365,21 @@ document.getElementById("copy").addEventListener("click", function(){
 
 refreshLinks();
 </script>
+
+<!-- ══ AUTOMATIC TRANSLATION ═══════════════════════════════════════════
+     GTranslate, on this setup page and the hub ONLY. Never app.html or
+     widget.html: those are read in the air, and HX Call in particular
+     exists to work with no signal, so a third-party script there would
+     put a network dependency inside that guarantee. Aviation English is
+     also the right register for the readings themselves.
+
+     At the end of <body> and `defer`red, so it cannot block the first
+     paint. If the CDN is unreachable the switcher never appears and the
+     page stays fully readable in English.
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="gtranslate_wrapper"></div>
+<script>window.gtranslateSettings = {"default_language":"en","native_language_names":true,"detect_browser_language":true,"languages":["en","de","fr","it","es"],"wrapper_selector":".gtranslate_wrapper","switcher_horizontal_position":"right","switcher_vertical_position":"top","float_switcher_open_direction":"bottom"}</script>
+<script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>
+
 </body>
 </html>
