@@ -522,7 +522,7 @@ for this knowledge with measurements; none of it needs re-deriving.
   that means stale readings go red, never quietly green.
 
 **What does not transfer.** `hx-call` ships a fixed dataset and works with no
-network at all; that is its whole product. Windgrade's readings are live by
+network at all; that is its whole product. Windmap's readings are live by
 nature and cannot work offline — only the terrain can. Do not import the
 "offline-first" framing along with the code.
 

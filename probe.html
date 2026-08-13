@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Windgrade — capability probe</title>
+<title>XCTrack Windmap — capability probe</title>
 <style>
 :root{
   --ink:#0A1116; --panel:#151F27; --panel-hi:#1D2B36; --rule:#2A3B48;
@@ -46,7 +46,7 @@ pre{
 </head>
 <body>
 
-<h1>Windgrade probe</h1>
+<h1>Windmap probe</h1>
 <p class="sub" id="stamp"></p>
 
 <div class="big">
@@ -97,8 +97,8 @@ report 200 — a false negative. Only trust this test against the real host
    ════════════════════════════════════════════════════════════════ */
 
 var R = {};                       // collected results
-var BLOB_KEY = "/windgrade-probe-blob";
-var CACHE = "windgrade-probe";
+var BLOB_KEY = "/windmap-probe-blob";
+var CACHE = "windmap-probe";
 
 /* CORS candidates. Add any provider you're considering. */
 var CORS_TARGETS = [

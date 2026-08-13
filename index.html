@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A1116">
-<title>Windgrade — nearby wind stations on terrain</title>
+<title>XCTrack Windmap — nearby wind stations on terrain</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -13,7 +13,7 @@
 <meta name="description" content="Wind stations near you, drawn on the terrain they sit on. An XCTrack overlay for paraglider XC pilots.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Free Flight Tools">
-<meta property="og:title" content="Windmap — wind stations on the terrain">
+<meta property="og:title" content="XCTrack Windmap — wind stations on the terrain">
 <meta property="og:description" content="Speed, gust and direction for every station near you, drawn where they actually are.">
 <meta property="og:url" content="https://freeflight-tools.github.io/xctrack-windmap/">
 <meta property="og:image" content="https://freeflight-tools.github.io/xctrack-windmap/og-windmap.png">
@@ -90,7 +90,7 @@ a{color:var(--chart)}
 <body>
 <div class="wrap">
 
-  <h1>Windgrade</h1>
+  <h1>XCTrack Windmap</h1>
   <!-- The old intro explained what is wrong with other tools before saying what
        this one does. A pilot who has just arrived does not yet care. -->
   <p class="sub">
@@ -148,7 +148,7 @@ a{color:var(--chart)}
        wrong is silent. A pilot doing this on a phone will not read prose. -->
   <p class="note">
     In XCTrack, edit a page and add <b>two widgets on top of each other</b>: its
-    own map underneath, and Windgrade above it.
+    own map underneath, and Windmap above it.
   </p>
   <ol>
     <li>Add an <b>XC map</b> widget. Set its <b>scale</b> to <b id="stepScale">the
@@ -175,7 +175,7 @@ a{color:var(--chart)}
        name; the overlay resolves the scale on the device. Measured with
        tools/ruler.html — docs/findings.md 2026-08-11. -->
   <p class="note">
-    <b>Did it work?</b> Windgrade draws a small scale bar just above XCTrack's
+    <b>Did it work?</b> Windmap draws a small scale bar just above XCTrack's
     own. <b>If the two bars are the same length, you're set</b> — you never have
     to read either number. If they differ, change XCTrack's map scale until they
     match.
@@ -195,15 +195,15 @@ a{color:var(--chart)}
   <p class="note">
     Under <b>Advanced settings → Interactive mode</b>, and off by default. They
     need <b>Allow tapping on the web page when locked</b> turned <b>on</b> — and
-    once it is, Windgrade takes every tap over its own area, so <b>move
+    once it is, Windmap takes every tap over its own area, so <b>move
     XCTrack's zoom buttons outside it</b> or they will stop responding.
   </p>
   <ol>
     <li>Tap a station to see how its wind has changed over the last few hours.</li>
     <li>Add <b>+</b> and <b>−</b> buttons, or use the top and bottom of the
-      screen, to change Windgrade's scale.</li>
-    <li>That changes <b>Windgrade's</b> scale only — XCTrack doesn't let a web
-      page change its map. Windgrade says so at the bottom until you change the
+      screen, to change Windmap's scale.</li>
+    <li>That changes <b>Windmap's</b> scale only — XCTrack doesn't let a web
+      page change its map. Windmap says so at the bottom until you change the
       map to match.</li>
   </ol>
 

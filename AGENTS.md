@@ -1,4 +1,4 @@
-# Windgrade
+# XCTrack Windmap
 
 An XCTrack web widget (plus a standalone page) that shows nearby **wind-station
 readings on terrain**, each rendered as an arrow coloured by a rating scale. For
@@ -21,8 +21,11 @@ the `User-Agent` question for winds.mobi, and a latitude check on the 0.942
 calibration constant. **Pixel density is settled** — the map works in device
 pixels and the correction is computed, see `docs/findings.md`.
 
-`windgrade` is a placeholder name — renaming is a folder move and three lines
-of docs.
+Renamed 2026-08-13: the repo is `xctrack-windmap` under the `freeflight-tools`
+org, the product is **XCTrack Windmap**, short name **Windmap**. The full name
+goes in `<title>`, the manifest `name` and the launcher's `<h1>`; the short one
+in `app.html`'s compact header, the tool pages, and any prose where the
+surrounding sentence already says "XCTrack".
 
 ## Who it's for, and under what conditions
 

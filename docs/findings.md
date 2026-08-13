@@ -34,7 +34,7 @@ turn most polls into a 304**. Add it to the email to Yann already pending over
 the `User-Agent` term — see `docs/todo.md`.
 
 Rejected: aligning our poll to wall-clock (:00, :10, :20) so it lands just after
-MeteoSwiss and Holfuy publish. It would also make every Windgrade instance hit
+MeteoSwiss and Holfuy publish. It would also make every Windmap instance hit
 them on the same second, which is the opposite of "do not overload".
 
 ---
@@ -1374,7 +1374,7 @@ it is now the one remaining PMTiles unknown.
 ```
 curl -s -D- -o /dev/null -r 0-99 \
   -H 'Accept-Encoding: gzip, deflate, br' \
-  https://elgandoz.github.io/windgrade/packs/<region>.pmtiles \
+  https://freeflight-tools.github.io/xctrack-windmap/packs/<region>.pmtiles \
   | grep -iE '^HTTP|content-type|content-encoding|content-range'
 ```
 
@@ -1467,6 +1467,13 @@ These are `curl` results from macOS, not `probe.html` output.
 #### HTTP 206 / byte ranges — GitHub Pages
 
 Origin: `https://elgandoz.github.io/windgrade/`
+
+> **Superseded 2026-08-13.** The repo moved to the `freeflight-tools` org and
+> was renamed, so the automatic `Origin` the API now sees is
+> `https://freeflight-tools.github.io`. The measurement above stands — the
+> header is still sent and still identifies the deployment — but this is the
+> value to quote to winds.mobi, and the one in the question posted to their
+> community. The old origin will never appear again.
 
 ```
 GET /probe.html  Range: bytes=0-99      -> 206, content-range: bytes 0-99/14348, 100 bytes

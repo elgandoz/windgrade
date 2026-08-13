@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Windgrade — tap pass-through probe</title>
+<title>XCTrack Windmap — tap pass-through probe</title>
 <style>
 /* Unpainted body, like the real widget: XCTrack renders white or absent as
    transparent, which is the only way this can sit over a map. */
@@ -222,7 +222,7 @@ el("clear").addEventListener("click", function(){
 });
 el("copy").addEventListener("click", function(){
   var btn = this;
-  var txt = "windgrade tap probe\nmode " + MODES[state.mode] + "\nXCTrack " + xct +
+  var txt = "windmap tap probe\nmode " + MODES[state.mode] + "\nXCTrack " + xct +
             "\nviewport " + window.innerWidth + "x" + window.innerHeight + "\n\n" +
             counts() + "\n\n" + state.log.join("\n");
   var done = function(){

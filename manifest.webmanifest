@@ -1,6 +1,6 @@
 {
-  "name": "Windgrade",
-  "short_name": "Windgrade",
+  "name": "XCTrack Windmap",
+  "short_name": "Windmap",
   "description": "Nearby wind-station readings on terrain, coloured by measured speed and gust.",
   "start_url": "app.html",
   "scope": "./",

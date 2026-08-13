@@ -325,7 +325,7 @@ the test: **can a zoom gesture override the per-widget scale on whichever map do
 receive it?** If ours never receives zoom input, it cannot.
 
 **Acceptance test — `tools/registration.html`, built 2026-08-10.** Live at
-`/windgrade/tools/registration.html`. No data, no arrows; it exists only to answer
+`/xctrack-windmap/tools/registration.html`. No data, no arrows; it exists only to answer
 whether the overlay can be registered at all. Three independent checks, ordered by
 how much they isolate:
 
@@ -1410,7 +1410,7 @@ and an update to AGENTS.md.
 
 ## Decisions still open
 
-1. **Repo name.** `windgrade` is a placeholder.
+1. ~~**Repo name.**~~ **Closed 2026-08-13 — `xctrack-windmap`,** under the `freeflight-tools` org, product name **XCTrack Windmap** / **Windmap**.
 2. ~~**Rating thresholds.**~~ **Closed 2026-08-10.** Six levels, burnair-style,
    with separate km/h tables for average and gust — see `handover.md`. Three
    smaller questions it left behind:

@@ -1,4 +1,4 @@
-# Windgrade
+# XCTrack Windmap
 
 Instructions live in AGENTS.md so every agent reads the same file.
 

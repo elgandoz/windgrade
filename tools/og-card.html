@@ -19,7 +19,7 @@
        #    CENTRE, which silently lops the header off and cost an hour.
        "$CH" --headless=new --virtual-time-budget=15000 \
              --window-size=560,668 --screenshot=tools/og-shot.png \
-             "http://localhost:8080/app.html?lat=46.02&lng=7.75&size=0"
+             "http://localhost:8080/app.html?lat=46.02&lng=7.75&size=0&theme=light"
 
        # 2. the card
        "$CH" --headless=new --virtual-time-budget=5000 \
@@ -31,7 +31,15 @@
      cycle a third of the list is legitimately red. Measured at Zermatt on
      2026-08-13: 28 of 56 stale at 34 min after the hour, 16 of 56 eight
      minutes later. Both are correct output; only one makes a good card.
-     Holfuy runs ~6 min and is green almost always.
+     Holfuy runs ~6 min and is green almost always. On a genuinely calm
+     evening every arrow is near-white and the card looks washed out —
+     that is correct output too. Regenerate on a day with some wind.
+
+     `theme=light` is PINNED, not incidental. Without it the capture
+     follows the laptop's appearance setting, so the same command
+     produced a light card in the afternoon and a dark one after macOS
+     switched at sunset. The card has a dark ground either way; a light
+     screenshot is what gives it contrast.
      ═══════════════════════════════════════════════════════════════════ -->
 <style>
   @page{margin:0}
@@ -44,7 +52,7 @@
   .l{flex:1;padding:74px 0 74px 78px;display:flex;flex-direction:column;justify-content:center}
   .brand{display:flex;align-items:center;gap:16px;margin-bottom:34px}
   .brand .nm{font-size:30px;font-weight:700;letter-spacing:-.02em}
-  h1{font-size:62px;line-height:1.07;letter-spacing:-.034em;font-weight:700;max-width:14ch}
+  h1{font-size:62px;line-height:1.07;letter-spacing:-.034em;font-weight:700;max-width:13ch}
   p{margin-top:24px;font-size:26px;line-height:1.45;color:#9FB2C0;max-width:24ch}
   .foot{
     margin-top:44px;display:flex;align-items:center;gap:12px;
@@ -78,7 +86,7 @@
         <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="#EFCB1F" stroke="#3A4750" stroke-width="1"/>
       </g>
     </svg>
-    <div class="nm">Windmap</div>
+    <div class="nm">XCTrack Windmap</div>
   </div>
   <h1>Wind stations on the terrain</h1>
   <p>Speed, gust and direction for every station near you — drawn where they actually are.</p>

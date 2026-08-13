@@ -126,7 +126,7 @@ Run `tools/tap.html`:
   rim eats inward, so a narrower dart needs a narrower rim.
 - **Halo:** owner said "probably stays on". Currently always on. `tools/arrow.html`
   toggles it over five backgrounds if that needs revisiting.
-- **Repo name.** `windgrade` is still a placeholder.
+- ~~**Repo name.**~~ **Closed 2026-08-13.** `freeflight-tools/xctrack-windmap`; the product is **XCTrack Windmap**, short name **Windmap**.
 
 ---
 
@@ -153,7 +153,7 @@ station's altitude.
 
 ## Environment notes
 
-**Push access.** `git remote` is `https://github.com/elgandoz/windgrade.git`, but
+**Push access.** `git remote` is `https://github.com/freeflight-tools/xctrack-windmap.git`, but
 `gh` in this session was authenticated as **`marcogandi`**, which has only READ on
 that repo — `git push` returned 403, and SSH also resolved to `marcogandi`. The
 owner pushed manually all session. **The owner is switching Claude Code accounts, so
@@ -189,5 +189,5 @@ drawn **canvas is not captured** (SVG is fine), and the capture can be **narrowe
 than the page's viewport**, so right-edge content is cropped rather than
 overflowing. Screenshot 100–150 px wider than the layout you are checking.
 
-**Live URL:** `https://elgandoz.github.io/windgrade/` — Pages serves from
+**Live URL:** `https://freeflight-tools.github.io/xctrack-windmap/` — Pages serves from
 `main` / root, `status: built`.

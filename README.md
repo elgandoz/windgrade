@@ -1,4 +1,4 @@
-# Windgrade
+# XCTrack Windmap
 
 Nearby wind-station readings on a light offline map, for paraglider XC pilots.
 An XCTrack web widget plus a standalone page.
