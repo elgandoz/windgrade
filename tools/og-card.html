@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Windmap — social preview card</title>
+<!-- ══════════════════════════════════════════════════════════════════════
+     Generates og-windmap.png, the 1200x630 image chat apps show when the
+     link is pasted. Build-time only: nothing in the shipped pages loads
+     this, and it is deliberately NOT in sw.js's ASSETS — no individual
+     tool is, and a scraper-only image has no business in an offline cache.
+
+     Two commands, from the repo root, with a server already running:
+
+       CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+       # 1. the screenshot, at the exact aspect the frame below expects.
+       #    --window-size IS the crop: it captures the top of the page.
+       #    Do NOT crop afterwards with `sips -c` — that crops from the
+       #    CENTRE, which silently lops the header off and cost an hour.
+       "$CH" --headless=new --virtual-time-budget=15000 \
+             --window-size=560,668 --screenshot=tools/og-shot.png \
+             "http://localhost:8080/app.html?lat=46.02&lng=7.75&size=0"
+
+       # 2. the card
+       "$CH" --headless=new --virtual-time-budget=5000 \
+             --window-size=1200,630 --screenshot=og-windmap.png \
+             "http://localhost:8080/tools/og-card.html"
+
+     PICK YOUR MOMENT for step 1. MeteoSwiss and SLF stations report on a
+     ~30 min cadence against a `stale` default of 30, so for part of every
+     cycle a third of the list is legitimately red. Measured at Zermatt on
+     2026-08-13: 28 of 56 stale at 34 min after the hour, 16 of 56 eight
+     minutes later. Both are correct output; only one makes a good card.
+     Holfuy runs ~6 min and is green almost always.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style>
+  @page{margin:0}
+  *{box-sizing:border-box;margin:0}
+  body{
+    width:1200px;height:630px;overflow:hidden;
+    background:#0A1116;color:#E8F0F5;display:flex;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .l{flex:1;padding:74px 0 74px 78px;display:flex;flex-direction:column;justify-content:center}
+  .brand{display:flex;align-items:center;gap:16px;margin-bottom:34px}
+  .brand .nm{font-size:30px;font-weight:700;letter-spacing:-.02em}
+  h1{font-size:62px;line-height:1.07;letter-spacing:-.034em;font-weight:700;max-width:14ch}
+  p{margin-top:24px;font-size:26px;line-height:1.45;color:#9FB2C0;max-width:24ch}
+  .foot{
+    margin-top:44px;display:flex;align-items:center;gap:12px;
+    font:600 17px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#54A6DC;
+  }
+  .foot span{width:6px;height:6px;border-radius:50%;background:#54A6DC}
+  .r{width:466px;position:relative;display:flex;align-items:center;padding-right:62px}
+  /* height:auto with a source cropped to the same aspect. object-fit:cover
+     here scaled to fill and cropped the sides off instead. */
+  .r .shot{
+    width:100%;border-radius:16px;border:1px solid #2A3B48;overflow:hidden;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.9);position:relative;z-index:1;line-height:0;
+  }
+  .r .shot img{display:block;width:100%;height:auto}
+  .glow{
+    position:absolute;inset:auto -140px -180px -60px;height:460px;
+    background:radial-gradient(closest-side,rgba(238,138,28,.22),transparent);
+  }
+</style>
+</head>
+<body>
+<div class="l">
+  <div class="brand">
+    <!-- ARROW from wg/core.js, same four stacked strokes as icon.svg -->
+    <svg width="58" height="58" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="15" fill="#151F27"/>
+      <g transform="translate(32 32) rotate(35)" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#FFF" stroke-width="11"/>
+        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#0A1116" stroke-width="8.5"/>
+        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#EE8A1C" stroke-width="5"/>
+        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="#EFCB1F" stroke="#3A4750" stroke-width="1"/>
+      </g>
+    </svg>
+    <div class="nm">Windmap</div>
+  </div>
+  <h1>Wind stations on the terrain</h1>
+  <p>Speed, gust and direction for every station near you — drawn where they actually are.</p>
+  <div class="foot"><span></span>Free Flight Tools</div>
+</div>
+<div class="r">
+  <div class="glow"></div>
+  <div class="shot"><img src="og-shot.png" alt=""></div>
+</div>
+</body>
+</html>

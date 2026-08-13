@@ -8,6 +8,20 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-180.png">
+
+<!-- Social preview — see the note in app.html. Regenerate with tools/og-card.html. -->
+<meta name="description" content="Wind stations near you, drawn on the terrain they sit on. An XCTrack overlay for paraglider XC pilots.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Free Flight Tools">
+<meta property="og:title" content="Windmap — wind stations on the terrain">
+<meta property="og:description" content="Speed, gust and direction for every station near you, drawn where they actually are.">
+<meta property="og:url" content="https://freeflight-tools.github.io/xctrack-windmap/">
+<meta property="og:image" content="https://freeflight-tools.github.io/xctrack-windmap/og-windmap.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Windmap listing nearby wind stations with speed, gust, altitude and direction.">
+<meta name="twitter:card" content="summary_large_image">
+
 <link rel="stylesheet" href="wg/base.css">
 <style>
 body{padding:0 0 40px}
@@ -55,6 +69,10 @@ ol ul li::before{content:"·";position:absolute;left:-.8em;color:var(--chart);fo
   border:1px solid var(--amber-line);border-radius:3px;color:var(--amber);
   font-size:.82em;line-height:1.45}
 .warn b{color:var(--amber-str)}
+.priv{margin:22px 0 0;padding:10px 12px;background:var(--panel);
+  border:1px solid var(--rule);border-radius:3px;
+  color:var(--dim);font-size:.84em;line-height:1.5}
+.priv b{color:var(--fg)}
 footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);
   color:var(--dim);font-size:.76em;line-height:1.6}
 footer p{margin:0 0 10px;font-size:1.1em}
@@ -201,6 +219,13 @@ a{color:var(--chart)}
     no lee-side guesses. <b>Readings cannot work offline.</b> Anything marked
     stale is old and must be treated as unknown.
   </p>
+
+  <!-- One sentence, above the legal line rather than inside it: a pilot asked
+       for GPS on first launch wants this answered, and burying it in the
+       disclaimer reads as though it were also a liability caveat. -->
+  <p class="priv"><b>Your position stays on your phone.</b> Only the area around
+    you is sent to winds.mobi, to ask which stations are in it. No accounts, no
+    analytics.</p>
 
   <footer>
     <p><a href="tools.html">Diagnostic tools →</a> — for checking the overlay
