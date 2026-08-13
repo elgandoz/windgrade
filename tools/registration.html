@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>XCTrack Windmap — overlay registration test</title>
+<title>XCTrack Windmap. Overlay registration test</title>
 <style>
 /* body stays unpainted: XCTrack renders white/absent as transparent so the
    widget floats over its map. Every control carries its own background. */
@@ -40,7 +40,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 <script>
 "use strict";
 /* ══════════════════════════════════════════════════════════════════
-   Overlay registration test — Phase 3b feasibility.
+   Overlay registration test: Phase 3b feasibility.
 
    Stack this WebView widget ON TOP of an XCTrack map widget covering the
    exact same area, both with rotation set to North-up. Set XCTrack's map
@@ -48,18 +48,18 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 
    Three independent checks, none relying on coordinates typed from memory:
 
-     1. CENTRE  — the magenta cross must sit exactly under XCTrack's own
+     1. CENTRE, the magenta cross must sit exactly under XCTrack's own
                   aircraft symbol. Tests centring, nothing else.
-     2. SCALE   — the range rings are true ground distances. Compare against
+     2. SCALE, the range rings are true ground distances. Compare against
                   XCTrack's own scale bar.
-     3. FULL    — airspace outlines come from SHV, the same data XCTrack
+     3. FULL. Airspace outlines come from SHV, the same data XCTrack
                   draws. Toggle XCTrack's airspace layer and see whether the
                   edges coincide. This is the real test (chmd's method,
                   gitlab xcontest-public/xctrack-public#1235).
 
    If alignment needs the x-multiplier at x3, XCTrack's scale is in device
    pixels, not CSS pixels. If a different integer zoom lines up, the issue
-   table is wrong for this build. Either answer is a result — report it.
+   table is wrong for this build. Either answer is a result, report it.
 
    Settings this needs in XCTrack: "Allow web page to access XCTrack data"
    ON, refresh rate 0, and "Allow tapping on the web page when locked" ON
@@ -69,8 +69,8 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 /* ── scale ↔ OSM zoom ────────────────────────────────────────────────
    chmd's table in xctrack-public#1235 lists labels this build does not
    have. Their OSM-aligned steps were 400m/800m/1500m/3km/6km/12km/25km/
-   50km/100km/200km/400km; the owner's slider offers 23 values —  exactly
-   chmd's mapWidget_scale.value span of 12..34 — of which every second one
+   50km/100km/200km/400km; the owner's slider offers 23 values,  exactly
+   chmd's mapWidget_scale.value span of 12..34, of which every second one
    doubles. Taking the alternating subset that lines up position-for-
    position gives a consistent ~1.25x relabel:
 
@@ -80,7 +80,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
    So this build's "8 km" should be chmd's "6 km", i.e. OSM z11. The other
    alternating subset (300m/600m/1.2km/2.5km/5km/10km/20km/40km/80km/
    150km/300km/600km) sits half a zoom level away and cannot land on an
-   integer OSM zoom — which is why 5 km and 10 km are the wrong ones to
+   integer OSM zoom. Which is why 5 km and 10 km are the wrong ones to
    calibrate with even though they look like round numbers.
 
    All of this is a hypothesis. The buttons are here to test it, and the
@@ -92,12 +92,12 @@ var FINE = 1.02;   /* one tap = 2% */
 
 /* ── MEASURED CALIBRATION, 2026-08-10 ─────────────────────────────────
    XCTrack "8 km" over a 448x978 css widget at 47.361N aligned with our
-   z11 at x0.942 — confirmed against airspace edges with a valid GPS fix.
+   z11 at x0.942. Confirmed against airspace edges with a valid GPS fix.
    That is 54.95 m/px, i.e. a fractional OSM zoom of 10.914, so XCTrack's
    scale ladder is NOT on integer OSM zoom levels: it sits a constant
    1/0.942 = 1.062 coarser, an offset of -0.086 of a zoom level.
 
-   Whether this single constant holds at every ladder step is still open —
+   Whether this single constant holds at every ladder step is still open,
    it does only if the ladder doubles exactly. Test 15 km against z10 and
    4 km against z12 with this same multiplier. ─────────────────────── */
 var CAL = 0.942;
@@ -135,7 +135,7 @@ function qs(n){
   return m ? decodeURIComponent(m[1]) : null;
 }
 /* An unsubstituted placeholder arrives as the literal "${lat}" and must be
-   ignored, not parsed — hx-call records this exact failure. */
+   ignored, not parsed, hx-call records this exact failure. */
 function num(v){
   if (v === null) return NaN;
   if (/\$\{/.test(v)) return NaN;
@@ -163,7 +163,7 @@ function readXCTrack(){
 function acquire(){
   /* Take an XCTrack fix even when isValid is false. A stale position is
      exactly what XCTrack's own map is centred on with no lock, so using it
-     is what makes the two layers agree indoors — and terrain does not move,
+     is what makes the two layers agree indoors. And terrain does not move,
      so remembering a position is safe (unlike remembering a reading). */
   var x = readXCTrack();
   if (x){
@@ -204,7 +204,7 @@ if (navigator.geolocation){
    SHV gives a structured floor: Lower.Metric.Alt.{Type, Altitude}, where
    Type is "m AGL", "m QNH" or "m STD". QNH and STD are close enough to MSL
    for a calibration filter. AGL is terrain-relative and we ship no DEM, so
-   treat it as 0 — 179 of 359 features are "0 m AGL" anyway, i.e. from the
+   treat it as 0. 179 of 359 features are "0 m AGL" anyway, i.e. from the
    ground up, which is always below the pilot.
 
    InactiveByAgreement is excluded as "not active". HX and DABS activation
@@ -269,7 +269,7 @@ function draw(){
   function sx(lon){ return (lon2px(lon,zoom)-cx)*mul + W/2; }
   function sy(lat){ return (lat2px(lat,zoom)-cy)*mul + H/2; }
 
-  /* 3. airspace — the real reference */
+  /* 3. airspace. The real reference */
   if (showAS && as){
     var vw = (W/2)*res/111320, vh = (H/2)*res/111320;   /* deg padding, rough */
     var padx = vw/Math.cos(fix.lat*Math.PI/180) + 0.05, pady = vh + 0.05;
@@ -295,7 +295,7 @@ function draw(){
     }
   }
 
-  /* 2. range rings — compare against XCTrack's scale bar */
+  /* 2. range rings, compare against XCTrack's scale bar */
   ctx.strokeStyle = "rgba(232,240,245,.55)";
   ctx.fillStyle   = "rgba(232,240,245,.9)";
   ctx.font = "10px ui-monospace,monospace";
@@ -328,7 +328,7 @@ function draw(){
     }
   }
 
-  /* 1. centre cross — must sit under XCTrack's aircraft symbol */
+  /* 1. centre cross. Must sit under XCTrack's aircraft symbol */
   var mx = W/2, my = H/2;
   ctx.strokeStyle = "#FF2FB0"; ctx.lineWidth = 2;
   ctx.beginPath();
@@ -371,7 +371,7 @@ function paintUI(){
   }
   if (d !== lastDiag){ elDiag.innerHTML = ""; elDiag.appendChild(document.createTextNode(d)); lastDiag = d; }
 }
-function fmt(v){ return (v === undefined || v === null || v !== v) ? "—" : (Math.round(v*10)/10); }
+function fmt(v){ return (v === undefined || v === null || v !== v) ? ", " : (Math.round(v*10)/10); }
 
 /* ── poll: 2 Hz, but redraw only when something moved a whole pixel ─ */
 function tick(){

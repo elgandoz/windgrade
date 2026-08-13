@@ -26,7 +26,7 @@ ready to post.
 
 **Verified on device 2026-08-11.** Markers, labels, declutter and the scale bar all
 render correctly in XCTrack, and our bar matched XCTrack's own to within reading
-error — the calibration confirming itself passively. Screenshot analysis in
+error, the calibration confirming itself passively. Screenshot analysis in
 `findings.md`.
 
 Still true that **headless screenshots cannot capture an asynchronously drawn
@@ -35,7 +35,7 @@ laptop can only verify `app.html` and `tools/arrow.html` visually.
 
 ---
 
-## The blocking question — ANSWERED 2026-08-11: no
+## The blocking question: ANSWERED 2026-08-11: no
 
 **A tap on a web widget never reaches a background XCTrack widget.** Tested in all
 three modes and both layer orders; `pointer-events: none` gave nothing to either
@@ -48,7 +48,7 @@ swallows every tap over its area, killing the pilot's own zoom buttons. It has
 nothing to tap, so the setup now says leave tapping **OFF**.
 
 **One thing still to look at on device:** only "tapping off + widget in the
-background" preserves the zoom buttons — does the XC map then draw over the arrows?
+background" preserves the zoom buttons. Does the XC map then draw over the arrows?
 
 **Built afterwards** (Phase 3d in `plan.md`): a scale bar drawn above XCTrack's own,
 on by default, so the pairing is checked by comparing bar *lengths* rather than
@@ -73,8 +73,8 @@ Run `tools/tap.html`:
 | Outcome | What to do |
 |---|---|
 | **both** | Phase 3c is buildable. Track a ladder step, ±1 per tap. |
-| **page only** | The map will not follow. Silent drift — **do not build**. |
-| **map only** | The widget cannot know. Silent drift — **do not build**. |
+| **page only** | The map will not follow. Silent drift, **do not build**. |
+| **map only** | The widget cannot know. Silent drift, **do not build**. |
 | **neither** | Tapping is off. Nothing to build. |
 
 </details>
@@ -83,22 +83,22 @@ Run `tools/tap.html`:
 
 ## Open items, in the owner's stated order
 
-1. **Check the two fixes from 2026-08-11 on device** — markers now keep off the
+1. **Check the two fixes from 2026-08-11 on device**, markers now keep off the
    scale bar and badge, and the reset target grows to full width while the scale
    is offset. Also still open: whether a background-layered widget is drawn over
    by the XC map, which is the only arrangement preserving the pilot's zoom
    buttons.
-2. **Phase 3** — our own PMTiles basemap, for the standalone page. Still the durable
+2. **Phase 3**. Our own PMTiles basemap, for the standalone page. Still the durable
    answer; 3b was the cheap one that shipped first. Two unresolved risks live here:
    byte ranges against a real `.pmtiles` (see below) and the ~50 MB pack ceiling.
-3. **Phase 4 polish** — owner said keep this last. Includes a proper README rewrite,
+3. **Phase 4 polish**, owner said keep this last. Includes a proper README rewrite,
    `radar orientation`, and any remaining parameters.
 
 **Not blocking, do when convenient:**
 
 - **Email Yann, `info@winds.mobi`.** Their terms require identifying calls with a
   `User-Agent` header, which browsers forbid `fetch()` from setting. The automatic
-  `Origin` header does identify the deployment — ask whether that suffices. Deferred
+  `Origin` header does identify the deployment, ask whether that suffices. Deferred
   by the owner pending feasibility, and the API works meanwhile. Do not spoof the
   header, and do not quietly ignore the rule: their terms end "blacklisted without
   any notice."
@@ -113,7 +113,7 @@ Run `tools/tap.html`:
   resolve against the *negotiated* representation and this origin gzips even
   `application/octet-stream` above a size threshold. Pass = 206, **no**
   `content-encoding`, and a `content-range` total equal to the real file size. If it
-  fails, packs go to R2 — which is why Phase 3's manifest keeps absolute URLs.
+  fails, packs go to R2, which is why Phase 3's manifest keeps absolute URLs.
 
 ---
 
@@ -130,7 +130,7 @@ Run `tools/tap.html`:
 
 ---
 
-## Constants that were measured — do not re-derive
+## Constants that were measured: do not re-derive
 
 ```
 Overlay calibration    m/px = 156543.034 · cos(lat) / 2^z / 0.942
@@ -139,14 +139,14 @@ Pairing                4km=z12  8km=z11  15km=z10  30km=z9     (step 27/25/23/21
 ```
 
 XCTrack's ladder is a **resolution** on an exact power-of-two ladder, but **not** on
-integer OSM zoom levels — it runs 1.062× coarser, hence the 0.942. Verified at three
+integer OSM zoom levels, it runs 1.062× coarser, hence the 0.942. Verified at three
 ladder steps against airspace edges. The printed km labels are **rounded and
 build-specific**; never compute geometry from them. `docs/findings.md` has the
 numbers and `tools/registration.html` reproduces the whole thing.
 
 `getLocation()` returns `lon, lat, time, altGps, isValid, stdBaroAlt, pressure,
 speedGps, speedComputed, bearingGps, heading, airspeed`. `stdBaroAlt` is **pressure
-altitude vs 1013.25 hPa**, not height above sea level — never compare it to a
+altitude vs 1013.25 hPa**, not height above sea level, never compare it to a
 station's altitude.
 
 ---
@@ -155,7 +155,7 @@ station's altitude.
 
 **Push access.** `git remote` is `https://github.com/freeflight-tools/xctrack-windmap.git`, but
 `gh` in this session was authenticated as **`marcogandi`**, which has only READ on
-that repo — `git push` returned 403, and SSH also resolved to `marcogandi`. The
+that repo. `git push` returned 403, and SSH also resolved to `marcogandi`. The
 owner pushed manually all session. **The owner is switching Claude Code accounts, so
 re-check this before assuming a push will work:**
 
@@ -189,5 +189,5 @@ drawn **canvas is not captured** (SVG is fine), and the capture can be **narrowe
 than the page's viewport**, so right-edge content is cropped rather than
 overflowing. Screenshot 100–150 px wider than the layout you are checking.
 
-**Live URL:** `https://freeflight-tools.github.io/xctrack-windmap/` — Pages serves from
+**Live URL:** `https://freeflight-tools.github.io/xctrack-windmap/`, Pages serves from
 `main` / root, `status: built`.

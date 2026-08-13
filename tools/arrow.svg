@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Windgrade marker — the editable master.
+  XCTrack Windmap marker: the editable master.
 
   Open in any vector editor, reshape the dart, save, then copy the `d`
   attribute back into ARROW in wg/core.js. Everything that draws a marker
@@ -14,7 +14,7 @@
 
       halo   12   white          outermost, keeps a BLACK fill off dark terrain
       outer   9   near black     keeps a WHITE fill off light terrain
-      gust  6.5   GUST colour    the rim — reads the gust threshold table
+      gust  6.5   GUST colour    the rim, reads the gust threshold table
       fill  1.2   AVERAGE colour the body, with a thin dark-grey stroke
 
   Each band's visible thickness is half the difference to the next one in.
@@ -27,7 +27,7 @@
      same absolute amount to width and length, so they push a narrow shape
      towards square. 14x24 here renders as roughly 26x36.
 
-  Points DOWNWIND — apex towards where the air is going. Callers rotate by
+  Points DOWNWIND: apex towards where the air is going. Callers rotate by
   (w-dir + 180), because providers report a from-bearing.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-18 -18 36 36" width="288" height="288">

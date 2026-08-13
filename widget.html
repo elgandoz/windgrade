@@ -10,7 +10,7 @@
 html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* The browser applies `hidden` as a low-priority [hidden]{display:none}. Any
-   author rule that sets display — #zbtns{display:flex} did — silently outranks
+   author rule that sets display, #zbtns{display:flex} did. Silently outranks
    it and the element stays on screen. base.css restates this for the other
    pages; this one cannot load base.css, because its body must stay unpainted,
    so it needs its own copy. Without it the zoom buttons rendered with zbtn=0,
@@ -25,7 +25,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 #badge.bad{background:rgba(126,26,20,.92)}
 /* A compact chip sitting directly ABOVE our scale bar, pointing at it. A
    full-width bar here covered XCTrack's own scale, which is the one thing the
-   pilot has to compare against — it made itself pointless. Transient: it is a
+   pilot has to compare against, it made itself pointless. Transient: it is a
    prompt, not a state, and the state lives on in the amber bar number. */
 #warn{position:absolute;z-index:6;white-space:nowrap;
   padding:7px 10px;background:rgba(150,105,15,.95);color:#FFF6E6;border-radius:3px;
@@ -33,16 +33,16 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
   opacity:1;transition:opacity .5s}
 #warn.fade{opacity:0;pointer-events:none}
 /* Only present when ztap=1. Invisible: they exist to catch a tap, not to be
-   looked at. Nothing else in this widget is a hit target, deliberately —
-   with tapping enabled the WebView swallows every touch over its area, so a
+   looked at. Nothing else in this widget is a hit target, deliberately.
+   With tapping enabled the WebView swallows every touch over its area, so a
    zone here is a zone taken away from XCTrack. */
 .zone{position:absolute;left:0;width:100%;height:50%}
 #zin{top:0} #zout{top:50%}
 
-/* Dedicated zoom buttons. Small and cornered, so they cost little area — the
+/* Dedicated zoom buttons. Small and cornered, so they cost little area, the
    invisible halves can stay on alongside them. */
 /* Placement is the pilot's, because the widget shares its rectangle with
-   XCTrack's own controls and only they know what is already there — including
+   XCTrack's own controls and only they know what is already there. Including
    a second pair for the map's zoom, which is why the row layout exists. */
 #zbtns{position:absolute;display:flex;flex-direction:column;gap:4px;
   padding:4px;z-index:7}
@@ -63,8 +63,8 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
    phone unless ?theme=light forces otherwise, and [data-theme] wins over both.
 
    ONLY the popup is themed. The badge, the warn chip and the scale bar sit on
-   XCTrack's map, where they need contrast against terrain — grass, snow, rock —
-   not against a page, so they stay dark on light at every setting. */
+   XCTrack's map, where they need contrast against terrain. Grass, snow, rock.
+   Not against a page, so they stay dark on light at every setting. */
 :root{
   --pop-bg:rgba(255,255,255,.97);
   --rule:#CBD6DE; --fg:#0F1A21; --dim:#5C7180; --chart:#1E6FA8;
@@ -83,7 +83,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
   --amber:#E9A33C; --red:#D6483C;
 }
 
-/* Detail popup. Carries its own background — the body must stay unpainted. */
+/* Detail popup. Carries its own background, the body must stay unpainted. */
 #pop{position:absolute;left:0;right:0;bottom:0;z-index:9;max-height:74%;overflow:auto;
   background:var(--pop-bg);border-top:1px solid var(--rule);
   color:var(--fg);font:400 12px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:9px 10px 11px}
@@ -93,7 +93,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 #pop .now b{font:700 26px ui-monospace,monospace;letter-spacing:-.02em}
 #pop .now i{font-style:normal;color:var(--dim);font-size:11px}
 /* Fixed height. The strip fills in a moment after the header, and without a
-   reserved box the whole panel would resize as it arrives — which is what the
+   reserved box the whole panel would resize as it arrives. Which is what the
    flash on tapping a second marker actually was. */
 #pop .trend{display:flex;gap:3px;overflow-x:auto;padding-bottom:2px;
   min-height:62px;align-items:center}
@@ -127,7 +127,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 <script>
 "use strict";
 /* ══════════════════════════════════════════════════════════════════════
-   widget.html — Phase 3b. Arrows only, on a transparent page, stacked ON
+   widget.html, Phase 3b. Arrows only, on a transparent page, stacked ON
    TOP of an XCTrack map widget covering the same rectangle.
 
    REQUIRED XCTrack SETUP
@@ -152,18 +152,18 @@ var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 /* Double buffered. Markers are drawn into an offscreen canvas and blitted
    in ONE composite-copy operation, so the visible canvas is never caught
    cleared-but-not-yet-redrawn. That is a flicker risk at 2 Hz over a moving
-   map, and it also made headless screenshots come out blank — the capture
+   map, and it also made headless screenshots come out blank, the capture
    landed between the clear and the redraw. */
 var buf = document.createElement("canvas"), bctx = buf.getContext("2d");
 
 var W = 0, H = 0, dpr = 1;
 /* Density FIRST, before anything projects. XCTrack draws its map in device
    pixels, so this is what makes the overlay agree with it on any screen; cal is
-   only a residual on top. Measured — see docs/findings.md. */
+   only a residual on top. Measured, see docs/findings.md. */
 WG.setDpr(C.dpr || window.devicePixelRatio || WG.DPR_REF);
 WG.setCal(C.cal);
 
-/* Theme, by the same <html data-theme> convention base.css uses — WG.applyTheme
+/* Theme, by the same <html data-theme> convention base.css uses, WG.applyTheme
    lives in fields.js, which this page does not load. Only the popup reacts;
    see the CSS. */
 if (C.theme !== "auto") document.documentElement.setAttribute("data-theme", C.theme);
@@ -181,7 +181,7 @@ function setHome(lat) {
   homeStep = WG.resolveStep(C, lat);
   if (!curStep) curStep = homeStep;
 }
-/* Left inset of both bars, matching XCTrack's — measured off the owner's screen
+/* Left inset of both bars, matching XCTrack's. Measured off the owner's screen
    at ~15 css px, so the two start at the same x and a difference in LENGTH is
    the only thing left to see. */
 var BAR_X = 15;
@@ -199,7 +199,7 @@ var popStation = null, popTimer = null, popHist = null, popErr = "";
 var histCache = {};
 var stations = [], lastFetch = 0, fetchErr = "", fetching = false;
 /* How many the box actually held, whether the API truncated at its 500 cap,
-   and how many survived the view cull — the three numbers that say whether a
+   and how many survived the view cull. The three numbers that say whether a
    missing marker was never fetched, was capped away, or lost a collision. */
 var fetchCapped = false, nRanked = 0;
 /* How many markers had to be moved to fit. Reported, because a displaced
@@ -227,13 +227,13 @@ window.addEventListener("resize", resize);
 /* ── draw ─────────────────────────────────────────────────────────────
    Declutter by collision, nearest first. A whole marker at a time: a number
    without its arrow has lost its direction, an arrow without its number has
-   lost the reading, and either half alone is worse than omitting the station —
+   lost the reading, and either half alone is worse than omitting the station,
    see the SeeYou decluttering bug in handover.md.
 
    NUDGE (`nudge=1`, on) puts back the readings that would otherwise be
    dropped. WG.marker.layout() does it in two phases:
 
-     1. place everything that fits, nearest first — byte for byte what nudge=0
+     1. place everything that fits, nearest first. Byte for byte what nudge=0
         draws, so turning it on never MOVES a marker that was already fine
      2. for each one that did not fit, ring-search a small radius around its
         true position and take the angle furthest from the markers already
@@ -244,7 +244,7 @@ window.addEventListener("resize", resize);
    up in one pile.
 
    The case that forced all this, from Zermatt: ZFC: Landing at 2600 m and
-   Zermatt at 1648 m are 387 m apart on the ground — 16 px at scale 3000 — so
+   Zermatt at 1648 m are 387 m apart on the ground. 16 px at scale 3000. So
    the valley floor station was being discarded in favour of one nearly a
    kilometre above it. With strong valley winds those two readings are not
    near-duplicates, they are the whole question.
@@ -257,7 +257,7 @@ window.addEventListener("resize", resize);
 
    Nudged markers ALWAYS print their altitude, whatever `alt` says. Two markers
    side by side are the one case where the pilot cannot tell which reading is
-   which, and altitude is what separates them — it is the difference between a
+   which, and altitude is what separates them. It is the difference between a
    valley floor and a ridge 950 m up. `textH` therefore includes the altitude
    line whenever nudging is on, so the layout reserves room for a line it knows
    will be drawn.
@@ -267,7 +267,7 @@ window.addEventListener("resize", resize);
      * Drawing each marker as it was placed put the next leader line straight
        THROUGH the previous marker's speed number. So layout and painting are
        now separate passes, and every leader line goes down before any marker
-       goes on top — a line that has to cross a label is hidden behind it
+       goes on top. A line that has to cross a label is hidden behind it
        instead of scribbling over it.
      * Fading the whole marker to 0.6 faded the NUMBER, which is the fallback
        for a colour scale a lot of pilots cannot separate, and it was marginal
@@ -285,7 +285,7 @@ function draw(fix, ranked){
     var P = WG.projector(fix, WG.zoomForStep(curStep), W, H, WG.getCal());
     var box = WG.REACH * scale, i, st, x, y;
     /* The altitude line grows each marker downwards, so the vertical spacing
-       has to grow with it — by exactly the line's height, taken from the
+       has to grow with it. By exactly the line's height, taken from the
        renderer rather than guessed, or one marker's altitude lands on the
        arrow of the station below it. Nudged markers print it unconditionally,
        so nudging reserves the room even when `alt` is off. */
@@ -301,7 +301,7 @@ function draw(fix, ranked){
     }
     /* Measured, not assumed: the status line is much shorter than the 190 px
        constant that was here, and it appears even with badge=0 when something
-       is wrong — so the rectangle has to follow the element, not the setting. */
+       is wrong, so the rectangle has to follow the element, not the setting. */
     var bEl = document.getElementById("badge");
     if (!bEl.hidden) keepOut.push([0, 0, bEl.offsetWidth || 190,
                                          bEl.offsetHeight || 26]);
@@ -315,7 +315,7 @@ function draw(fix, ranked){
     }
 
     /* Everything on screen and not sitting on a keep-out rectangle, in
-       nearest-first order — the layout takes it from there. */
+       nearest-first order, the layout takes it from there. */
     var cand = [];
     for (i = 0; i < ranked.length; i++){
       st = ranked[i];
@@ -330,7 +330,7 @@ function draw(fix, ranked){
        tools/nudge.html draws exactly what this draws. */
     /* Text width MEASURED PER MARKER. WG.marker.layout treats the text as its
        own rectangle and never lets one be covered, so it has to know how wide
-       each really is — and "3/7" is barely half of "14/22". Using the widest
+       each really is, and "3/7" is barely half of "14/22". Using the widest
        possible label for everyone cost about 10 px of needless displacement on
        every short one. The altitude line is measured too, because it is drawn
        in a smaller font but can still be the wider of the pair ("1648m"). */
@@ -364,7 +364,7 @@ function draw(fix, ranked){
 
     /* Every leader line first, under every marker. Painting each marker as it
        was placed put the next line straight through the previous marker's
-       speed number — caught by screenshotting it, not by reading it. The
+       speed number. Caught by screenshotting it, not by reading it. The
        selection ring goes in the same pass, for the same reason. */
     for (i = 0; i < lay.length; i++){
       L = lay[i];
@@ -381,12 +381,12 @@ function draw(fix, ranked){
 
     /* REVERSE order, so the highest-priority member of a cluster paints LAST
        and therefore on top. The exclusion test keeps the arrows apart, but a
-       label and an altitude line hang below the box and can still touch — and
+       label and an altitude line hang below the box and can still touch. And
        when they do, the anchor is the one that should win. */
     for (i = lay.length - 1; i >= 0; i--){
       L = lay[i];
       st = cand[L.i].st;
-      /* The tap target follows the DRAWN marker, not the true position — the
+      /* The tap target follows the DRAWN marker, not the true position, the
          pilot taps what they can see. */
       hits.push({ st: st, x: L.x, y: L.y, r: box });
       /* Only the ARROW fades. The number is the fallback for a colour scale a
@@ -419,10 +419,10 @@ function draw(fix, ranked){
    of reading the settings would reveal it.
 
    Bottom-left, mirroring XCTrack's placement. Ours sits higher so both stay
-   visible — the body is transparent, so theirs shows through. ───────── */
+   visible, the body is transparent, so theirs shows through. ───────── */
 function drawScaleBar(g, res){
   /* The bar names what the pilot's own XCTrack names, computed from THIS
-     screen's density and latitude — not from a table copied off one device. */
+     screen's density and latitude, not from a table copied off one device. */
   var m = WG.scaleMetres(curStep, barLat);
   if (!m || !res) return;
   var px = m / res;
@@ -430,13 +430,13 @@ function drawScaleBar(g, res){
 
   /* barY tunes the vertical gap: the bars are compared by eye, so the closer
      together the better, but XCTrack's own label sits above its bar and the
-     exact height is device-specific — hence a parameter rather than a guess
+     exact height is device-specific. Hence a parameter rather than a guess
      baked in. */
   var x = BAR_X, y = H - C.barY, t = WG.fmtScale(m);
   g.lineCap = "butt"; g.lineJoin = "miter";
 
   /* TICKS POINT DOWN. XCTrack's point up, so the two bars close on each other
-     like facing brackets and their ends line up in a single vertical glance —
+     like facing brackets and their ends line up in a single vertical glance,
      which is the whole comparison, done without reading either number. */
   function trace(){
     g.beginPath();
@@ -476,14 +476,14 @@ function refresh(fix){
 
 /* ── status line ───────────────────────────────────────────────────────
    What is on screen, and whether it can be trusted. It used to lead with the
-   assumed scale and "N↑" permanently; both are redundant now — the scale bar
+   assumed scale and "N↑" permanently; both are redundant now. The scale bar
    shows the scale against XCTrack's OWN, which is the comparison that actually
    catches a mis-pairing, and north-up is required setup rather than news. They
    moved behind ?debug=1.
 
    Goes red on the two things that make the display untrustworthy: the last
    fetch failed, or every visible reading is stale. Deliberately NOT driven
-   by the single oldest station in the box — one distant instrument that
+   by the single oldest station in the box. One distant instrument that
    stopped reporting is not a reason to alarm the whole widget, and
    per-marker staleness already shows in red numbers. ──────────────── */
 function paintBadge(fix, shown, nStale){
@@ -499,7 +499,7 @@ function paintBadge(fix, shown, nStale){
        A bare count implies the map is showing everything it has, and it is
        not: markers that would overlap are evicted whole, nearest kept. In
        Zermatt at scale 3000 that silently removed Zermatt, Gornergrat and
-       Schwarzsee — pairs 390 m to 1050 m apart, which is 16 to 42 px at that
+       Schwarzsee: pairs 390 m to 1050 m apart, which is 16 to 42 px at that
        resolution against a marker needing 29 x 49 px of clearance. The owner
        reasonably read the absence as a fetch bug and went looking for one.
        The number now says there is more, so the answer is "zoom in", not
@@ -524,10 +524,10 @@ function paintBadge(fix, shown, nStale){
   }
 
   /* Off by default: the count is a nicety and the map wants the pixels. Three
-     ways it appears anyway — asked for, debugging, or something is wrong. That
+     ways it appears anyway, asked for, debugging, or something is wrong. That
      last one is not negotiable: no position, OFFLINE and ALL STALE are the
      display admitting it cannot be trusted, and no display setting may switch
-     that off. (Before this, badge=0 hid nothing at all — it was inert.) */
+     that off. (Before this, badge=0 hid nothing at all, it was inert.) */
   var want = (C.badge || C.debug) ? true : bad;
   if (b.hidden === want) b.hidden = !want;
   if (!want) return;
@@ -538,7 +538,7 @@ function paintBadge(fix, shown, nStale){
   if (b.className !== cls) b.className = cls;
 
   /* Separate element, separate concern: the badge reports the data, this
-     reports that the pilot still has to act. Amber, not red — red means the
+     reports that the pilot still has to act. Amber, not red. Red means the
      readings are stale, and conflating the two would blunt both. */
   if (curStep === homeStep) hideWarn();
 }
@@ -546,14 +546,14 @@ function paintBadge(fix, shown, nStale){
 /* ── tick ──────────────────────────────────────────────────────────────
    THE KEY IS COMPUTED BEFORE ANY WORK, and everything expensive sits behind
    it. That ordering is the whole optimisation, and it used to be the other way
-   round: the old loop ran WG.prepare() — distance, bearing, two rating lookups
-   and a staleness test per station, then a sort — plus a localStorage write,
+   round: the old loop ran WG.prepare(). Distance, bearing, two rating lookups
+   and a staleness test per station, then a sort. Plus a localStorage write,
    TWICE A SECOND, and only then asked whether anything had moved a pixel. The
    comment claiming it was "nearly free" was true of the canvas repaint and of
    nothing else.
 
    What the key covers, and therefore what can change the display:
-     position, quantised to a whole DEVICE PIXEL — a glider at 40 km/h moves
+     position, quantised to a whole DEVICE PIXEL, a glider at 40 km/h moves
        0.21 px/s at z11, so this fires about every 5 s of flight
      the widget's size, the ladder step, and the last fetch
      the MINUTE, which is the granularity at which staleness can change
@@ -563,7 +563,7 @@ function paintBadge(fix, shown, nStale){
 
    1 Hz, not 2: getLocation() is a call across the JS bridge into native and
    XCTrack's own GPS is 1 Hz, so the second poll each second could only ever
-   return the same answer. Interaction does not wait for the tick — the zoom
+   return the same answer. Interaction does not wait for the tick, the zoom
    handlers call it directly. ─────────────────────────────────────────── */
 var nStaleShown = 0;
 
@@ -594,7 +594,7 @@ function tick(){
     drawKey = key;
     /* Cull to the view BEFORE C.max, or the cap is spent on stations that are
        off the sides of a tall screen. A marker's width of slack so one at the
-       very edge is still a candidate — draw() does the exact clipping. */
+       very edge is still a candidate, draw() does the exact clipping. */
     var view = WG.bboxAround(fix, z, (W || 448) + 60, (H || 978) + 60, 0);
     var ranked = WG.prepare(stations, fix, C, now, view), i;
     nRanked = ranked.length;
@@ -603,7 +603,7 @@ function tick(){
     /* Counted over the markers ACTUALLY DRAWN, not over everything ranked.
        Comparing a count from one population against a total from another made
        the badge claim ALL STALE whenever the stale count in the ranked list
-       happened to equal the number drawn — which trains a pilot to ignore the
+       happened to equal the number drawn. Which trains a pilot to ignore the
        warning, the worst possible outcome for it. Cached alongside the draw,
        because hits[] and their staleness only change when prepare() runs, and
        the minute in the key is what guarantees prepare() runs when it can. */
@@ -615,8 +615,8 @@ function tick(){
 }
 
 /* ── detail popup ─────────────────────────────────────────────────────
-   Tap a marker for its recent trend. Purely descriptive — the same measured
-   values, over time — so it breaks no rule, and it answers the question a
+   Tap a marker for its recent trend. Purely descriptive. The same measured
+   values, over time. So it breaks no rule, and it answers the question a
    single reading cannot: is this building or easing?
 
    History is fetched ON DEMAND, one small call (~0.5-1 KB for a few hours).
@@ -640,7 +640,7 @@ function openPop(st){
   popHist = (c && Date.now() - c.at < C.poll * 1000) ? c.list : null;
   paintPop();
   /* The selection ring lives on the canvas, and the draw key carries the open
-     station's id — so this is what puts the ring on. After paintPop, so the
+     station's id, so this is what puts the ring on. After paintPop, so the
      panel and the ring appear in the same frame. */
   tick();
   if (popTimer) clearTimeout(popTimer);
@@ -675,7 +675,7 @@ function paintPop(){
   h += '<h3>' + esc(st.name) + (st.peak ? ' <span style="color:var(--chart)">▲</span>' : '') + '</h3>';
   /* The geocoded municipality, when it is not just the name again. It is the
      word a pilot who does not know the site has a chance of recognising, and
-     the reason a station can look absent when it is right there — see the
+     the reason a station can look absent when it is right there, see the
      name/short swap in windsmobi.js. */
   h += '<div class="sub">' +
        (st.place ? esc(st.place) + ' · ' : '') +
@@ -728,7 +728,7 @@ function hitTest(x, y){
 /* ── optional tap zones ───────────────────────────────────────────────
    Off by default, and that default matters: with tapping enabled the WebView
    swallows every touch over its area, so any zone here takes one away from
-   XCTrack. Measured 2026-08-11 — a tap never reaches both. See findings.md.
+   XCTrack. Measured 2026-08-11: a tap never reaches both. See findings.md.
 
    For this to be useful the pilot must move XCTrack's own zoom buttons
    OUTSIDE the widget rectangle, then re-zoom the map by hand to match. The
@@ -740,7 +740,7 @@ function hitTest(x, y){
    a permanent banner down here would sit on XCTrack's own scale bar, which is
    the thing it is asking to be compared against.
 
-   The lasting signal is elsewhere and quieter — the bar's number goes amber
+   The lasting signal is elsewhere and quieter. The bar's number goes amber
    while offset, right on the value that needs checking. Reset stays on the
    badge, which never fades. ───────────────────────────────────────────── */
 var WARN_MS = 15000;
@@ -751,17 +751,17 @@ function showWarn(){
   wn.hidden = false;
   wn.className = "";
   /* FIXED horizontally. It used to start at the bar's right edge, which moves
-     with the scale — so the prompt slid left and right every time the pilot
+     with the scale. So the prompt slid left and right every time the pilot
      zoomed, movement that reads as a fault rather than as a pointer. BAR_MAX_DP
      is the bar's ceiling by construction, so clearing it clears the bar at
      EVERY scale, ours and XCTrack's alike, without ever covering either. */
   var wx = BAR_X + WG.BAR_MAX_DP + 8;
   /* On a widget too narrow to hold both, being on screen beats being clear of
-     the bar — a prompt hanging off the edge says nothing at all. */
+     the bar, a prompt hanging off the edge says nothing at all. */
   if (wx + wn.offsetWidth > W) wx = Math.max(0, W - wn.offsetWidth);
   wn.style.left = Math.round(wx) + "px";
   /* Centred on the GAP between the two bars, so the arrow points at the pair
-     rather than at one of them — the instruction is to compare, not to look at
+     rather than at one of them, the instruction is to compare, not to look at
      ours. Measured from the element so it stays centred if the text changes. */
   wn.style.bottom = Math.max(0, Math.round(
     (C.barY + XCT_BAR_Y) / 2 - wn.offsetHeight / 2)) + "px";
@@ -830,7 +830,7 @@ resize();
 tick();
 
 /* 1 Hz. See tick(): the expensive work is behind the key, so most wakeups are a
-   bridge read and a string compare. Paused while the page is hidden — Android
+   bridge read and a string compare. Paused while the page is hidden. Android
    may or may not throttle a background WebView, and this tool has to leave the
    battery something for the rest of the flight. */
 var timer = setInterval(tick, 1000);

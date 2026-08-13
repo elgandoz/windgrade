@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>XCTrack Windmap — nudged markers over terrain</title>
+<title>XCTrack Windmap. Nudged markers over terrain</title>
 <link rel="icon" type="image/svg+xml" href="../icon.svg">
 <style>
 body{margin:0;background:#0A1116;color:#E8F0F5;
@@ -25,7 +25,7 @@ a{color:#54A6DC}
 <div class="wrap">
 <h1>Nudged markers over terrain</h1>
 <p>
-  Everything that fits is drawn normally first — the left canvas and the right
+  Everything that fits is drawn normally first, the left canvas and the right
   canvas agree exactly on those. Then each marker that did <b>not</b> fit is
   ring-searched at a small radius around where it really is, taking the angle
   <b>furthest from the markers already there</b>. If no angle keeps the numbers
@@ -37,22 +37,22 @@ a{color:#54A6DC}
   for snow, rock, forest, a river and an airspace edge.
 </p>
 <p>
-  What to judge: <b>a label is never overlapped by anything</b> — not by another
-  label, not by an arrow — where "label" means the speed line and the altitude
+  What to judge: <b>a label is never overlapped by anything</b>. Not by another
+  label, not by an arrow. Where "label" means the speed line and the altitude
   line together. <b>Arrows may overlap, but only partially:</b>
   <code>ARROW_TOL</code> keeps two centres far enough apart that neither
-  swallows the other. <b>Nothing fades</b> — the leader line is the annotation,
+  swallows the other. <b>Nothing fades</b>. The leader line is the annotation,
   and it says where a marker came from without needing to be interpreted.
 </p>
 <p>
-  The <b>selection ring</b> marks the station the popup is describing — without
+  The <b>selection ring</b> marks the station the popup is describing. Without
   it the overlay answers a tap with a panel naming a station and no way to tell
   which of a dozen arrows it came from. Blue because the rating palette is white,
   green, yellow, orange, red and black, so it cannot be read as a wind strength.
 
   <b>Nothing is ever drawn further than one stack row from where it belongs.</b>
   The ring radii are generated up to that same bound, so the fallback can no
-  longer be worse than the search — it was, by three times, and that is what
+  longer be worse than the search. It was, by three times, and that is what
   "the stations at the bottom are so far apart" turned out to be. A marker that
   cannot fit inside the bound is dropped rather than filed under the wrong
   ridge: at 225 m per pixel, 104 px is 23 km from the real station and no leader
@@ -66,7 +66,7 @@ a{color:#54A6DC}
 
 <div class="row">
   <div class="col"><h2>nudge on</h2><canvas id="on" width="411" height="560"></canvas><p id="onn"></p></div>
-  <div class="col"><h2>nudge off — what is lost</h2><canvas id="off" width="411" height="560"></canvas><p id="offn"></p></div>
+  <div class="col"><h2>nudge off. What is lost</h2><canvas id="off" width="411" height="560"></canvas><p id="offn"></p></div>
 </div>
 </div>
 
@@ -75,7 +75,7 @@ a{color:#54A6DC}
 <script>
 "use strict";
 /* Measured offsets of the real cluster, in css px at 24.7 m/px. The pairs are
-   the ones the overlay actually collides on — findings.md 2026-08-11. */
+   the ones the overlay actually collides on, findings.md 2026-08-11. */
 var CLUSTER = [
   { x:216, y:171, avg:14, gust:22, dir:190, alt:2600, name:"ZFC: Landing" },
   { x:216, y:184, avg:3,  gust:7,  dir:20,  alt:1648, name:"Zermatt" },
@@ -138,7 +138,7 @@ function render(cv, nudge){
   for (i = 0; i < lay.length; i++){
     if (lay[i].moved)
       WG.marker.leader(g, lay[i].tx, lay[i].ty, lay[i].x, lay[i].y, box);
-    /* The selection ring, drawn in the same pass and for the same reason —
+    /* The selection ring, drawn in the same pass and for the same reason,
        under every marker. Here it marks Gornergratsee so the ring can be judged
        against terrain; in the widget it marks whichever station the popup is
        describing. */

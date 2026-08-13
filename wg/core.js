@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   wg/core.js — the engine.
+   wg/core.js, the engine.
 
    Touches no DOM and renders nothing. It hands pages a state object; pages
    only draw. That is what keeps the widget and the standalone page from
@@ -13,7 +13,7 @@ var WG = (function () {
 
 /* ── measured calibration ─────────────────────────────────────────────
    XCTrack's map scale is a RESOLUTION on an exact power-of-two ladder,
-   but it is not on integer OSM zoom levels — it runs 1.062x coarser.
+   but it is not on integer OSM zoom levels, it runs 1.062x coarser.
    Verified at three ladder steps against airspace edges, 2026-08-10.
    See docs/findings.md. Do not re-derive; do not "simplify" to 1.0.
 
@@ -24,8 +24,8 @@ var CAL = 0.942;
 
 /* ── density ──────────────────────────────────────────────────────────
    XCTrack's map resolution is fixed in DEVICE pixels, not css pixels. So its
-   metres-per-css-pixel scales with devicePixelRatio, and CAL — measured on one
-   phone at dpr 3 — has to be scaled to any other device.
+   metres-per-css-pixel scales with devicePixelRatio, and CAL. Measured on one
+   phone at dpr 3. Has to be scaled to any other device.
 
    Measured 2026-08-11 with tools/ruler.html, one emulator at two densities,
    reading XCTrack's own scale bar against a css-pixel ruler:
@@ -50,7 +50,7 @@ function getCal() { return CAL * dprAdj * calAdj; }
 
 /* ── XCTrack's scale ladder ────────────────────────────────────────────
    Its map scale is an integer, mapWidget_scale.value, running 12 to 34, and
-   ONE STEP IS sqrt(2) IN SCALE — half an OSM zoom level:
+   ONE STEP IS sqrt(2) IN SCALE: half an OSM zoom level:
 
        z = (value - 3) / 2
 
@@ -66,7 +66,7 @@ function getCal() { return CAL * dprAdj * calAdj; }
 
    A previous version replaced this with an alternating x1.25 / x1.6 ladder,
    fitted to the phone's label list alone. It reproduced that list by
-   construction and had no mechanism for the Pixel's — see docs/findings.md.
+   construction and had no mechanism for the Pixel's, see docs/findings.md.
    Do not re-derive a ladder from a label list; the labels are downstream of
    the screen. ─────────────────────────────────────────────────────────── */
 var XCT_LADDER = {
@@ -79,7 +79,7 @@ var XCT_STEP_MIN = 12, XCT_STEP_MAX = 34;
 
 /* Ground distance each label names, in metres. The scale bar draws exactly
    this, so it can be compared against XCTrack's own bar length rather than
-   against its text — which is the only check that catches a calibration that
+   against its text. Which is the only check that catches a calibration that
    is off while both labels happen to agree. */
 var XCT_METRES = (function () {
   var o = {}, v, t;
@@ -106,7 +106,7 @@ function stepForZoom(z) { return Math.round(z * 2 + 3); }
    35. A fixed max length in dp is also simply how an Android widget is written.
 
    Anything in 147.1..154.3 dp scores 46/46; 150 is the middle. NOT a fitted
-   fudge for the resolution — the resolution is measured, and this only has to
+   fudge for the resolution. The resolution is measured, and this only has to
    agree with the label lists it was checked against. */
 var BAR_MAX_DP = 150;
 var NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
@@ -126,7 +126,7 @@ function niceBelow(x) {
 
    The latitude guard is not decoration: `lat === undefined ? 47 : lat` let a
    null through, Math.cos(null) is 1, and the whole label table came out
-   computed at the EQUATOR — one step off, which sent the owner to the wrong
+   computed at the EQUATOR. One step off, which sent the owner to the wrong
    map scale. Reject anything that is not a real number. */
 function scaleMetresAtDpr(step, lat, dpr) {
   var la = (typeof lat === "number" && lat === lat) ? lat : 47;
@@ -148,17 +148,17 @@ function scaleLabel(step, lat) { return fmtScale(scaleMetres(step, lat)); }
 
 /* ── ground scale -> ladder step, resolved ON THE DEVICE ───────────────
    A ladder step is NOT a scale. The same step is 8km on a dpr-3 phone and 6km
-   on a Pixel 9a, because XCTrack draws in device pixels — so a launcher running
+   on a Pixel 9a, because XCTrack draws in device pixels. So a launcher running
    on a laptop cannot know which step a pilot's phone needs, and picking one
    there is guessing. It guessed wrong: step 25 offered as "8km" printed 6km.
 
    So the pilot picks a GROUND SCALE, which is device-independent, and the step
-   is resolved here — on the device, at the real density, at the real latitude.
+   is resolved here. On the device, at the real density, at the real latitude.
    Nearest in log space, because the ladder is multiplicative: being a factor
    1.2 out is equally wrong at 300m and at 300km.
 
-   Not every scale exists on every screen — a Pixel 9a has no 8km step at all —
-   so asking for one lands on the nearest that does, and the overlay's own bar
+   Not every scale exists on every screen: a Pixel 9a has no 8km step at all.
+   So asking for one lands on the nearest that does, and the overlay's own bar
    then says what it really is. */
 function stepForScale(metres, lat) {
   var best = 25, bestErr = Infinity, v, m, e;
@@ -174,8 +174,8 @@ function stepForScale(metres, lat) {
 
 /* ── what the launcher may offer ───────────────────────────────────────
    Generated from ONE device's ladder, the list is missing scales that other
-   devices do print: the reference phone has no 6km step, so a Pixel 9a pilot
-   — whose screen shows 6km — could not choose it at all.
+   devices do print: the reference phone has no 6km step, so a Pixel 9a pilot,
+   whose screen shows 6km, could not choose it at all.
 
    The two failure modes are not symmetric. An option that this pilot's phone
    cannot reach costs nothing, because nobody picks a number their own screen
@@ -187,7 +187,7 @@ function stepForScale(metres, lat) {
    the ladder can actually produce, so it cannot drift from the ladder.
 
    BUT NOT ALL THE WAY UP. The full union runs to 1000 km, and past about
-   40 km the display stops being complete — winds.mobi caps a query at 500
+   40 km the display stops being complete, winds.mobi caps a query at 500
    stations, and the fetch box grows with the square of the scale. Measured
    2026-08-11 over Interlaken, the densest area we serve:
 
@@ -201,7 +201,7 @@ function stepForScale(metres, lat) {
       800km   2284 x 4939 km      478      121.3 KB
 
    Past the cap a wider scale does not show more, it shows an arbitrary
-   thinner sample spread over half a continent — with almost nothing left
+   thinner sample spread over half a continent. With almost nothing left
    where the pilot is actually flying. That is a correctness problem before
    it is a performance one, so 30 km is the widest the launcher OFFERS.
 
@@ -241,13 +241,13 @@ var R_EARTH   = 6378137;
 var EQ_CIRC   = 2 * Math.PI * R_EARTH;      /* 40075016.7 m */
 var M_PER_DEG = EQ_CIRC / 360;              /* 111319.49 m per degree of lat */
 
-/* ── SPEC — single source of truth for URL params AND the settings UI ──
+/* ── SPEC. Single source of truth for URL params AND the settings UI ──
    Add a parameter here and it appears in both, already clamped. Never
    hand-write a settings field. `ui:false` means URL-only; `only` marks a
    parameter that applies to one view.
 
    `grp` decides where the row lands. **A row with NO `grp` is one of the very
-   few shown up front** — everything else goes behind the Advanced accordion,
+   few shown up front**. Everything else goes behind the Advanced accordion,
    under its group's heading. That default is the right way round: a new
    parameter should have to argue for the front page, and the front page is
    what a pilot sees before their first flight with this.
@@ -271,8 +271,8 @@ var SPEC = [
      comment here or in docs/, where the next developer will look and the
      pilot will not. */
 
-  /* The pilot picks a ground scale because a ladder step is not a scale —
-     the same step is 8km on one phone and 6km on another, so a launcher
+  /* The pilot picks a ground scale because a ladder step is not a scale.
+     The same step is 8km on one phone and 6km on another, so a launcher
      running on a laptop cannot know which step to name. resolveStep() does
      it on the device, at the real density and latitude; if that scale has
      no step at all, it lands on the nearest and the overlay's bar says so.
@@ -285,7 +285,7 @@ var SPEC = [
     lab:"Show station altitude",
     help:"Adds each station's height under its speed." },
 
-  /* The network's own flag — never a guess of ours. */
+  /* The network's own flag, never a guess of ours. */
   { k:"peaks", t:"int", d:0, min:0, max:1,
     lab:"Summits only",
     help:"Only stations on a summit." },
@@ -303,8 +303,8 @@ var SPEC = [
   /* ── behind Advanced, by group ────────────────────────────────────── */
 
   /* THE LIST HAS NO MAP, so it has no scale. `scale` on that page did exactly
-     one thing — feed zoomOf() and a nominal 448x978 widget to bboxAround —
-     which made its catchment a portrait rectangle roughly 65 km wide and 94 km
+     one thing. Feed zoomOf() and a nominal 448x978 widget to bboxAround.
+     Which made its catchment a portrait rectangle roughly 65 km wide and 94 km
      tall, while the list itself sorts purely by distance. A radius in km is the
      same control said honestly, in a unit that survives having no viewport.
      40 km is close to what the old default reached and is a sensible XC number:
@@ -316,7 +316,7 @@ var SPEC = [
 
   /* Applied AFTER the view cull in prepare(), so on a map it caps what could
      be drawn rather than what happens to fall inside a radius. It was 40,
-     which cost half the drawable markers at wide scales — findings 2026-08-11. */
+     which cost half the drawable markers at wide scales, findings 2026-08-11. */
   { k:"max",   t:"int", d:120, min:1, max:400, grp:"Which stations",
     lab:"Most stations at once",
     help:"An upper limit on how many markers are considered. Overlapping ones " +
@@ -324,7 +324,7 @@ var SPEC = [
   /* A cache radius, not a display radius: 20 km buys ~30 min of flight at
      40 km/h, so movement never forces a refetch faster than the data cadence
      does. Widget-only, because it is margin around a VIEW and the list has
-     none — there, `range` is both the fetch and the display radius. */
+     none. There, `range` is both the fetch and the display radius. */
   { k:"pad",   t:"int", d:20, min:0, max:60, only:"widget", grp:"Which stations",
     lab:"Extra area fetched (km)",
     help:"Downloads a little beyond the screen, so flying on does not mean " +
@@ -355,7 +355,7 @@ var SPEC = [
 
   /* The exceptions are not negotiable: no position, OFFLINE, ALL STALE and
      BOX FULL are the display admitting it cannot be trusted, and no display
-     setting may switch those off. `badge=0` was once inert — see plan.md 3f. */
+     setting may switch those off. `badge=0` was once inert, see plan.md 3f. */
   { k:"badge", t:"int", d:0, min:0, max:1, only:"widget", grp:"Status line",
     lab:"Show station count",
     help:"A line at the top: how many stations are drawn and how many are old. " +
@@ -366,7 +366,7 @@ var SPEC = [
          "tap again." },
   /* NOT widget-only: the list expands a row on tap and draws the same trend
      from the same wg/marker.js renderer, so it needs the same setting. `popup`
-     stays widget-only — an expanded list row has no reason to time out. */
+     stays widget-only, an expanded list row has no reason to time out. */
   { k:"hours", t:"int", d:3, min:1, max:12, grp:"Interactive mode",
     lab:"Trend length (h)",
     help:"How far back the history goes when you tap a station." },
@@ -377,7 +377,7 @@ var SPEC = [
     opts:["bottom-right", "bottom-left", "top-right", "top-left",
           "top-centre", "bottom-centre", "left-centre", "right-centre"],
     lab:"Where the buttons sit",
-    help:"Avoid bottom-left and top-left — the scale bar and the status line " +
+    help:"Avoid bottom-left and top-left. The scale bar and the status line " +
          "are already there." },
   { k:"zrow",  t:"int", d:0, min:0, max:1, only:"widget", grp:"Interactive mode",
     lab:"Buttons side by side",
@@ -397,13 +397,13 @@ var SPEC = [
      depends on density. The overlay reads its own and is always right; this
      exists only so a laptop can preview a phone's scale. probe.html and
      tools/ruler.html print the number. NEVER a per-device setting. */
-  { k:"dpr",   t:"num", d:0, min:0, max:6, grp:"Calibration — you should not need these",
+  { k:"dpr",   t:"num", d:0, min:0, max:6, grp:"Calibration, you should not need these",
     lab:"Pixel density override",
     help:"Leave at 0. Only for previewing another phone's scale from this one." },
   /* Residual override on top of the computed correction. If this ever needs
-     to move on a real device, that is a finding — re-run tools/ruler.html. */
+     to move on a real device, that is a finding, re-run tools/ruler.html. */
   { k:"cal",   t:"num", d:1, min:0.5, max:2, only:"widget",
-    grp:"Calibration — you should not need these",
+    grp:"Calibration, you should not need these",
     lab:"Scale correction",
     help:"Leave at 1. A last-resort nudge if the two scale bars still disagree." },
 
@@ -415,7 +415,7 @@ var SPEC = [
     help:"Adds a line with the position, the scale and what the last download " +
          "returned. Useful when reporting a problem." },
 
-  /* No row anywhere, but kept in URLs and in storage — which is what
+  /* No row anywhere, but kept in URLs and in storage, which is what
      separates `hidden` from `ui:false`, and it is NOT the same thing as the
      Advanced accordion above. Kept for old URLs and for anyone who knows
      exactly which ladder step they want. It stays out of the UI because a
@@ -445,7 +445,7 @@ function clamp(spec, raw) {
     for (i = 0; i < spec.opts.length; i++) if (spec.opts[i] === String(raw)) return String(raw);
     return spec.d;                                      /* unknown -> default */
   }
-  /* "ladder" is an integer with a label map — clamped exactly like an int.
+  /* "ladder" is an integer with a label map, clamped exactly like an int.
      Without this it fell through to the raw passthrough below, so ?step=99
      survived unclamped and a URL string stayed a string. */
   if (spec.t === "num" || spec.t === "int" || spec.t === "ladder" ||
@@ -489,7 +489,7 @@ function cfg(search) {
 }
 
 /* The zoom the overlay renders at. There was briefly a range around it, for
-   following XCTrack's zoom; that is gone — the 2026-08-11 probe established
+   following XCTrack's zoom; that is gone. The 2026-08-11 probe established
    that a tap can never reach both the widget and a zoom button, so the overlay
    can never learn that the map zoomed. The scale is fixed by configuration,
    which is what makes it correct by construction. See docs/findings.md. */
@@ -537,7 +537,7 @@ function setConfig1(k, v) {
       config[k] = clamp(SPEC[i], v);
       /* Choosing a scale means the scale is what you want. Without this, a
          pilot who opened the launcher from an old ?step=NN link could pick a
-         new scale, watch the select change, get a URL carrying both — and the
+         new scale, watch the select change, get a URL carrying both, and the
          pinned step would silently win. The step row is hidden, so nothing on
          screen would have explained why the overlay ignored them. */
       if (k === "scale") config.step = 0;
@@ -574,7 +574,7 @@ function resetConfig() {
    `opts.placeholders` appends XCTrack's ${lat}/${lng} substitution tokens, and
    a widget URL should always have them. XCTrack fills them with its LAST KNOWN
    position even when there is no GPS fix, whereas getLocation() returns the
-   string "null" in that case — so the placeholders are the only source that
+   string "null" in that case. So the placeholders are the only source that
    answers before a lock, which is exactly when the pilot is on the ground
    waiting and the screen would otherwise be blank.
 
@@ -630,7 +630,7 @@ function readXCTrack() {
   return { fix: {
     lat: la, lon: lo,
     alt:  toNum(o.altGps),        /* GPS altitude, ellipsoidal */
-    baro: toNum(o.stdBaroAlt),    /* PRESSURE altitude vs 1013.25 — not MSL */
+    baro: toNum(o.stdBaroAlt),    /* PRESSURE altitude vs 1013.25, not MSL */
     hdg:  toNum(o.heading),
     brg:  toNum(o.bearingGps),
     valid: o.isValid !== false,
@@ -656,7 +656,7 @@ function fromStore() {
 
 /* ── last known position ──────────────────────────────────────────────
    THROTTLED, and that is the point of it. `position()` calls this on every
-   read and `setGeoFix` on every watchPosition callback — so before the
+   read and `setGeoFix` on every watchPosition callback. So before the
    throttle this was a synchronous localStorage write twice a second in the
    overlay and roughly once a second from browser geolocation. Synchronous
    disk I/O is the single most expensive thing that was in the tick loop, and
@@ -699,9 +699,9 @@ function position(c) {
 
 /* ── projection ───────────────────────────────────────────────────────
    Two resolutions, deliberately separate:
-     mppXct — for the Phase 3b overlay. Includes the calibration, because
+     mppXct, for the Phase 3b overlay. Includes the calibration, because
               it must agree with XCTrack's renderer.
-     mppOsm — for our own basemap in Phase 3. Plain Web Mercator.
+     mppOsm, for our own basemap in Phase 3. Plain Web Mercator.
    Using the wrong one puts every marker in the wrong place. ───────── */
 function mppOsm(lat, z) {
   return EQ_CIRC * Math.cos(lat * Math.PI / 180) / (256 * Math.pow(2, z));
@@ -731,7 +731,7 @@ function projector(fix, z, W, H, mul) {
 
 /* ── geo helpers ──────────────────────────────────────────────────────
    Equirectangular with a cached cos(lat). hx-call measured 0.5% worst case
-   across Swiss test points — far below the error already inherent in the
+   across Swiss test points. Far below the error already inherent in the
    task, and much cheaper than haversine. Ranking only; the overlay uses
    the Mercator projector above because it must match a tile projection. */
 function dist(lat1, lon1, lat2, lon2) {
@@ -749,7 +749,7 @@ function bearing(lat1, lon1, lat2, lon2) {
 }
 
 /* Bounding box for a fetch: the visible area plus a margin in km. The
-   margin is a CACHE radius — 20 km buys ~30 min of flight at 40 km/h, so
+   margin is a CACHE radius. 20 km buys ~30 min of flight at 40 km/h, so
    movement never forces a refetch faster than the data cadence does.
 
    `mul` defaults to getCal(), NOT the raw CAL constant. It used to be CAL,
@@ -757,7 +757,7 @@ function bearing(lat1, lon1, lat2, lon2) {
    ground than CAL predicts, so the box was smaller than the view and the
    edges were never fetched at all. The projector already used getCal(); the
    two disagreeing is exactly how stations went missing off-screen-left.
-   Pass padKm 0 and this returns the view rectangle itself — which is what
+   Pass padKm 0 and this returns the view rectangle itself, which is what
    prepare()'s `keep` argument wants. */
 function bboxAround(fix, z, W, H, padKm, mul) {
   var res = mppOsm(fix.lat, z) / ((mul === undefined) ? getCal() : mul);
@@ -771,7 +771,7 @@ function bboxAround(fix, z, W, H, padKm, mul) {
 
 /* ── a radius, for a page with no map ─────────────────────────────────
    The list ranks by distance and shows no geometry, so what it wants is
-   "everything within R km" — one number, in a unit that means something
+   "everything within R km", one number, in a unit that means something
    without a viewport.
 
    It used to reach for bboxAround with a nominal 448x978 widget, which made
@@ -781,7 +781,7 @@ function bboxAround(fix, z, W, H, padKm, mul) {
 
    The box is the circle's bounding square, so the fetch overreaches to
    R x sqrt(2) in the corners; prepare()'s `keep` trims that back to a real
-   circle. Overfetching the corners is the right way round — the alternative
+   circle. Overfetching the corners is the right way round. The alternative
    is asking the provider for a shape it does not support, or missing
    stations. */
 function bboxRadius(fix, metres) {
@@ -793,7 +793,7 @@ function bboxRadius(fix, metres) {
 
 /* ── the rating scale ─────────────────────────────────────────────────
    Owner-supplied, burnair-style, six levels, km/h. AVERAGE and GUST use
-   TWO DIFFERENT tables — the gust bands sit 8-10 km/h higher, and that
+   TWO DIFFERENT tables: the gust bands sit 8-10 km/h higher, and that
    offset is what makes a hotter rim mean something. A single shared table
    could carry no signal, since gusts always exceed the average.
 
@@ -834,8 +834,8 @@ function rateGust(v) { return band(v, GUST_BANDS); }
    structural, not decoration: the near-black outer keeps a WHITE fill
    legible on light terrain, and the halo keeps a BLACK fill legible on
    dark terrain. The thin inner stroke is what stops the two shapes
-   collapsing into one blob when average and gust land in the same band —
-   which is the common case, the gust table being the average table
+   collapsing into one blob when average and gust land in the same band.
+   Which is the common case, the gust table being the average table
    shifted up. */
 var PALETTE = {
   white:  { fill:"#DCE4EA", ink:"#0A1116" },
@@ -857,7 +857,7 @@ var HALO         = "#FFFFFF";   /* outside the outer stroke */
 
    CENTRED ON (0,0) ON PURPOSE. The first version spanned y -15..11, so
    its bounding-box centre sat at y=-2 while rotation happened about the
-   origin — the arrow visibly orbited a point above itself. Keep the
+   origin, the arrow visibly orbited a point above itself. Keep the
    vertical extents symmetric or that returns.
 
    Rendered by STROKE OUTSET, not by drawing a second scaled copy. Scaling
@@ -874,7 +874,7 @@ var HALO         = "#FFFFFF";   /* outside the outer stroke */
    WIDTH IS A TRADE AGAINST THE RIM, and it bites hard. The gust stroke is
    centred on the outline, so half of it eats inward, and the average fill is
    whatever interior survives. At 14 wide with a 6.5 rim the fill collapsed to
-   0.25 units near the middle — the primary channel reduced to a sliver. 18
+   0.25 units near the middle, the primary channel reduced to a sliver. 18
    wide with a 5 rim leaves 2.3 there and 5.4 towards the rear, which reads as
    a fill with a border rather than the reverse. Narrow the dart further only
    if the rim narrows with it. ─────────────────────────────────────────── */
@@ -898,7 +898,7 @@ var BANDS = { halo: 11, outer: 8.5, gust: 5, inner: 1 };
 /* The viewBox has to clear the ROTATED extent, not the upright one. The
    furthest vertex is a rear corner at hypot(9, 11.75) = 14.80, and the halo
    adds 11/2 = 5.5 on top, so anything under 20.3 clips the corners as the
-   arrow turns — which is exactly what happened at 18. */
+   arrow turns, which is exactly what happened at 18. */
 function reach() {
   var m = 0, i, r;
   for (i = 0; i < ARROW_PTS.length; i++) {
@@ -933,18 +933,18 @@ function staleness(st, c, now) {
 
 /* ── ranking ──────────────────────────────────────────────────────────
    Horizontal distance. Delta-altitude weighting was withdrawn by the
-   owner (see plan.md "Altitude — downgraded"); the station's own altitude
+   owner (see plan.md "Altitude, downgraded"); the station's own altitude
    is still shown as a fact, and terrain position is what Phase 3/3b
    convey. `peaks` filters on the provider's own peak flag.
 
    `keep` is applied BEFORE the `max` cut, and takes one of two shapes,
    because the two pages want different things:
 
-     {s,n,w,e}  a rectangle — the OVERLAY's own view. Without it the cut was
+     {s,n,w,e}  a rectangle, the OVERLAY's own view. Without it the cut was
                 radial while the screen is a rectangle, so at a 30 km scale on
                 a 448x978 widget 17 of 40 slots went to stations that could
                 never be drawn, and 13 drawable ones were dropped to pay.
-     {r:metres} a circle — the LIST, which ranks by distance and shows no
+     {r:metres} a circle. The LIST, which ranks by distance and shows no
                 geometry, so a rectangle there is an arbitrary bias no reader
                 can see. Pairs with bboxRadius(), whose square overreaches to
                 r x sqrt(2) in the corners; this is what trims it.
@@ -960,7 +960,7 @@ function prepare(list, fix, c, now, keep) {
   for (i = 0; i < list.length; i++) {
     st = list[i];
     if (c.peaks && !st.peak) continue;
-    /* Distance first when the cut is radial — the test needs it anyway, so
+    /* Distance first when the cut is radial. The test needs it anyway, so
        computing it before the filter costs nothing and avoids two code paths
        that could disagree about what "within R" means. */
     d = fix ? dist(fix.lat, fix.lon, st.lat, st.lon) : NaN;

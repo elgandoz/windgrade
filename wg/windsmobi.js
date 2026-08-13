@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   wg/windsmobi.js — winds.mobi provider.
+   wg/windsmobi.js, winds.mobi provider.
 
    Aggregates 13 networks behind one CORS-open, key-free API: SLF,
    MeteoSwiss, Holfuy, OpenWindMap/Pioupiou, Windline and more. Measured at
@@ -10,7 +10,7 @@
      {id, name, place, short, lat, lon, alt, dir, avg, gust, ts, peak,
       status, provider, url}
    `name` is the station owner's own name and `place` the geocoded
-   municipality when it differs — see normalise(), the two are swapped
+   municipality when it differs. See normalise(), the two are swapped
    relative to what the API calls them.
 
    TERMS OF USE (from the OpenAPI spec, quoted because one is a problem):
@@ -19,13 +19,13 @@
      3. "Do not overload this server by minimizing your number of calls.
          Get data for multiple stations at once."
      "Any IP or service that doesn't respect these rules will be
-      blacklisted without any notice."  — Yann, info@winds.mobi
+      blacklisted without any notice.", Yann, info@winds.mobi
 
    Rule 1 CANNOT be honoured from a browser: User-Agent is a forbidden
    header name in the Fetch spec, so any attempt to set it is dropped. The
    automatic Origin header does identify the deployment. Asking Yann whether
    that suffices is an open action, deferred by the owner pending
-   feasibility — do not paper over it, and do not try to spoof the header.
+   feasibility. Do not paper over it, and do not try to spoof the header.
 
    Rules 2 and 3 we meet: one bounding-box call per ~10 minutes.
    ═══════════════════════════════════════════════════════════════════════ */
@@ -35,14 +35,14 @@
 var BASE = "https://winds.mobi/api/2/stations/";
 
 /* Only the fields we render. The default key set also returns temp, hum,
-   rain and pressure, which we never draw — trimming measured 23.4 KB down
+   rain and pressure, which we never draw, trimming measured 23.4 KB down
    to 17.9 KB. NOTE: `keys` must be REPEATED parameters; the
    comma-separated form is a validation error. */
 var KEYS = ["name", "short", "alt", "peak", "status", "pv-name", "loc",
             "last._id", "last.w-dir", "last.w-avg", "last.w-max"];
 
 /* The API's own documented ceiling ("Nb stations to return (max=500)"), and
-   it is a HARD truncation with no documented ordering — ask for a box with
+   it is a HARD truncation with no documented ordering. Ask for a box with
    more than 500 stations and you silently get some 500 of them. Measured
    2026-08-11: a 143x265 km Piedmont box holds 161, a 190x267 km Swiss box
    309-356, so a wide scale over the densest Alps can reach it. We always
@@ -61,12 +61,12 @@ function url(bbox, opts) {
   q.push("limit=" + Math.min(opts && opts.limit ? opts.limit : LIMIT_MAX, LIMIT_MAX));
 
   /* Server-side staleness filter. Cheaper than downloading readings we
-     would only discard — but it does NOT replace our own clock, because a
+     would only discard. But it does NOT replace our own clock, because a
      station inside the window can still be too old to trust. */
   if (opts && opts.maxAgeSec) q.push("last-measure=" + Math.round(opts.maxAgeSec));
 
   /* Collapses stations at the same place. Real decluttering still has to
-     happen at render time, and must evict whole markers — never an arrow
+     happen at render time, and must evict whole markers, never an arrow
      without its number. */
   q.push("is-highest-duplicates-rating=true");
 
@@ -96,13 +96,13 @@ function get(u, cb) {
 
 /* winds.mobi gives WGS84 in GeoJSON order [lon, lat], km/h for both wind
    fields, altitude in metres, a documented `peak` boolean, and a unix
-   timestamp. No projection maths and no unit conversion — which is most of
+   timestamp. No projection maths and no unit conversion. Which is most of
    why it displaced going direct to MeteoSwiss, whose feed is EPSG:2056 and
    needs two endpoints.
 
    NAMES ARE THE OTHER WAY ROUND FROM WHAT THE FIELD NAMES SUGGEST. For
-   openwindmap.org — 63 of 161 stations in a Piedmont sample, the largest
-   single network there — `name` is a GEOCODED MUNICIPALITY and `short` is
+   openwindmap.org. 63 of 161 stations in a Piedmont sample, the largest
+   single network there. `name` is a GEOCODED MUNICIPALITY and `short` is
    the name the station's owner gave it:
 
        name "Valgioie"          short "Decollo TRUCETTI 980m"
@@ -152,12 +152,12 @@ function normalise(raw) {
 
 /* ── history, for the detail popup ────────────────────────────────────
    GET /stations/{id}/historic/?duration=<seconds>. Returns a plain array,
-   NEWEST FIRST — the pages want oldest-first for a left-to-right trend, so
+   NEWEST FIRST: the pages want oldest-first for a left-to-right trend, so
    normalise() reverses it rather than leaving every caller to remember.
 
    Measured: ~550 bytes for 2 h of MeteoSwiss (10 min cadence), ~970 for
    Holfuy (6-8 min). Fetched on demand when a popup opens, never prefetched
-   for every station — that would be one call per marker and would breach
+   for every station. That would be one call per marker and would breach
    "do not overload" for data nobody asked to see. */
 function historicUrl(id, opts) {
   var q = [], i, hk = ["_id", "w-dir", "w-avg", "w-max"];
@@ -185,8 +185,8 @@ function normaliseHistoric(raw) {
 WG.providers.windsmobi = {
   id: "windsmobi",
   label: "winds.mobi",
-  /* Attribution is owed to the source networks, not only the aggregator —
-     each record carries pv-name, so the pages build the list per fetch. */
+  /* Attribution is owed to the source networks, not only the aggregator.
+     Each record carries pv-name, so the pages build the list per fetch. */
   aggregator: "winds.mobi",
 
   buildUrl: url,
@@ -216,7 +216,7 @@ WG.providers.windsmobi = {
       catch (e) { return cb("unparseable JSON", null, { url:u }); }
 
       /* The API returns a bare array on success and an object on a
-         validation error — so an object here means we built a bad query. */
+         validation error, so an object here means we built a bad query. */
       if (!j || !j.length) {
         if (j && j.detail) return cb("API rejected the query", null, { url:u, detail:j.detail });
         return cb(null, [], { url:u, ms:Date.now() - t0, bytes:body.length });

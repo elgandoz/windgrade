@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   wg/base.css — shared tokens and primitives. Page layout stays inline.
+   wg/base.css, shared tokens and primitives. Page layout stays inline.
 
    Theme: light by default, dark when the phone asks for it, and forced
    either way by <html data-theme="dark|light">, which WG.applyTheme() sets
@@ -8,9 +8,9 @@
 
    --scale comes from ?size= (0-100 -> 1.0-2.0).
 
-   NOT loaded by widget.html. That page's <body> must stay unpainted —
+   NOT loaded by widget.html. That page's <body> must stay unpainted.
    XCTrack renders white or absent as transparent, which is what lets the
-   overlay float over its map — so it carries its own few rules instead.
+   overlay float over its map, so it carries its own few rules instead.
    ═══════════════════════════════════════════════════════════════════ */
 
 :root{
@@ -27,7 +27,7 @@
   --amber:#A96608;
   /* Emphasis INSIDE an amber panel. It has to move with the theme: the page
      hardcoded a dark-theme tint, which put the safety warning's bold text at
-     roughly no contrast on the light background — the emphasised words were
+     roughly no contrast on the light background, the emphasised words were
      the least legible ones in the box. */
   --amber-str:#6E4103;
   --red:#B3271C;
@@ -110,7 +110,7 @@ button,summary{cursor:pointer}
   border:1px solid var(--rule);border-radius:3px;
   font:600 1em var(--mono);text-align:right;
 }
-/* Enums size to their longest option — a fixed 92px clipped "bottom-right" to
+/* Enums size to their longest option. A fixed 92px clipped "bottom-right" to
    "bottom-", which reads as a different setting. Capped so a long option can
    never crowd the label off a narrow phone. */
 .field select{text-align:left;width:auto;min-width:calc(92px * var(--scale));max-width:45%}
@@ -148,5 +148,5 @@ button,summary{cursor:pointer}
 
 /* Hover is gated behind a fine pointer. On a touch screen :hover fires on tap
    and sticks until something else is tapped, leaving a control lit long after
-   use. :active is never gated — the tap-highlight reset above removes the
+   use. :active is never gated. The tap-highlight reset above removes the
    platform's own press feedback, so it is the only confirmation a finger gets. */

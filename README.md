@@ -6,7 +6,7 @@ An XCTrack web widget plus a standalone page.
 Each station is an arrow pointing downwind: **filled** by a six-level rating
 from the average wind, **rimmed** by the same scale applied to the gust, with
 the `average/gust` pair always printed beside it. Drawn over terrain, so you
-can see whether a reading came from a valley floor, a summit, or a gorge —
+can see whether a reading came from a valley floor, a summit, or a gorge,
 which is the part a station name can't tell you when you're flying somewhere
 new.
 
@@ -22,8 +22,8 @@ overlay whose registration against XCTrack's own map has been measured and
 confirmed on device.
 
 Not built: our own offline PMTiles basemap (Phase 3) and the final polish
-(Phase 4). One question still open — whether a tap can reach a background
-XCTrack widget — decides whether zoom sync is possible at all.
+(Phase 4). One question still open. Whether a tap can reach a background
+XCTrack widget: decides whether zoom sync is possible at all.
 
 Start at `docs/next-session.md`. Then `docs/plan.md` for the phases,
 `docs/findings.md` for what was measured, `docs/handover.md` for why.
@@ -38,14 +38,14 @@ results.
 
     python3 -m http.server 8080
 
-For XCTrack you need a real https URL — push to GitHub Pages, or tunnel with
+For XCTrack you need a real https URL: push to GitHub Pages, or tunnel with
 `cloudflared tunnel --url http://localhost:8080`. Add it as a **Web page**
 widget with *Allow web page to access XCTrack data* switched on.
 
 Run it in Chrome too. The difference between the two is the finding.
 
 One caveat: `python3 -m http.server` does not support HTTP Range requests, so
-the range test reports 200 there. That result is meaningless locally — only
+the range test reports 200 there. That result is meaningless locally, only
 trust it against the real host.
 
 Record results in `docs/findings.md`.

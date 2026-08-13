@@ -1,6 +1,6 @@
 /* Engine tests. Run on a laptop:  node tools/test-core.js
    Add --live to also hit winds.mobi (network, and it counts against their
-   "do not overload" rule — so keep it to one call).
+   "do not overload" rule, so keep it to one call).
 
    core.js touches no DOM precisely so this can exist. */
 "use strict";
@@ -30,7 +30,7 @@ eq("default poll is the 10 min data cadence", WG.cfg("").poll, 600);
    `grp` is on the front page, and the front page has to stay short enough to
    be read before a first flight. Adding a parameter without a group is how
    that quietly stops being true, so it fails here instead. */
-head("SPEC grouping — what the configurator shows up front");
+head("SPEC grouping, what the configurator shows up front");
 var front = [], noGrp = [], gi, gs;
 for (gi = 0; gi < WG.SPEC.length; gi++) {
   gs = WG.SPEC[gi];
@@ -51,7 +51,7 @@ eq("the list's front page", front.filter(function (k) {
      return s.only !== "widget";
    }).join(","), "peaks");
 /* Groups render in first-appearance order, so the first grouped SPEC entry is
-   the first row inside the accordion — `range`, the list's own catchment. */
+   the first row inside the accordion, `range`, the list's own catchment. */
 eq("range heads the accordion", (function () {
   var i2; for (i2 = 0; i2 < WG.SPEC.length; i2++)
     if (WG.SPEC[i2].grp && WG.SPEC[i2].ui !== false && !WG.SPEC[i2].hidden)
@@ -68,7 +68,7 @@ eq("groups are few enough to scan", (function () {
   return n;
 })() <= 8, true);
 /* `hidden` is NOT the accordion. It means no control anywhere, while the
-   parameter keeps working in URLs — unlike ui:false, which also strips it. */
+   parameter keeps working in URLs, unlike ui:false, which also strips it. */
 eq("the ladder-step override has no control at all",
    WG.SPEC.filter(function (s) { return s.k === "step"; })[0].hidden, true);
 eq("but it still survives a URL round-trip",
@@ -78,7 +78,7 @@ head("XCTrack placeholder trap (from hx-call)");
 eq("literal ${lat} is NaN, not 0", isNaN(WG.toNum("${lat}")), true);
 eq("cfg drops it to null so the chain falls through", WG.cfg("?lat=${lat}").lat, null);
 
-head("measured calibration — docs/findings.md 2026-08-10");
+head("measured calibration, docs/findings.md 2026-08-10");
 eq("CAL", WG.CAL, 0.942);
 eq("mppOsm  z11 @47.361", WG.mppOsm(47.361, 11), 51.78, 0.02);
 eq("mppXct  z11 (measured 54.95)", WG.mppXct(47.361, 11), 54.95, 0.03);
@@ -91,7 +91,7 @@ eq("zEff z11 = 10.914", zEff(11), 10.914, 0.002);
 eq("zEff spacing z10->z11 is exactly 1", zEff(11) - zEff(10), 1, 1e-9);
 eq("zEff spacing z11->z12 is exactly 1", zEff(12) - zEff(11), 1, 1e-9);
 
-head("XCTrack scale ladder — sqrt2 per step");
+head("XCTrack scale ladder, sqrt2 per step");
 eq("z from step 25 (8km)", WG.zoomForStep(25), 11);
 eq("z from step 23 (15km)", WG.zoomForStep(23), 10);
 eq("z from step 27 (4km)", WG.zoomForStep(27), 12);
@@ -107,7 +107,7 @@ eq("and at a half step too", WG.stepForZoom(WG.zoomForStep(24)), 24);
 /* THE EVIDENCE THAT SETTLED IT. The printed labels come from the scale bar,
    not the ladder: the bar shows the largest nice number fitting a fixed max
    length of ~150 dp. One sqrt2 ladder plus the measured density law reproduces
-   two different devices' label lists exactly — 46 labels, no misses. An
+   two different devices' label lists exactly, 46 labels, no misses. An
    alternating ladder fitted to one list cannot explain the other.
 
    The width the labels react to is DENSITY, not css width: the same 150 dp bar
@@ -176,7 +176,7 @@ eq("8km on the reference phone is step 25", WG.stepForScale(8000, 47.361), 25);
 eq("...and it really does print 8km there", WG.scaleLabel(25, 47.361), "8km");
 WG.setDpr(2.625);
 eq("8km on a Pixel 9a is NOT step 25", WG.stepForScale(8000, 47.361) !== 25, true);
-/* A Pixel 9a's ladder goes 6km, 10km — it has no 8km at all, and 10/8 is a
+/* A Pixel 9a's ladder goes 6km, 10km. It has no 8km at all, and 10/8 is a
    smaller factor than 8/6, so nearest-in-log-space lands on 10km. */
 eq("it has no 8km step, so the nearest is taken",
    WG.scaleLabel(WG.stepForScale(8000, 47.361), 47.361), "10km");
@@ -194,7 +194,7 @@ eq("a junk scale falls back rather than picking an extreme",
    WG.resolveStep({ scale:0, step:0 }, 47.361), 25);
 /* The pilot's choice must survive the trip to a different phone: the same
    requested scale resolves to a different step, which is the entire point.
-   (Not every scale flips — 20km is step 22 on both — so this asserts on one
+   (Not every scale flips. 20km is step 22 on both. So this asserts on one
    that does, and on the invariant that matters underneath.) */
 eq("8km resolves to step 25 at dpr 3 and step 24 at dpr 2.625",
    (WG.setDpr(3), WG.stepForScale(8000, 47.361)) + "/" +
@@ -275,7 +275,7 @@ eq("choosing a scale clears the pin", WG.getConfig().step, 0);
 eq("and the scale is what is stored", WG.getConfig().scale, 6000);
 eq("so the URL carries no stale step",
    WG.buildUrl("widget.html").indexOf("step=") < 0, true);
-/* But a URL that only pins a step still works untouched — that is the whole
+/* But a URL that only pins a step still works untouched, that is the whole
    reason the parameter still exists. */
 WG.initConfig("?step=24");
 eq("step=24 still resolves to step 24", WG.resolveStep(WG.getConfig(), 47.361), 24);
@@ -283,7 +283,7 @@ WG.initConfig("");
 
 head("pixel density");
 /* MEASURED 2026-08-11, tools/ruler.html, one emulator at two densities, reading
-   XCTrack's own scale bar against a css-pixel ruler — so nothing here depends
+   XCTrack's own scale bar against a css-pixel ruler. So nothing here depends
    on our calibration being right in the first place. Step 22, near 46.3 N:
 
        dpr 2.625  ->  bar 15km over 111.0 css px  ->  135.1 m/css px
@@ -291,7 +291,7 @@ head("pixel density");
 
    A css-fixed resolution predicts those two are EQUAL; they differ by 28%.
    Fixed in device pixels predicts the ratio is 2.625/2 = 1.312; measured 1.277.
-   These are the numbers the whole density correction rests on — if this block
+   These are the numbers the whole density correction rests on. If this block
    ever goes red, the correction is wrong, not the test. */
 eq("defaults to the reference phone, so nothing moves for it", WG.getCal(), WG.CAL);
 eq("reference dpr is the phone CAL was measured on", WG.DPR_REF, 3);
@@ -322,7 +322,7 @@ eq("and the two compose", WG.getCal(), 0.942 * 1.5 * 1.1, 1e-9);
 eq("a bad value is ignored rather than blanking the map", WG.setCal(0), 1);
 WG.setCal(1); WG.setDpr(3);
 eq("back to the measured constant", WG.getCal(), 0.942);
-/* Labels DO move with density — that is the whole finding — but not with cal,
+/* Labels DO move with density. That is the whole finding. But not with cal,
    which is a residual on a resolution the labels already agree with. */
 eq("label at step 25 is 8km at the reference density",
    WG.scaleLabel(25, 47.361), "8km");
@@ -333,14 +333,14 @@ var east10 = 10000 / (111319.49 * Math.cos(47.361 * Math.PI / 180));
 eq("10 km east in px", (P.x(8.578 + east10) - 224) * P.res, 10000, 15);
 eq("10 km north in px", (489 - P.y(47.361 + 10000 / 111319.49)) * P.res, 10000, 25);
 
-head("rounding — half-up, one rule for display and colour");
+head("rounding, half-up, one rule for display and colour");
 eq("1.4 -> 1", WG.roundKmh(1.4), 1);
 eq("1.5 -> 2", WG.roundKmh(1.5), 2);
 eq("6.4 -> 6", WG.roundKmh(6.4), 6);
 eq("6.5 -> 7", WG.roundKmh(6.5), 7);
 eq("missing stays missing", isNaN(WG.roundKmh(NaN)), true);
 
-head("rating bands — six levels, two tables, rated on the rounded value");
+head("rating bands. Six levels, two tables, rated on the rounded value");
 [[0,0],[6,0],[6.4,0],[6.49,0],[6.5,1],[6.9,1],[7,1],[14.4,1],[14.5,2],[15,2],
  [24.4,2],[24.5,3],[25,3],[30.4,3],[30.5,4],[31,4],[36.4,4],[36.5,5],[37,5],[99,5]]
  .forEach(function (p) {
@@ -377,9 +377,9 @@ eq("gust: same", mism, 0);
 
 head("the mismatch signal is the point of two tables");
 eq("22/37 fill", WG.LEVELS[WG.rateAvg(22)], "yellow");
-eq("22/37 rim is HOTTER — real gust factor", WG.LEVELS[WG.rateGust(37)], "orange");
+eq("22/37 rim is HOTTER, real gust factor", WG.LEVELS[WG.rateGust(37)], "orange");
 eq("21/31 fill", WG.LEVELS[WG.rateAvg(21)], "yellow");
-eq("21/31 rim MATCHES — ordinary gusting", WG.LEVELS[WG.rateGust(31)], "yellow");
+eq("21/31 rim MATCHES, ordinary gusting", WG.LEVELS[WG.rateGust(31)], "yellow");
 eq("a shared table would make every rim hotter", WG.rateAvg(31) > WG.rateGust(31), true);
 
 head("calm glyph agrees with the displayed number");
@@ -393,17 +393,17 @@ eq("0.5/0.4 rounds to 1/0, so it is NOT calm",
 eq("no direction is always calm", MK.isCalm({ avg:9, gust:12, dir:NaN }), true);
 eq("a real reading is not calm", MK.isCalm({ avg:9, gust:12, dir:200 }), false);
 
-/* WG.marker.layout — where markers go when they will not all fit. Pure
+/* WG.marker.layout. Where markers go when they will not all fit. Pure
    arithmetic on purpose, so the rules are asserted here rather than judged from
    a screenshot.
 
    THE CONTRACT, owner's design:
-     1. place everything normally, nearest first — exactly what nudge=0 draws
+     1. place everything normally, nearest first, exactly what nudge=0 draws
      2. for each one that did not fit, ring-search at a small radius and take
         the angle FURTHEST from the markers already there
      3. if no angle keeps the numbers readable, stack it below the marker it
         collided with, fading by depth
-   Arrows may overlap. Numbers may never be covered — by anything. */
+   Arrows may overlap. Numbers may never be covered, by anything. */
 head("marker layout: place, then rotate, then stack");
 (function () {
   var BOX = 20, LW = 46, TH = 24, TW = LW / 2;
@@ -415,7 +415,7 @@ head("marker layout: place, then rotate, then stack");
   function it(x, y, tw) { return { x:x, y:y, tw:tw }; }
   function dist(p) { return Math.sqrt(Math.pow(p.x - p.tx, 2) + Math.pow(p.y - p.ty, 2)); }
 
-  /* THE RULE: a LABEL — speed line and altitude line together — may not be
+  /* THE RULE: a LABEL. Speed line and altitude line together. May not be
      overlapped by anything, another label or an arrow. Arrows may overlap each
      other, but only partially: ARROW_TOL bounds it. Checked over every pair of
      every result below. */
@@ -448,7 +448,7 @@ head("marker layout: place, then rotate, then stack");
      MK.layout([it(100, 100)], opt())[0].moved, false);
 
   /* Phase 1 is plain nearest-first, so the FIRST of a pair keeps its place.
-     Altitude and staleness no longer decide this — dropped at the owner's
+     Altitude and staleness no longer decide this. Dropped at the owner's
      request while the placement is being evaluated. */
   var pair = MK.layout([it(100, 100), it(105, 108)], opt());
   eq("both of an overlapping pair are drawn", pair.length, 2);
@@ -462,20 +462,20 @@ head("marker layout: place, then rotate, then stack");
      clear two 46 px text columns; a narrow one ("3/7" rather than "14/22", the
      common case in light valley wind) gets away with far less. Letting arrows
      overlap without limit made this much closer and was measured as too
-     cluttered — partial overlap only. */
+     cluttered, partial overlap only. */
   eq("a wide-label pair clears its text columns", dist(pair[1]), 48, 1);
   var narrow = MK.layout([it(100, 100, 12), it(105, 108, 12)], opt());
   eq("a narrow-label pair gets much closer", dist(narrow[1]) < 26, true);
   eq("still with nothing covered",
      anyLabelCovered(narrow, [it(100,100,12), it(105,108,12)]), false);
 
-  /* NOTHING FADES any more — the leader line is the annotation. Two attempts at
+  /* NOTHING FADES any more, the leader line is the annotation. Two attempts at
      tying opacity to something (displacement, then real overlap) both made
      markers paler for reasons a pilot could not read off the screen. */
   eq("no alpha helper survives", typeof MK.nudgeAlpha, "undefined");
 
   /* THE BOUND. Nothing may be drawn further than one stack row from where it
-     belongs — a marker 104 px out at 225 m/px is 23 km from its station, which
+     belongs. A marker 104 px out at 225 m/px is 23 km from its station, which
      no leader line rescues. The ring radii are generated up to the SAME bound,
      which is what stops the fallback being worse than the search: it stopped at
      58 px while the stack went to 195, and that was "the stations at the bottom
@@ -524,8 +524,8 @@ head("marker layout: place, then rotate, then stack");
   })();
 
   /* THE KNOCK-ON THE OWNER REPORTED. At Zermatt, scale 12000, ZFC: Blauherd
-     moved 54 px SOUTH onto Gornergratsee's TRUE position — which had not been
-     placed yet, so the ring scored south as empty — and Gornergratsee then had
+     moved 54 px SOUTH onto Gornergratsee's TRUE position. Which had not been
+     placed yet, so the ring scored south as empty, and Gornergratsee then had
      to move 47 px itself. The scoring now includes markers still waiting to be
      placed, so a displaced marker stops walking into the next one's spot. */
   (function () {
@@ -558,7 +558,7 @@ head("marker layout: place, then rotate, then stack");
 })();
 
 head("station altitude line");
-/* A missing altitude must draw NOTHING — not a dash, not a zero. The provider
+/* A missing altitude must draw NOTHING, not a dash, not a zero. The provider
    not knowing is different from the station being at sea level, and this tool
    shows facts, so it stays silent rather than inventing either. */
 eq("a real altitude carries its unit", MK.altText({ alt:3020 }), "3020m");
@@ -577,14 +577,14 @@ eq("but never microscopic at the smallest marker size", MK.altSize(9), 8);
    Its three empty states are NOT interchangeable: still-loading and
    has-no-history are different facts, and showing a spinner for a station that
    will never have history is a display that lies about what it is waiting for. */
-head("trend strip — shared by both pages, three distinct empty states");
+head("trend strip. Shared by both pages, three distinct empty states");
 eq("null means still loading", /Loading/.test(MK.trendHtml(null, {})), true);
 eq("an empty array means the station HAS no history, and says so",
    /keeps no history/.test(MK.trendHtml([], {})), true);
 eq("loading and no-history do not read the same",
    MK.trendHtml(null, {}) === MK.trendHtml([], {}), false);
 eq("an error names itself", /No history: timeout/.test(MK.trendHtml(null, { err:"timeout" })), true);
-eq("an error wins over the loading state — a dead call is not pending",
+eq("an error wins over the loading state, a dead call is not pending",
    /Loading/.test(MK.trendHtml(null, { err:"timeout" })), false);
 (function () {
   var ts = 1786453200000;              /* fixed, so this is not clock-dependent */
@@ -608,7 +608,7 @@ eq("bearing N", Math.round(WG.bearing(47, 8, 48, 8)), 0);
 eq("bearing E", Math.round(WG.bearing(47, 8, 47, 9)), 90);
 eq("bearing S", Math.round(WG.bearing(47, 8, 46, 8)), 180);
 
-head("fetch bbox — 448x978 widget at z11 with a 20 km cache margin");
+head("fetch bbox. 448x978 widget at z11 with a 20 km cache margin");
 var b = WG.bboxAround({ lat:47.0447, lon:8.6430 }, 11, 448, 978, 20);
 var wKm = WG.dist(47.0447, b.w, 47.0447, b.e) / 1000;
 var hKm = WG.dist(b.s, 8.643, b.n, 8.643) / 1000;
@@ -617,7 +617,7 @@ eq("height = 53.8 view + 40 pad", hKm, 93.8, 0.6);
 eq("box contains the fix", b.s < 47.0447 && b.n > 47.0447 && b.w < 8.643 && b.e > 8.643, true);
 
 /* The box has to follow the SAME resolution the projector draws with. It used
-   to divide by the raw CAL — the dpr-3 value — so on a denser screen the view
+   to divide by the raw CAL. The dpr-3 value. So on a denser screen the view
    covered more ground than the box did and the edges were never fetched. */
 head("fetch bbox follows pixel density, like the projector");
 WG.setDpr(1.5);
@@ -633,7 +633,7 @@ eq("pad 0 gives the view rectangle itself, which is what prepare's keep wants",
 WG.setDpr(3);
 
 /* position() calls remember() on EVERY read, and setGeoFix on every
-   watchPosition callback — so unthrottled this was a synchronous localStorage
+   watchPosition callback. So unthrottled this was a synchronous localStorage
    write twice a second in the overlay. The stored value exists so a cold start
    with no GPS has somewhere to point; half a minute of staleness there is
    nothing against being absent. */
@@ -648,7 +648,7 @@ head("last-known position is written at most every 30 s");
   eq("no fix writes nothing and says so", WG.remember(null, t0 + 90000), false);
 })();
 
-head("staleness — old wind must never look current");
+head("staleness, old wind must never look current");
 var cf = WG.cfg(""), now = 1786370000000;
 eq("5 min  -> fresh", WG.staleness({ ts:now - 5 * 60000 }, cf, now).cls, "fresh");
 eq("20 min -> warn",  WG.staleness({ ts:now - 20 * 60000 }, cf, now).cls, "warn");
@@ -670,7 +670,7 @@ eq("attribution names the networks, not just the aggregator",
 
 /* The screen is a rectangle and distance is a circle. Culling to the view
    BEFORE the cap is what stops C.max being spent on stations that can never
-   be drawn — measured at 17 of 40 wasted on a 448x978 widget at 30 km. */
+   be drawn. Measured at 17 of 40 wasted on a 448x978 widget at 30 km. */
 head("prepare: the view cull runs before the cap");
 var view = { s:47.0, n:47.1, w:8.6, e:8.7 };
 var east = { id:"east", name:"East", lat:47.05, lon:9.4, alt:900, avg:8, gust:12, ts:now, peak:false, provider:"c" };
@@ -678,9 +678,9 @@ eq("a station outside the rectangle is dropped",
    WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now, view).length, 1);
 eq("and it is the one inside that survives",
    WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now, view)[0].id, "near");
-eq("no rectangle means no cull — the list page wants nearest regardless",
+eq("no rectangle means no cull, the list page wants nearest regardless",
    WG.prepare([near, east], { lat:47.0447, lon:8.6430 }, cf, now).length, 2);
-/* THE LIST HAS NO MAP, so it has no scale and no viewport — it wants a radius.
+/* THE LIST HAS NO MAP, so it has no scale and no viewport, it wants a radius.
    Before this it borrowed bboxAround with a nominal 448x978 widget, which made
    its catchment a PORTRAIT RECTANGLE while the list sorted purely by distance:
    a station 40 km east dropped, one 45 km north kept, and nothing on the page
@@ -699,7 +699,7 @@ head("prepare: a radius, for the page with no map");
   for (b = 0; b < 360; b += 30) ring.push(at(45, b));
 
   /* The nominal viewport is 27 km tall and 12 km wide at z11, so 20 km is
-     inside it going north and outside going east — same distance, opposite
+     inside it going north and outside going east. Same distance, opposite
      answers, and no reader of a distance-sorted list could tell why. */
   var oldBox = WG.bboxAround(here, 11, 448, 978, 0);
   eq("the old rectangle was anisotropic: 20 km N in, 20 km E out",
@@ -718,7 +718,7 @@ head("prepare: a radius, for the page with no map");
      WG.prepare([edge], here, cf, now, { r:edgeD - 1 }).length, 0);
 
   /* bboxRadius is the circle's bounding SQUARE, so the corners overreach to
-     r x sqrt(2) — deliberately, since the provider takes a rectangle. The
+     r x sqrt(2), deliberately, since the provider takes a rectangle. The
      radius in prepare is what trims them back. */
   var bb = WG.bboxRadius(here, 45000);
   eq("the box reaches the radius due north",

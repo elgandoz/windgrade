@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>XCTrack Windmap — marker geometry</title>
+<title>XCTrack Windmap, marker geometry</title>
 <style>
 body{margin:0;background:#0A1116;color:#E8F0F5;
   font:400 13px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:12px}
@@ -32,7 +32,7 @@ Every average band (fill, rows) against every gust band (rim, columns). The
 diagonal is ordinary gusting; <b>above</b> the diagonal the rim is hotter than
 the fill, which is the calm-average-hiding-violent-gusts case; <b>below</b> it the
 rim is cooler, meaning unusually steady air. Bottom row shows the same marker on
-the backgrounds it has to survive — dark terrain, light terrain, and mid-grey.
+the backgrounds it has to survive, dark terrain, light terrain, and mid-grey.
 </p>
 
 <div>
@@ -47,7 +47,7 @@ the backgrounds it has to survive — dark terrain, light terrain, and mid-grey.
 <h2>fill (average) × rim (gust)</h2>
 <div id="grid"></div>
 
-<h2>Canvas renderer — must match the SVG above</h2>
+<h2>Canvas renderer. Must match the SVG above</h2>
 <p class="n">Same module, same point arrays, same band widths. Drawn with
 <code>WG.marker.canvas</code> plus <code>WG.marker.label</code>, which is what the
 overlay widget uses. Any visible difference between this row and the grid means the

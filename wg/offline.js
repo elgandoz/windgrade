@@ -1,11 +1,11 @@
 /* ══════════════════════════════════════════════════════════════════════
-   wg/offline.js — service worker registration.
+   wg/offline.js, service worker registration.
 
    Kept out of core.js, which has no side effects by design. Every failure
    path is swallowed on purpose: an old Android WebView with no service
    worker, or an XCTrack build that refuses to register one, must still get
-   a working page. Offline is an enhancement here, never a dependency —
-   and it only ever covers the app shell, never a wind reading. See sw.js.
+   a working page. Offline is an enhancement here, never a dependency.
+   And it only ever covers the app shell, never a wind reading. See sw.js.
    ═══════════════════════════════════════════════════════════════════ */
 (function () {
 "use strict";

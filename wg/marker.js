@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   wg/marker.js — draws the marker, to canvas and to SVG.
+   wg/marker.js. Draws the marker, to canvas and to SVG.
 
    Extracted because it was living inside widget.html, where it could not be
    tested or screenshotted on its own. Both renderers read the same point
@@ -8,7 +8,7 @@
 
    THE CONSTRUCTION, in one place so it is not re-derived:
 
-     One path, drawn as concentric STROKE OUTSETS of decreasing width —
+     One path, drawn as concentric STROKE OUTSETS of decreasing width,
      never a second scaled copy of the shape. Scaling a notched outline
      pinches the gap near the notch and the rim stops reading as a rim.
 
@@ -21,7 +21,7 @@
      in. Neither stroke is decoration: they are what makes the marker
      survive an arbitrary basemap, and the thin inner one is what stops the
      two shapes collapsing into one blob when average and gust land in the
-     same band — the common case, the gust table being the average table
+     same band. The common case, the gust table being the average table
      shifted up.
 
    Points DOWNWIND: providers report a from-bearing, so callers rotate by
@@ -89,7 +89,7 @@ function labelText(st) {
 }
 /* Whole km/h. Goes through the same rounding as the band lookup in core.js, so
    the number and the colour always tell the same story. */
-function fmt(v) { var r = WG.roundKmh(v); return (r !== r) ? "—" : r; }
+function fmt(v) { var r = WG.roundKmh(v); return (r !== r) ? ", " : r; }
 
 function labelCanvas(g, st, x, y, scale, fs) {
   var t = labelText(st);
@@ -107,7 +107,7 @@ function labelCanvas(g, st, x, y, scale, fs) {
 
 /* Station altitude, a second line under the speed.
 
-   Offerable at all only because it is a FACT the provider supplies — no
+   Offerable at all only because it is a FACT the provider supplies, no
    inference, no interpolation. And it is the fact this whole tool exists for:
    a station NAME cannot tell a pilot who does not fly the area whether a
    reading came from a valley floor or a 2900 m ridge, which is precisely the
@@ -115,7 +115,7 @@ function labelCanvas(g, st, x, y, scale, fs) {
 
    Smaller, lighter in weight and slate rather than near-black, so the hierarchy
    reads at a glance: the speed is still the thing you see first. That ordering
-   is not cosmetic — the speed is the mandatory fallback for the rating scale's
+   is not cosmetic. The speed is the mandatory fallback for the rating scale's
    hue-only middle, and nothing may compete with it.
 
    The unit is included. A bare number sitting under another bare number invites
@@ -163,7 +163,7 @@ function svg(st, px, opts) {
 /* ── laying out markers that will not all fit ─────────────────────────
    Pure arithmetic, no DOM, so tools/test-core.js exercises it directly.
 
-   COST. draw() only runs when its key changes — position quantised to a whole
+   COST. draw() only runs when its key changes. Position quantised to a whole
    device pixel, the widget size, the ladder step, the last fetch, or the
    minute. A glider at 40 km/h crosses one pixel every ~5 s at 8 km scale and
    ~2 s at 3 km scale; parked, the minute term fires once a minute. So this runs
@@ -175,18 +175,18 @@ function svg(st, px, opts) {
    ── the two phases ──────────────────────────────────────────────────
    1. PLACE NORMALLY, nearest first, exactly as if nudging were off. Whatever
       fits at its true position is drawn there, unfaded. Everything else is
-      hidden — and hidden is where the interesting part starts.
+      hidden, and hidden is where the interesting part starts.
 
    2. For each hidden marker, try to put it back on screen:
-      a. RING SEARCH. Stay at a small fixed radius from where it really is —
-         close is the whole point — and rotate: score every angle and take the
+      a. RING SEARCH. Stay at a small fixed radius from where it really is.
+         Close is the whole point, and rotate: score every angle and take the
          one that sits FURTHEST from the markers already there. Overlapping
          arrows are accepted; a covered NUMBER is not, so an angle is only
          eligible if its text stays clear.
       b. If no angle at any tried radius keeps the text clear, STACK IT BELOW
          the marker it collided with, fading by depth.
 
-   NOTHING FADES. Every marker is drawn at full strength, moved or not — the
+   NOTHING FADES. Every marker is drawn at full strength, moved or not. The
    LEADER LINE is the annotation, and it is unambiguous where a fade was not:
    two attempts at tying opacity to displacement and then to actual overlap both
    produced markers that were paler for reasons a pilot could not read off the
@@ -207,7 +207,7 @@ var ARROW_TOL = 0.6;             /* arrows may overlap by about 40% */
    is filed under the wrong ridge and is better omitted than misplaced.
 
    The ring radii are GENERATED up to that bound rather than hand-written, which
-   is what stops the two halves drifting apart — and they had. The ring stopped
+   is what stops the two halves drifting apart, and they had. The ring stopped
    at 3.0 reaches (58 px) while the stack routinely landed at 106-195 px, so the
    FALLBACK WAS TWO TO THREE TIMES WORSE than the thing it fell back from.
    Measured at Zermatt, scale 30000: every ring placement in that scene was
@@ -266,11 +266,11 @@ function layout(items, o) {
      is the whole game:
 
        ARROWS may overlap, but only PARTIALLY. `aw` is the arrow's half-extent
-       scaled by ARROW_TOL, so two centres must stay 2*aw apart — anything
+       scaled by ARROW_TOL, so two centres must stay 2*aw apart. Anything
        closer and one arrow swallows the other. Letting them overlap without
        limit was measured as too cluttered.
 
-       LABELS may not be overlapped BY ANYTHING — not by another label, not by
+       LABELS may not be overlapped BY ANYTHING: not by another label, not by
        an arrow. `t0..t1` spans the speed line and the altitude line together,
        because the owner counts both as the label. This is the constraint that
        sets how close two markers can get, and it should be: the number is the
@@ -319,7 +319,7 @@ function layout(items, o) {
   }
   var nPlaced = placed.length;               /* everything up to here is fixed */
 
-  /* Neighbours worth scoring against — a bounded set, so the ring search stays
+  /* Neighbours worth scoring against. A bounded set, so the ring search stays
      cheap however many markers are on screen.
 
      IT INCLUDES MARKERS NOT YET PLACED, at their true positions. Without that,
@@ -334,7 +334,7 @@ function layout(items, o) {
 
      Every candidate for a marker lies within `maxMove` of its true position,
      and nothing further than NEARX/NEARY from that position can reach any of
-     them — those bounds include maxMove for exactly this reason. So the set
+     them. Those bounds include maxMove for exactly this reason. So the set
      computed once at the true position is a superset of what all 48 candidates
      would each have computed for themselves.
 
@@ -345,7 +345,7 @@ function layout(items, o) {
 
      The set includes markers NOT YET PLACED, at their true positions. Without
      that, a marker searching for room sees only what has already been drawn and
-     moves happily into the spot a later one is about to need — measured at
+     moves happily into the spot a later one is about to need, measured at
      Zermatt scale 12000, ZFC: Blauherd went 54 px south onto Gornergratsee's
      true position and Gornergratsee then had to move 47 px itself. */
   var nearBuf = [], nearN = 0;
@@ -382,7 +382,7 @@ function layout(items, o) {
 
   /* Which already-drawn marker did this one collide with? Only used to key the
      pile so `maxPerCluster` can count it. Reads the same neighbourhood, and
-     `p[3]` is the marker's slot in `placed` — phase-1 markers are the ones
+     `p[3]` is the marker's slot in `placed`, phase-1 markers are the ones
      below nPlaced. */
   function hostOf(it, tw) {
     var k, p, best = -1, bd = Infinity, d;
@@ -399,17 +399,17 @@ function layout(items, o) {
   /* A stack step that leaves the number ALONE. t1 is the bottom of the text and
      aw the arrow's half-height, so this is exactly the point where the lower
      marker's arrow stops touching the upper marker's number. Arrows may overlap
-     each other — text may not, and the stack is no exception. */
+     each other. Text may not, and the stack is no exception. */
   var depthAt = {};
 
-  /* NOTHING BELOW THIS LINE RUNS WITH NUDGING OFF, which is the default — so
+  /* NOTHING BELOW THIS LINE RUNS WITH NUDGING OFF, which is the default. So
      the early return is the whole point of it, not tidiness. Everything from
      here on serves phase 2 only: measured 44.5 us with nudging off against
      711.9 us with it on, over 118 markers, so the ring search is 94% of the
      cost and a pilot who has not asked for it pays none of that.
 
      The `pending` seeding used to sit OUTSIDE the gate, allocating one array
-     per hidden marker — about 87 of them per draw at Zermatt scale 30000 — for
+     per hidden marker. About 87 of them per draw at Zermatt scale 30000, for
      a loop that then never ran. */
   if (!o.nudge) return out;
 
@@ -446,7 +446,7 @@ function layout(items, o) {
 
     /* (b) nowhere rotationally: straight down, a row at a time, FROM ITS OWN
        POSITION rather than the host's. Anchoring to the host and multiplying by
-       depth compounded — Mottec's host sat 85 px BELOW it and a depth-2 stack
+       depth compounded. Mottec's host sat 85 px BELOW it and a depth-2 stack
        then added 110 px on top, putting a station 195 px from where it was
        measured. Rows from the marker's own place are bounded by construction,
        and since the pile collided in the first place they still land together. */
@@ -469,14 +469,14 @@ function layout(items, o) {
    Drawn UNDER the marker the pilot has open, so the popup and the arrow it
    describes are visibly the same station. Without it the overlay answers a tap
    with a panel naming a station and no way to tell which of a dozen arrows it
-   came from — which is worst exactly where it matters, in a cluster.
+   came from, which is worst exactly where it matters, in a cluster.
 
    A RING, not SeeYou's filled disc: our markers already carry a white halo for
    contrast against terrain, and a white disc behind one would swallow it.
 
    Blue, and that is safe rather than decorative: the rating palette is white,
    green, yellow, orange, red, black, so blue cannot be read as a wind strength.
-   The colour rule — "the colour belongs to the marker" — is about the SPACE
+   The colour rule: "the colour belongs to the marker". Is about the SPACE
    AROUND a reading not being coloured to imply a value there; this says
    "you tapped this one" and implies nothing about the wind.
 
@@ -494,7 +494,7 @@ function ring(g, x, y, box) {
 
 /* ── leader line, for a marker that had to be moved ───────────────────
    The overlay nudges a marker DOWN when it would overlap one already placed,
-   rather than dropping the reading — see draw() in widget.html. This is what
+   rather than dropping the reading, see draw() in widget.html. This is what
    keeps that honest: the line says the marker is not where it is drawn, and the
    dot says where it really is.
 
@@ -506,7 +506,7 @@ function ring(g, x, y, box) {
    The CALLER must draw every leader before any marker: a line that has to cross
    a speed number must be hidden behind it, not scribbled over it. Painting each
    marker as it was placed put the next line straight through the previous
-   marker's number — caught by screenshotting it, not by reading it. */
+   marker's number. Caught by screenshotting it, not by reading it. */
 function leader(g, tx, ty, x, y, box) {
   var dx = x - tx, dy = y - ty, len = Math.sqrt(dx * dx + dy * dy);
   if (!len) return;
@@ -527,15 +527,15 @@ function leader(g, tx, ty, x, y, box) {
 }
 
 /* ── the trend strip ──────────────────────────────────────────────────
-   Recent history as a row of small markers, oldest left. Purely descriptive —
-   the same measured values, over time — so it breaks no rule, and it answers
+   Recent history as a row of small markers, oldest left. Purely descriptive.
+   The same measured values, over time. So it breaks no rule, and it answers
    the one question a single reading cannot: is this building or easing?
 
    Lives here rather than in a page because BOTH the overlay's popup and the
    list's expanded row draw it, and two copies of "which colour does 22 km/h
    get" is exactly the drift this file exists to prevent. It returns the strip's
    inner HTML; each page owns the container and its CSS. The class names are
-   part of the contract — `.t`, `.wait`, and `em`/`span` inside `.t`.
+   part of the contract, `.t`, `.wait`, and `em`/`span` inside `.t`.
 
    The loading and error states are in here too, because "no history for this
    station" is a fact about the data and both pages must say it the same way.
@@ -549,7 +549,7 @@ function hhmm(ts) {
 }
 
 /* samples: oldest-first, from the provider's normaliseHistoric. `null` means
-   still loading — an empty array means the station has no history, which is a
+   still loading. An empty array means the station has no history, which is a
    different thing and must not read as a spinner that never finishes. */
 function trendHtml(samples, opts) {
   var o = opts || {}, px = o.size || 34, i, s, h = "";
@@ -570,14 +570,14 @@ function trendHtml(samples, opts) {
 /* Scroll the strip to the NEWEST sample, and mark it when the oldest end is
    cut off.
 
-   Oldest-left reads naturally but puts the newest sample — the one actually
-   wanted — off the right edge: three hours of MeteoSwiss ten-minute samples is
+   Oldest-left reads naturally but puts the newest sample, the one actually
+   wanted, off the right edge: three hours of MeteoSwiss ten-minute samples is
    eighteen cells, far more than a phone is wide, so scrolling is inherent, not
    a layout mistake to design away.
 
    The subtle part is what that does to the left edge. Scrolled fully right, the
    leftmost visible cell is cut mid-width, and a clipped time does not look
-   clipped — it looks like bad data. The first strip drawn showed "5:00" where
+   clipped, it looks like bad data. The first strip drawn showed "5:00" where
    the value was 15:00. Snapping to a cell boundary cannot fix it: the two edges
    can only both align when the viewport is an exact multiple of the cell pitch,
    and if one of them has to be cut it must be the oldest sample, never the

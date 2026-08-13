@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   sw.js — offline cache for the app shell.
+   sw.js, offline cache for the app shell.
 
    ┌──────────────────────────────────────────────────────────────────────┐
    │  READINGS ARE NEVER CACHED. Not now, not as an optimisation later.   │
@@ -12,12 +12,12 @@
    │  The origin guard below is what enforces it: winds.mobi is           │
    │  cross-origin, so its responses never reach this cache. If a         │
    │  provider is ever added on our own origin, exclude it explicitly.    │
-   │  Terrain may be cached — terrain does not change. Wind does.         │
+   │  Terrain may be cached, terrain does not change. Wind does.         │
    └──────────────────────────────────────────────────────────────────────┘
 
    Strategy is stale-while-revalidate, not cache-first: the cached copy is
    returned immediately and a fresh one fetched in the background for next
-   time. That matters for the *shell* too — a corrected rating threshold or
+   time. That matters for the *shell* too. A corrected rating threshold or
    a fixed marker must be able to reach a pilot who already installed the
    page, and this way it arrives on the next load rather than never.
 
@@ -80,7 +80,7 @@ self.addEventListener("fetch", function (event) {
 
   var url = new URL(req.url);
 
-  /* THE GUARD. Cross-origin means the providers — let them through
+  /* THE GUARD. Cross-origin means the providers. Let them through
      untouched, every time, so a reading is always live or visibly absent. */
   if (url.origin !== self.location.origin) return;
 

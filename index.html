@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A1116">
-<title>XCTrack Windmap — nearby wind stations on terrain</title>
+<title>XCTrack Windmap: nearby wind stations on terrain</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-180.png">
 
-<!-- Social preview — see the note in app.html. Regenerate with tools/og-card.html. -->
+<!-- Social preview, see the note in app.html. Regenerate with tools/og-card.html. -->
 <meta name="description" content="Wind stations near you, drawn on the terrain they sit on. An XCTrack overlay for paraglider XC pilots.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Free Flight Tools">
-<meta property="og:title" content="XCTrack Windmap — wind stations on the terrain">
+<meta property="og:title" content="XCTrack Windmap: wind stations on the terrain">
 <meta property="og:description" content="Speed, gust and direction for every station near you, drawn where they actually are.">
 <meta property="og:url" content="https://freeflight-tools.github.io/xctrack-windmap/">
 <meta property="og:image" content="https://freeflight-tools.github.io/xctrack-windmap/og-windmap.png">
@@ -94,7 +94,7 @@ a{color:var(--chart)}
   <!-- The old intro explained what is wrong with other tools before saying what
        this one does. A pilot who has just arrived does not yet care. -->
   <p class="sub">
-    Wind stations near you, drawn <b>on the terrain they sit on</b> — an arrow
+    Wind stations near you, drawn <b>on the terrain they sit on</b>. One arrow
     per station, coloured by how strong the wind is. A station name can't tell
     you whether a reading came from a valley floor or a summit. Seeing where it
     is can.
@@ -115,11 +115,11 @@ a{color:var(--chart)}
     To get the arrows <b>on top of XCTrack's own map</b>, there are three steps.
   </p>
 
-  <h2>Step 1 — choose what you'll see</h2>
+  <h2>Step 1: choose what you'll see</h2>
   <div id="fields"></div>
   <button type="button" id="reset">Reset to defaults</button>
 
-  <h2>Step 2 — get the link onto your phone</h2>
+  <h2>Step 2: get the link onto your phone</h2>
   <p class="note">
     <b>On your phone:</b> tap Copy, then paste it into XCTrack in step 3.<br>
     <b>On a computer:</b> point your phone's camera at the QR code.
@@ -132,15 +132,15 @@ a{color:var(--chart)}
     <small>The same link. Open it on your phone, then copy it from there.</small>
   </div>
 
-  <h2>Step 3 — set it up in XCTrack</h2>
+  <h2>Step 3: set it up in XCTrack</h2>
   <!-- Every item here is a measured XCTrack behaviour, not a preference:
 
-       * refresh rate 0 — ${lat}/${lng} substitution makes XCTrack reload the
+       * refresh rate 0. ${lat}/${lng} substitution makes XCTrack reload the
          whole page on that interval and throw away everything drawn.
-       * tapping OFF — with it on the widget swallows every tap over its own
+       * tapping OFF. With it on the widget swallows every tap over its own
          rectangle, including taps meant for controls underneath it. Measured;
          tools/tap.html, docs/findings.md.
-       * North-up — the overlay projects to true north. Nothing reads XCTrack's
+       * North-up: the overlay projects to true north. Nothing reads XCTrack's
          rotation, so a rotated map would put every arrow in the wrong place.
 
        Wording rule for this list: one instruction per line, the setting named
@@ -157,11 +157,11 @@ a{color:var(--chart)}
       link into it.</li>
     <li>In the Web page widget's settings:
       <ul>
-        <li><b>Allow web page to access XCTrack data</b> — <b>on</b>. This is what
+        <li><b>Allow web page to access XCTrack data</b>: <b>on</b>. This is what
           gives it your position.</li>
-        <li><b>Refresh rate</b> — <b>0</b>. Anything else makes XCTrack reload the
+        <li><b>Refresh rate</b>: <b>0</b>. Anything else makes XCTrack reload the
           page every minute or two and lose everything it has drawn.</li>
-        <li><b>Allow tapping on the web page when locked</b> — <b>off</b>, unless
+        <li><b>Allow tapping on the web page when locked</b>: <b>off</b>, unless
           you want the optional tapping features below.</li>
       </ul>
     </li>
@@ -173,10 +173,10 @@ a{color:var(--chart)}
        fixed in DEVICE pixels, so one ladder step is 8km on a dpr-3 phone and
        6km on a Pixel 9a. A launcher on a laptop cannot know which step to
        name; the overlay resolves the scale on the device. Measured with
-       tools/ruler.html — docs/findings.md 2026-08-11. -->
+       tools/ruler.html, docs/findings.md 2026-08-11. -->
   <p class="note">
     <b>Did it work?</b> Windmap draws a small scale bar just above XCTrack's
-    own. <b>If the two bars are the same length, you're set</b> — you never have
+    own. <b>If the two bars are the same length, you're set.</b> You never have
     to read either number. If they differ, change XCTrack's map scale until they
     match.
   </p>
@@ -191,10 +191,10 @@ a{color:var(--chart)}
     appear immediately instead of after the GPS locks on.
   </p>
 
-  <h2>Optional — tapping and zoom</h2>
+  <h2>Optional: tapping and zoom</h2>
   <p class="note">
     Under <b>Advanced settings → Interactive mode</b>, and off by default. They
-    need <b>Allow tapping on the web page when locked</b> turned <b>on</b> — and
+    need <b>Allow tapping on the web page when locked</b> turned <b>on</b>, and
     once it is, Windmap takes every tap over its own area, so <b>move
     XCTrack's zoom buttons outside it</b> or they will stop responding.
   </p>
@@ -202,7 +202,7 @@ a{color:var(--chart)}
     <li>Tap a station to see how its wind has changed over the last few hours.</li>
     <li>Add <b>+</b> and <b>−</b> buttons, or use the top and bottom of the
       screen, to change Windmap's scale.</li>
-    <li>That changes <b>Windmap's</b> scale only — XCTrack doesn't let a web
+    <li>That changes <b>Windmap's</b> scale only. XCTrack doesn't let a web
       page change its map. Windmap says so at the bottom until you change the
       map to match.</li>
   </ol>
@@ -214,9 +214,9 @@ a{color:var(--chart)}
        visible at every marker size. See AGENTS.md. -->
   <p class="warn">
     <b>The colours are not a safety verdict.</b> They are a rough aid, not an
-    assessment of whether a flight is safe. Everything shown is measured —
-    altitude, speed, gust, direction — with no interpolation between stations and
-    no lee-side guesses. <b>Readings cannot work offline.</b> Anything marked
+    assessment of whether a flight is safe. Everything shown is measured: altitude,
+    speed, gust and direction, with no interpolation between stations and no
+    lee-side guesses. <b>Readings cannot work offline.</b> Anything marked
     stale is old and must be treated as unknown.
   </p>
 
@@ -228,11 +228,11 @@ a{color:var(--chart)}
     analytics.</p>
 
   <footer>
-    <p><a href="tools.html">Diagnostic tools →</a> — for checking the overlay
+    <p><a href="tools.html">Diagnostic tools →</a>, for checking the overlay
       against XCTrack. Not needed to fly.</p>
 
     Unofficial, no warranty. Station data via <a href="https://winds.mobi">winds.mobi</a>,
-    which aggregates MeteoSwiss, SLF, Holfuy, OpenWindMap and others — the data
+    which aggregates MeteoSwiss, SLF, Holfuy, OpenWindMap and others, the data
     belongs to those networks. You are responsible for your own flight preparation.
   </footer>
 
@@ -285,13 +285,13 @@ function refreshLinks(){
   drawQr(urlBox.value);
 
   /* Step 3 names the number the pilot actually chose, so they are not asked to
-     remember it while scrolling. It is the SCALE, not a ladder step — that is
+     remember it while scrolling. It is the SCALE, not a ladder step. That is
      what XCTrack's own list shows, and it is the same on any phone. */
   document.getElementById("stepScale").textContent =
     WG.fmtScale(WG.getConfig().scale);
 }
 
-/* Generated from WG.SPEC — nothing is skipped here except URL-only rows,
+/* Generated from WG.SPEC. Nothing is skipped here except URL-only rows,
    because this is where overlay URLs get built. Two rows show up front and
    the other seventeen sit in the accordion, grouped; #advanced opens it, so
    a note or a bug report can point straight at a setting. */

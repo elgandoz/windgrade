@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>XCTrack Windmap — capability probe</title>
+<title>XCTrack Windmap, capability probe</title>
 <style>
 :root{
   --ink:#0A1116; --panel:#151F27; --panel-hi:#1D2B36; --rule:#2A3B48;
@@ -50,7 +50,7 @@ pre{
 <p class="sub" id="stamp"></p>
 
 <div class="big">
-  Run this <b>inside XCTrack's Web page widget</b>, not just in Chrome — the
+  Run this <b>inside XCTrack's Web page widget</b>, not just in Chrome, the
   WebView has its own storage and its own rules. Run it in Chrome too and
   compare: the numbers will differ, and that difference is the finding.
 </div>
@@ -62,7 +62,7 @@ pre{
 
 <h2>Interactive tests</h2>
 <a class="tel" href="tel:+41416209106">Test a tel: link</a>
-<p class="note">Should open the dialer with 041 620 91 06 — <b>do not press call</b>.
+<p class="note">Should open the dialer with 041 620 91 06, <b>do not press call</b>.
 If nothing happens, XCTrack's WebView swallows non-http schemes.</p>
 
 <button id="btnPersist">Request persistent storage</button>
@@ -75,7 +75,7 @@ blob is still listed under Storage, offline map packs are viable.</p>
 <button id="btnRange">Test HTTP Range request (same origin)</button>
 <p class="note">PMTiles needs byte ranges. Must report <b>206</b>.
 Note: <code>python3 -m http.server</code> does <b>not</b> support ranges and will
-report 200 — a false negative. Only trust this test against the real host
+report 200, a false negative. Only trust this test against the real host
 (GitHub Pages, Netlify, or a tunnel).</p>
 
 <button id="btnCors">Test data-source CORS</button>
@@ -145,7 +145,7 @@ try { hasXct = typeof XCTrack !== "undefined" && typeof XCTrack.getLocation === 
 put("pos", "XCTrack object", hasXct, verdict(hasXct));
 
 if (hasXct){
-  /* list every method the interface exposes — the docs may be behind */
+  /* list every method the interface exposes, the docs may be behind */
   var methods = [];
   try { for (var k in XCTrack) if (typeof XCTrack[k] === "function") methods.push(k); } catch(e){}
   put("pos", "XCTrack methods", methods.join(", ") || "none enumerable", "dim");
@@ -167,7 +167,7 @@ if (hasXct){
     put("pos", "parse", "failed: " + e.message, "bad");
   }
 } else {
-  put("pos", "note", "not in XCTrack — rerun there", "warn");
+  put("pos", "note", "not in XCTrack, rerun there", "warn");
 }
 
 /* ── storage ─────────────────────────────────────────────────────── */
@@ -247,7 +247,7 @@ el("btnWrite").addEventListener("click", function(){
     var res = new Response(blob, {headers:{"x-written": new Date().toISOString()}});
     caches.open(CACHE).then(function(c){ return c.put(BLOB_KEY, res); }).then(function(){
       put("sto", "blob write", "10 MB written", "ok");
-      btn.textContent = "Written — now restart XCTrack and reload";
+      btn.textContent = "Written, now restart XCTrack and reload";
     }).catch(function(e){
       put("sto", "blob write", "failed: " + e.message, "bad");
       btn.textContent = "Write failed";

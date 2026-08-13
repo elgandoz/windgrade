@@ -4,20 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A1116">
-<title>XCTrack Windmap — nearby wind stations</title>
+<title>XCTrack Windmap: nearby wind stations</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-180.png">
 
 <!-- Social preview. These links get pasted into pilots' chat groups, which is
-     the whole distribution channel — without these tags the paste renders as a
+     the whole distribution channel. Without these tags the paste renders as a
      bare grey URL. Absolute, not relative: WhatsApp, Telegram and Slack do
      resolve a relative og:image, but the spec asks for absolute and some
      scrapers refuse otherwise. Regenerate the card with tools/og-card.html. -->
 <meta name="description" content="Wind stations near you, drawn on the terrain they sit on. Speed, gust and direction for paraglider XC pilots.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Free Flight Tools">
-<meta property="og:title" content="XCTrack Windmap — wind stations on the terrain">
+<meta property="og:title" content="XCTrack Windmap: wind stations on the terrain">
 <meta property="og:description" content="Speed, gust and direction for every station near you, drawn where they actually are.">
 <meta property="og:url" content="https://freeflight-tools.github.io/xctrack-windmap/app.html">
 <meta property="og:image" content="https://freeflight-tools.github.io/xctrack-windmap/og-windmap.png">
@@ -32,7 +32,7 @@
    pilot scanning readings never scrolls past a form to reach them. */
 body{padding:8px 8px calc(58px * var(--scale))}
 /* Title and the freshness control on one line. The control IS the age, because
-   "3 min ago" next to a refresh arrow says what tapping it does — a separate
+   "3 min ago" next to a refresh arrow says what tapping it does. A separate
    Refresh button said nothing about what was being refreshed, and took a whole
    row of a screen that exists to show readings. */
 #top{display:flex;align-items:center;gap:8px;margin:0 0 6px}
@@ -44,7 +44,7 @@ h1{flex:1;font-size:.86em;letter-spacing:.1em;text-transform:uppercase;margin:0;
 #bRef.old{border-color:var(--amber);color:var(--amber)}
 #bRef.busy{opacity:.55}
 /* One plain sentence. What the list is, and anything about it that is not
-   obvious from looking — never coordinates, never kilobytes. */
+   obvious from looking, never coordinates, never kilobytes. */
 #say{margin:0 0 8px;font-size:.86em;line-height:1.45;color:var(--dim)}
 #say b{color:var(--fg)}
 #dbg{font-family:var(--mono);font-size:.72em;color:var(--dim);margin:0 0 8px;
@@ -57,7 +57,7 @@ h1{flex:1;font-size:.86em;letter-spacing:.1em;text-transform:uppercase;margin:0;
 .chip{margin:0 0 5px;background:var(--panel);border:1px solid var(--rule);
   border-radius:4px;box-shadow:var(--shadow);overflow:hidden}
 /* The tappable part. A <button> and not a div: it is focusable, it announces
-   itself as a control, and Enter works — for free, on a page whose whole point
+   itself as a control, and Enter works. For free, on a page whose whole point
    is being usable one-handed. */
 .chip > .row{display:flex;align-items:center;gap:9px;width:100%;padding:7px 8px;
   background:none;border:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
@@ -68,7 +68,7 @@ h1{flex:1;font-size:.86em;letter-spacing:.1em;text-transform:uppercase;margin:0;
 /* ── the expanded trend ─────────────────────────────────────────────
    Expand in place rather than a bottom sheet: a list where tapping a row opens
    it is the most conventional pattern on a phone, it needs no dismiss gesture
-   to discover, and it keeps the neighbouring stations visible — which is the
+   to discover, and it keeps the neighbouring stations visible, which is the
    comparison a pilot is actually making. The overlay needs a popup because a
    map has no rows; this does not.
 
@@ -146,7 +146,7 @@ footer:empty{display:none}
 
 <footer id="foot"></footer>
 
-<!-- Static, so it stays out of the tick loop's DOM writes entirely — #foot is
+<!-- Static, so it stays out of the tick loop's DOM writes entirely. #foot is
      rewritten on a key change, this never is. Says what actually happens: a
      bounding box goes out, not a position, and nothing comes back that
      identifies the pilot. -->
@@ -162,7 +162,7 @@ footer:empty{display:none}
          standalone window whose manifest scope is "./", so a plain link to
          index.html navigates INSIDE the app and strands the pilot in a setup
          guide with no way back. There is no API for "open in the default
-         browser"; _blank is what hands it to one — a Custom Tab on Android,
+         browser"; _blank is what hands it to one. A Custom Tab on Android,
          Safari on iOS, a normal tab on desktop. The other lever would be
          narrowing the manifest scope so index.html falls outside it, which
          would also push every future page out. Not worth it for one link. -->
@@ -178,13 +178,13 @@ footer:empty{display:none}
 <script>
 "use strict";
 /* ══════════════════════════════════════════════════════════════════════
-   app.html — the standalone list. Phase 2: data, no map.
+   app.html, the standalone list. Phase 2: data, no map.
 
    Useful on its own, and the place the rating scale gets judged. Renders the
    real marker geometry, so the colours can be evaluated without XCTrack.
 
    Installable: it keeps its settings in localStorage and its shell in a
-   service worker. The SHELL only — readings are never cached, because old
+   service worker. The SHELL only. Readings are never cached, because old
    wind shown confidently is the one way this could hurt someone. See sw.js.
 
    Rows are built once and only changed text nodes are rewritten, so a
@@ -213,8 +213,8 @@ if (navigator.geolocation){
     WG.setGeoFix({ lat:p.coords.latitude, lon:p.coords.longitude,
                    alt:p.coords.altitude, src:"geo", valid:true });
     tick();
-  /* Short, and it does NOT repeat the hint the sentence above already gives —
-     two boxes saying the same thing reads as two problems. */
+  /* Short, and it does NOT repeat the hint the sentence above already gives.
+     Two boxes saying the same thing reads as two problems. */
   }, function(){ note("Location access is blocked for this page."); },
      { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
 }
@@ -228,7 +228,7 @@ function paintErr(){
 
 /* ── the freshness control ─────────────────────────────────────────────
    Readings move on a ~10 min cadence and tick() refetches on its own, so this
-   is not load-bearing — but "how old is this" is the one question a pilot must
+   is not load-bearing. But "how old is this" is the one question a pilot must
    always be able to answer, and putting the refresh on the answer costs no
    extra screen. Goes amber past two poll intervals, the same threshold the
    overlay's status line uses, so the two pages never disagree about when data
@@ -275,7 +275,7 @@ function mkNode(st){
 
 function paintRow(r, st){
   var c = r.cache;
-  /* The marker is the button's first child now, not the chip's — the chip also
+  /* The marker is the button's first child now, not the chip's, the chip also
      holds the expanded trend. Replacing r.el.firstChild here would swap out the
      whole control. */
   var rowEl = r.el.firstChild;
@@ -304,7 +304,7 @@ function paintRow(r, st){
 
   /* Order is by usefulness, and it decides what falls off the end when the line
      wraps: how far and which way (which is also how the list is sorted), then
-     how high, then how old. THE AGE MUST COME BEFORE THE ATTRIBUTION — it is
+     how high, then how old. THE AGE MUST COME BEFORE THE ATTRIBUTION. It is
      the field that decides whether the reading can be trusted at all, and it
      must never be the thing that wraps out of sight. The geocoded municipality
      sits after it, still present because it is the one word a pilot who does
@@ -347,8 +347,8 @@ function compass(b){
 
 /* ── tap a station for its recent trend ───────────────────────────────
    Descriptive only: the same measured values this station already reports, over
-   time. It answers the one thing a single reading cannot — is this building or
-   easing — without inferring anything.
+   time. It answers the one thing a single reading cannot. Is this building or
+   easing, without inferring anything.
 
    History is fetched ON DEMAND, one small call (~0.5-1 KB for a few hours), and
    cached for one poll interval. Prefetching for every row would be one HTTP
@@ -365,7 +365,7 @@ function toggleOpen(id){
   if (openId === id){ openId = null; hist = null; histErr = ""; tick(); return; }
   openId = id; hist = null; histErr = "";
 
-  /* Reuse anything fetched within one data cycle — upstream only updates on that
+  /* Reuse anything fetched within one data cycle. Upstream only updates on that
      cadence, so a second call would return the same samples. */
   var c = histCache[id];
   if (c && Date.now() - c.at < C.poll * 1000) hist = c.list;
@@ -377,8 +377,8 @@ function toggleOpen(id){
     if (err) histErr = "no connection";
     else {
       hist = list;
-      /* Sweep on insert. An entry is only ever REUSED inside one poll interval
-         — the check above enforces that — so anything older is dead weight
+      /* Sweep on insert. An entry is only ever REUSED inside one poll interval,
+         the check above enforces that. So anything older is dead weight
          that would otherwise be held until the next settings change. A pilot
          tapping their way down a long list was accumulating a few hundred
          samples per station for no one. */
@@ -400,7 +400,7 @@ function openDetail(r, st){
   d.innerHTML = '<div class="trend"></div>' +
     '<div class="src">Last ' + C.hours + (C.hours === 1 ? " hour" : " hours") +
     ', oldest first, from ' + WG.marker.esc(st.provider) +
-    '. Measured — not a forecast.</div>';
+    '. Measured, not a forecast.</div>';
   r.el.appendChild(d);
   paintDetail();
 }
@@ -416,7 +416,7 @@ function paintDetail(){
 
 /* Called from render(): attach the panel to whichever row is open, detach the
    one that used to hold it. Driven from `openId` rather than from the click, so
-   a re-render — new readings, a settings change — cannot leave a stale panel on
+   a re-render. New readings, a settings change. Cannot leave a stale panel on
    a row that has since moved or gone.
 
    `detailOn` tracks where the panel currently is, so this touches AT MOST TWO
@@ -449,7 +449,7 @@ function syncDetail(ranked){
 function render(fix){
   var list = el("list"), i, st, r, seen = {}, id;
   /* The same radius the fetch used, so the list shows a circle and not the
-     bounding square's corners — a station at 55 km appearing while another at
+     bounding square's corners. A station at 55 km appearing while another at
      45 km does not is exactly the arbitrary bias this replaced. */
   var ranked = WG.prepare(stations, fix, C, Date.now(), { r: C.range * 1000 });
 
@@ -463,7 +463,7 @@ function render(fix){
     if (rows.hasOwnProperty(id) && !seen[id]){
       if (rows[id].el.parentNode) rows[id].el.parentNode.removeChild(rows[id].el);
       delete rows[id];
-      /* A station can leave the list while its trend is open — the pilot moved,
+      /* A station can leave the list while its trend is open, the pilot moved,
          or the scale changed. Drop the open state with it, or paintDetail()
          hunts for a row that no longer exists. */
       if (openId === id){ openId = null; hist = null; histErr = ""; }
@@ -477,23 +477,23 @@ function render(fix){
 
   /* Attribution is owed to the networks that own the readings, not only to the
      aggregator, so the list is rebuilt from what is actually on screen. The
-     safety wording stays — it is the shortest it can be and still say what it
+     safety wording stays. It is the shortest it can be and still say what it
      has to.
 
      CACHED ON THE NETWORK LIST. This was an unconditional textContent write on
      every render, so ~250 characters of unchanging legal text were replaced
-     every few seconds — visible as a flicker, and the reason this whole pass
+     every few seconds. Visible as a flicker, and the reason this whole pass
      happened. The networks only change when the fetch brings different
      stations, which is at most once per poll interval. */
   var nets = WG.attribution(ranked).join(", ");
   if (nets !== footNets){
     footNets = nets;
     el("foot").textContent =
-      "Readings from " + (nets || "—") + ", via winds.mobi. " +
+      "Readings from " + (nets || ", ") + ", via winds.mobi. " +
       "Measured values only: altitude, speed, gust, direction. Nothing is " +
       "interpolated or guessed between stations. The colours are a rough aid, " +
       "NOT an assessment of whether a flight is safe. Readings cannot work " +
-      "offline — treat anything marked old as unknown.";
+      "offline, treat anything marked old as unknown.";
   }
 }
 
@@ -515,13 +515,13 @@ function say(ranked){
           ", closest first.";
   /* Old readings are already red on their own row; this says how many, so a
      list that is mostly red is obvious before scrolling it. */
-  if (nStale === n) parts += " <b>Every one is out of date</b> — treat them all as unknown.";
+  if (nStale === n) parts += " <b>Every one is out of date</b>, treat them all as unknown.";
   else if (nStale) parts += " <b>" + nStale + "</b> " +
        (nStale === 1 ? "is too old to trust" : "are too old to trust") + ".";
   /* The provider truncates at its own limit with no documented ordering, so
      stations exist that we were never sent. Never silent. */
   if (capped) parts += " There are more stations around you than can be " +
-                       "downloaded at once — try a smaller <b>How far to " +
+                       "downloaded at once. Try a smaller <b>How far to " +
                        "look</b>.";
   setSay(parts);
 }
@@ -536,7 +536,7 @@ function refresh(fix){
   fetching = true;
   /* A CIRCLE, not a phone-shaped rectangle. This page has no map, so it had no
      business borrowing the overlay's viewport geometry to decide how far to
-     look — see bboxRadius() in core.js. The square is the circle's bounding
+     look, see bboxRadius() in core.js. The square is the circle's bounding
      box; prepare() trims the corners back to the real radius. */
   var bbox = WG.bboxRadius(fix, C.range * 1000);
   paintAge();                                   /* show "checking…" at once */
@@ -545,7 +545,7 @@ function refresh(fix){
     /* Keep whatever is on screen and say the download failed. Wording matters:
        a pilot has to know the numbers below are the OLD ones. */
     if (err) note(lastFetch
-      ? "No connection — these readings are from the last time it worked."
+      ? "No connection. These readings are from the last time it worked."
       : "No connection, and nothing downloaded yet.");
     else {
       lastErr = ""; paintErr();
@@ -560,16 +560,16 @@ function refresh(fix){
 
 /* ── tick ──────────────────────────────────────────────────────────────
    Same discipline as the overlay: A KEY FIRST, and render() only when it
-   changes. Before this, every tick ran WG.prepare() over up to 120 stations —
-   distance, bearing, two rating lookups and a staleness test each, then a sort
-   — walked every row, and rewrote the footer's ~250 characters of unchanging
+   changes. Before this, every tick ran WG.prepare() over up to 120 stations
+   (distance, bearing, two rating lookups and a staleness test each, then a
+   sort), walked every row, and rewrote the footer's ~250 characters of unchanging
    text. That last one was visible as a flicker every few seconds, which is what
    started this.
 
    What can change a row, and therefore what is in the key:
      the position, to ~0.001° (about 100 m). Rows are sorted by distance and the
        printed value is to 0.1 km, so reordering below that is noise.
-     the last fetch — new readings
+     the last fetch. New readings
      the MINUTE, the granularity at which "14 min ago" and the amber/red
        staleness classes can change
      which row is expanded
@@ -601,7 +601,7 @@ function tick(){
 }
 
 /* Everything that used to be in the header, unchanged in content and now
-   behind one switch — same `debug` the overlay uses, so a bug report from
+   behind one switch. Same `debug` the overlay uses, so a bug report from
    either page shows the same fields. */
 function paintDbg(fix, p){
   var d = el("dbg");
@@ -612,7 +612,7 @@ function paintDbg(fix, p){
        (isFinite(fix.alt) ? "  " + Math.round(fix.alt) + " m" : "") + "\n" +
        "range " + C.range + " km  cap " + C.max +
        (meta1 ? "\n" + meta1 : ""))
-    : ("no fix — " + p.note);
+    : ("no fix, " + p.note);
   if (d.textContent !== t) d.textContent = t;
 }
 
@@ -637,7 +637,7 @@ function dropRows(){
   /* Cached histories go too: `hours` may have just changed, and a cached
      3-hour strip shown under a 6-hour heading is a quiet lie. */
   histCache = {};
-  /* Every per-element cache is now invalid — the elements are gone. */
+  /* Every per-element cache is now invalid, the elements are gone. */
   renderKey = ""; footNets = null; detailOn = null;
 }
 
@@ -654,9 +654,9 @@ el("bRef").addEventListener("click", function(){ lastFetch = 0; tick(); });
 
 tick();
 
-/* 15 s, not 5. Nothing on this page changes faster than once a minute — the age
-   text, the staleness colours, and the poll trigger are all minute-or-slower —
-   so 5 s was three times the wakeups for the same display, and a wakeup on a
+/* 15 s, not 5. Nothing on this page changes faster than once a minute. The age
+   text, the staleness colours, and the poll trigger are all minute-or-slower.
+   So 5 s was three times the wakeups for the same display, and a wakeup on a
    phone is a radio and a CPU coming out of idle.
 
    Paused while the page is hidden. An installed PWA left on a home screen was

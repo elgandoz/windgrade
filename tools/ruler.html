@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>XCTrack Windmap — CSS pixel ruler</title>
+<title>XCTrack Windmap. CSS pixel ruler</title>
 <style>
 /* Unpainted, like the widget: XCTrack renders white or absent as transparent. */
 html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
@@ -26,7 +26,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
 <script>
 "use strict";
 /* ══════════════════════════════════════════════════════════════════════
-   tools/ruler.html — measure XCTrack's map resolution directly.
+   tools/ruler.html, measure XCTrack's map resolution directly.
 
    It draws a ruler in CSS PIXELS across the screen. XCTrack's own scale bar
    is labelled with a ground distance. Read the bar's length off the ruler
@@ -41,7 +41,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
    in css pixels or scales with PIXEL DENSITY is not. Those predict different
    things, and one device measured at two densities separates them cleanly.
 
-   HOW TO RUN — one screenshot per density
+   HOW TO RUN: one screenshot per density
      1. Put an XC map widget on a page, North-up, any scale that shows a
         scale bar. Put this page on top of it, same rectangle.
      2. Screenshot. The header gives dpr and the widget size; the ruler gives
@@ -51,14 +51,14 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
             adb shell wm density reset      (back to default)
      4. Send both screenshots.
 
-   ANSWERED 2026-08-11 — Pixel 9a emulator, stock density and 320:
+   ANSWERED 2026-08-11: Pixel 9a emulator, stock density and 320:
 
        dpr 2.625   15km over 111.0 css px   135.1 m/css px   51.5 m/device px
        dpr 2.000   15km over 141.7 css px   105.9 m/css px   52.9 m/device px
 
      Constant in DEVICE pixels to 2.8%. Fixed-in-css-px was out by 28%. So
-     XCTrack works in device pixels, and the correction is 3/devicePixelRatio
-     — computed in core.js, never configured. Keep this page: it is the only
+     XCTrack works in device pixels, and the correction is 3/devicePixelRatio,
+     computed in core.js, never configured. Keep this page: it is the only
      instrument that measures XCTrack without going through our own model,
      and re-running it is how any future doubt gets settled.
    ═══════════════════════════════════════════════════════════════════ */
@@ -111,7 +111,7 @@ function draw(){
 
 function lines(){
   var s = [];
-  s.push("RULER — read XCTrack's scale bar against it");
+  s.push("RULER, read XCTrack's scale bar against it");
   s.push("dpr " + dpr + "   widget " + W + " x " + H + " css px");
   s.push("device px " + Math.round(W * dpr) + " x " + Math.round(H * dpr));
   s.push("");

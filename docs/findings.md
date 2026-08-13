@@ -4,7 +4,7 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
-### 2026-08-12 — winds.mobi has no generation cycle to sync to, and no cache validator
+### 2026-08-12: winds.mobi has no generation cycle to sync to, and no cache validator
 
 Asked whether the 10 minute poll could be aligned to winds.mobi's own update
 cycle. **There is no such cycle.** Timestamps across 310 stations, 14 networks,
@@ -12,7 +12,7 @@ one fetch:
 
 | network | n | reports at |
 |---|---|---|
-| slf.ch | 101 | **:00** — 100 of 101 on the hour |
+| slf.ch | 101 | **:00**, 100 of 101 on the hour |
 | meteoswiss.ch | 65 | :20 and :30, split |
 | holfuy.com | 57 | :22–:24 |
 | openwindmap.org | 40 | :17–:22, scattered per station |
@@ -20,18 +20,18 @@ one fetch:
 
 Every response is a *mixture of ages*. Whenever you ask, slf is up to 60 min old
 and openwindmap is minutes old; no instant makes the whole answer fresh. The
-10 minute figure is not enforced by them either — it is rule 3 of their terms
+10 minute figure is not enforced by them either, it is rule 3 of their terms
 ("do not overload… minimise your number of calls") plus the data not moving
 faster.
 
 **And there is no cache validator.** Response headers are `date` and
-`server: uvicorn`, nothing else — no `Cache-Control`, no `ETag`, no
+`server: uvicorn`, nothing else, no `Cache-Control`, no `ETag`, no
 `Last-Modified`, no `Age`. Two calls 3 s apart returned byte-identical payloads,
 but discovering that costs the full 118 KB.
 
 So the largest saving available is upstream: **`ETag` + `If-None-Match` would
 turn most polls into a 304**. Add it to the email to Yann already pending over
-the `User-Agent` term — see `docs/todo.md`.
+the `User-Agent` term, see `docs/todo.md`.
 
 Rejected: aligning our poll to wall-clock (:00, :10, :20) so it lands just after
 MeteoSwiss and Holfuy publish. It would also make every Windmap instance hit
@@ -39,7 +39,7 @@ them on the same second, which is the opposite of "do not overload".
 
 ---
 
-### 2026-08-12 — OPEN: a reported Pixel 9a "missing scales" list that no ladder can produce
+### 2026-08-12: OPEN: a reported Pixel 9a "missing scales" list that no ladder can produce
 
 Reported as absent from XCTrack's map scale setting on a Pixel 9a at default
 density: **250m, 500m, 1km, 1500m, 2km, 4km, 8km, 12km, 15km, 25km, 30km,
@@ -66,7 +66,7 @@ the ~23 nice numbers in the 150 m–60 km band can appear on a given device. A
 #### The other four are not a mis-tuned constant
 
 `1500m, 12km, 25km, 50km` sit at steps 29, 23, 21, 19 and are nowhere near a
-boundary — each occupies 81–85% of its bar span and would need the bar ~20%
+boundary. Each occupies 81–85% of its bar span and would need the bar ~20%
 shorter to drop to the next nice number:
 
 | step | bar spans | picks | next down needs |
@@ -77,7 +77,7 @@ shorter to drop to the next nice number:
 | 19 | 59164 m | 50km | ×0.80 |
 
 Swept bar width **60–400 dp** against dpr **1.50–4.00**, scoring all 16
-constraints (4 present + 12 absent). **Best fit still violates 3** — it always
+constraints (4 present + 12 absent). **Best fit still violates 3**, it always
 prints 1500m, 15km and 30km. `BAR_MAX_DP = 150` violates 4. No setting of the
 existing model satisfies the report.
 
@@ -95,7 +95,7 @@ that gap are available to it:
 
 Three of the four steps have **no label that would satisfy the report**. Either
 the neighbours (1200m, 2500m, 10km, 20km, 40km) are also not what the model
-says — a larger error than a constant — or the list is not exactly what
+says. A larger error than a constant, or the list is not exactly what
 XCTrack's scale setting offers on that device.
 
 #### What would settle it
@@ -107,14 +107,14 @@ one device, one measurement, no model of ours in the way. Until then
 and nothing better has been demonstrated.
 
 **No live defect either way.** The launcher offers a *union* across densities on
-purpose — a scale that a pilot's own screen shows but the list omits is a hard
-failure, an offered scale their screen cannot reach is not — and the overlay
+purpose. A scale that a pilot's own screen shows but the list omits is a hard
+failure, an offered scale their screen cannot reach is not, and the overlay
 resolves to the nearest step it can and prints what that really is. This is
 about the accuracy of the label model, not about anything a pilot cannot do.
 
 ---
 
-### 2026-08-11 — "missing" stations in Zermatt: decluttering, not the fetch
+### 2026-08-11: "missing" stations in Zermatt: decluttering, not the fetch
 
 Reported: `widget.html?scale=3000&alt=1&lat=46.0207&lng=7.7491` appears to omit
 *ZFC: Schwarzsee*, *Gornergrat*, *Zermatt* and *Platthorn*, all of which the
@@ -140,7 +140,7 @@ some of them on purpose.
 ```
 
 `scale=3000` resolves to step 27–28 depending on density, so **~20–25 m per css
-pixel**. A 411 × 846 widget is then about 10 × 21 km of ground — every one of
+pixel**. A 411 × 846 widget is then about 10 × 21 km of ground, every one of
 those twelve is on screen.
 
 #### What actually drops them
@@ -148,7 +148,7 @@ those twelve is on screen.
 `draw()` evicts a whole marker when it would overlap one already placed,
 nearest first. The exclusion zone is **29 px horizontally and 49 px
 vertically** (`box*1.5` and `box*1.9 + altSize`), against a drawn footprint of
-roughly 39 px across and 61 px tall with the altitude line on — so the zone is
+roughly 39 px across and 61 px tall with the altitude line on, so the zone is
 if anything *smaller* than the marker. The colliding pairs:
 
 | kept | dropped | apart | at 25 m/px |
@@ -159,7 +159,7 @@ if anything *smaller* than the marker. The colliding pairs:
 | Triftchumme (2.92 km) | **Platthorn** (3.80 km) | 1452 m | 59 px |
 
 Every one is closer than a single marker is wide. Which of the four disappear
-depends on pixel density and widget size — measured 10 of 12 drawn at dpr 3 on
+depends on pixel density and widget size. Measured 10 of 12 drawn at dpr 3 on
 448 × 978, 9 of 12 at dpr 2.625 on 411 × 846, 9 of 13 at dpr 2 on 540 × 1097.
 
 **Zooming in does not always separate them.** Both axes must clear, and the
@@ -167,14 +167,14 @@ vertical requirement is the larger one at 49 px. Zermatt and ZFC: Landing are
 387 m apart on a bearing that is mostly north, so on a north-up screen their
 separation is mostly vertical: they still collide at `scale=1500` (dy 26) and at
 `scale=1000` (dy 37), and only separate below about `scale=700`. **In a valley
-running north–south, the overlay declutters hardest along the valley** — which
+running north–south, the overlay declutters hardest along the valley**, which
 is the axis the stations are strung out on. Worth knowing before reading a gap
 as an absence.
 
 #### The real defect was the count
 
 `is-highest-duplicates-rating` is not involved: these are 400 m to 1.5 km apart,
-not co-located. `max` is not involved either — 12 is far under 120.
+not co-located. `max` is not involved either, 12 is far under 120.
 
 The badge said **"9 stations"**, which claims the map is showing everything it
 has. It is not. It now says **"9 of 12 stations"** whenever decluttering dropped
@@ -187,22 +187,22 @@ which is exactly why a station absent from the overlay appears there. That
 asymmetry is by design and is now visible on screen rather than discovered.
 
 **Not changed, deliberately:** the eviction rule itself. Keeping both markers by
-nudging one would break the only thing the overlay is for — an arrow sitting on
+nudging one would break the only thing the overlay is for, an arrow sitting on
 the terrain it was measured at. Choosing a "more useful" winner instead of the
 nearest would be an inference about which reading matters, which this tool does
 not make.
 
 ---
 
-### 2026-08-11 — the widget was drawing half the stations it had, and hiding the names pilots know
+### 2026-08-11: the widget was drawing half the stations it had, and hiding the names pilots know
 
 Reported from the air over Piedmont, an area the owner knows well:
 
     widget.html?scale=25000&lat=44.88&lng=7.33&debug=1
     → "30km N↑  15 stations (5 stale)"
 
-with sites the owner knows to exist — *Decollo TRUCETTI*, *Décollo Liretta
-Paradeltaclub Cuneo* — apparently absent. Four separate causes, all confirmed
+with sites the owner knows to exist, *Decollo TRUCETTI*, *Décollo Liretta
+Paradeltaclub Cuneo*, apparently absent. Four separate causes, all confirmed
 against the live API.
 
 #### The fetch was never the problem
@@ -222,9 +222,9 @@ So 125 stations arrived and **15 were drawn**. Both named stations were in the
 response. `is-highest-duplicates-rating` drops 30, and inspecting every one of
 them, 29 are genuine co-locations 0–30 m apart; the seven that are 1.7–8.9 km
 apart are all cases where the discarded twin was 1 800–38 700 minutes old.
-It is doing its job — leave it on.
+It is doing its job: leave it on.
 
-#### Cause 1 — the cap was radial, the screen is a rectangle
+#### Cause 1: the cap was radial, the screen is a rectangle
 
 `prepare()` sorted by distance and cut at `c.max` = 40. A tall widget covers
 103 × 225 km, so **17 of those 40 slots went to stations off the left and
@@ -244,20 +244,20 @@ applied **before** the cap. The widget passes its own view (`bboxAround` with
 wants nearest-regardless. Kept as a rectangle rather than a callback so
 `core.js` stays DOM-free and the rule stays unit-testable.
 
-#### Cause 2 — `max` 40 was too small once the cull was right
+#### Cause 2: `max` 40 was too small once the cull was right
 
 Even culled, 40 still cost 7–18 markers at wide scales. Default is now **120**
 (ceiling 400). Collision eviction, not the cap, should be what limits a map.
 
-#### Cause 3 — `bboxAround` ignored pixel density
+#### Cause 3: `bboxAround` ignored pixel density
 
-It divided by the raw `CAL` — the dpr-3 constant — while `projector` used
+It divided by the raw `CAL`, the dpr-3 constant, while `projector` used
 `getCal()`. On a screen denser than dpr 3 the view covers more ground than the
 box, so the edges were **never fetched**. `mul` now defaults to `getCal()`.
 
 Worth recording because the first instinct was that this would destabilise
 `app.html`, whose box is a nominal widget rather than a real view. The
-opposite is true — `zoomOf()` already compensates for density, so the raw
+opposite is true. `zoomOf()` already compensates for density, so the raw
 `CAL` was double-counting:
 
 ```
@@ -270,9 +270,9 @@ dpr 3     step 21         143 x 265 km     143 x 265 km
 
 The new default is the one that holds the ground area roughly constant.
 
-#### Cause 4 — winds.mobi's `name` and `short` are the opposite way round
+#### Cause 4: winds.mobi's `name` and `short` are the opposite way round
 
-This is why the two named stations "were missing" — they were on screen the
+This is why the two named stations "were missing", they were on screen the
 whole time, under names the owner had no way to recognise:
 
 ```json
@@ -282,15 +282,15 @@ whole time, under names the owner had no way to recognise:
   "short": "Décollo Liretta Paradeltaclub Cuneo ", "pv-name": "openwindmap.org" }
 ```
 
-For **openwindmap.org — 63 of the 161 stations here, the largest single
-network in the area — `name` is a geocoded municipality and `short` is the
+For **openwindmap.org. 63 of the 161 stations here, the largest single
+network in the area. `name` is a geocoded municipality and `short` is the
 name the station's owner gave it.** For `ffvl.fr`, `holfuy.com`, `slf.ch` and
 `meteoswiss.ch` the two fields are identical. `aviationweather.gov` differs
 but both forms are real names ("Cuneo International Airport" / "Cuneo/Levaldigi
 Arpt").
 
 So `normalise()` now sets `name` to the **owner's** name and carries the
-geocoded place as `place` when it differs — shown as the first item of the
+geocoded place as `place` when it differs, shown as the first item of the
 subtitle in both the popup and the list. Several records also carry trailing
 spaces and non-breaking spaces (`"Baouroux 1600m "`), squeezed on the way
 in so the two fields can be compared at all.
@@ -302,24 +302,24 @@ ordering. Piedmont holds 161, but a 190 × 267 km Swiss box holds 309–356, so 
 wide scale over the densest Alps can reach it. Splitting the box into several
 calls would trade a silent failure for a breach of *"do not overload"*, so
 instead the provider reports `meta.capped` and the widget appends **BOX FULL**
-to the status line — not suppressible, like the other admissions of doubt.
+to the status line, not suppressible, like the other admissions of doubt.
 
 #### Still filtered, deliberately
 
 `last-measure = stale × 4` (2 h by default) drops 9 of 161 server-side. Those
 instruments exist but have not reported in hours; they are not shown at all
-rather than shown red. That is a choice, not an oversight — recorded here so
+rather than shown red. That is a choice, not an oversight, recorded here so
 it is not rediscovered as a bug.
 
 ---
 
-### 2026-08-11 — SETTLED: XCTrack's map works in DEVICE pixels, not CSS pixels
+### 2026-08-11: SETTLED: XCTrack's map works in DEVICE pixels, not CSS pixels
 
 **The question the last three findings kept circling is now measured, and the
-answer is yes — it was pixel density all along.** The correction is computed
+answer is yes, it was pixel density all along.** The correction is computed
 from `devicePixelRatio` and needs nothing from the pilot.
 
-#### Method — the point is that it does not use our calibration
+#### Method: the point is that it does not use our calibration
 
 Every earlier attempt routed through `CAL`, which is circular for this exact
 question: nudging our bar until airspace aligns just inherits whatever `CAL`
@@ -328,8 +328,8 @@ map. XCTrack's own scale bar is labelled with a ground distance, so
 
     metres per css pixel  =  the bar's label  /  the bar's length
 
-with no model of ours anywhere in it. **One device at two densities** — a Pixel
-9a emulator, stock and `adb shell wm density 320` — changing nothing else.
+with no model of ours anywhere in it. **One device at two densities**, a Pixel
+9a emulator, stock and `adb shell wm density 320`, changing nothing else.
 
 #### Raw
 
@@ -349,11 +349,11 @@ run B   dpr 2.000   widget 540 x 1097 css px  device px 1080 x 2194
 
 | model | predicts res_A/res_B | measured 1.277 | error |
 |---|---|---|---|
-| resolution fixed in **css** px | 1.000 | | **28% — falsified** |
-| resolution fixed in **device** px | 1.312 | | **2.7% — holds** |
+| resolution fixed in **css** px | 1.000 | | **28%, falsified** |
+| resolution fixed in **device** px | 1.312 | | **2.7%, holds** |
 
 In device pixels the two runs agree to **2.8%**. The identical screen (~1080 px
-wide in both runs) shows the same ground width at both densities — which is what
+wide in both runs) shows the same ground width at both densities, which is what
 "the map is drawn in device pixels" means, and it is visible directly in the two
 screenshots without any arithmetic.
 
@@ -366,7 +366,7 @@ device pixels, metres-per-css-pixel scales with dpr, so:
 
 Reproduces both runs at step 22, 46.3°N: predicted 138.7 vs measured 135.1
 (2.7%), and 105.7 vs 105.9 (**0.1%**). At dpr 3 it is exactly 0.942, so the
-owner's phone — where the airspace-edge registration was verified — does not
+owner's phone. Where the airspace-edge registration was verified, does not
 move at all. In `wg/core.js` as `WG.setDpr()`, called by `widget.html` and
 `app.html` from `window.devicePixelRatio`. **Computed, never configured**: every
 future device is right without the pilot doing anything.
@@ -376,7 +376,7 @@ its help text now says so.
 
 #### What this explains, retrospectively
 
-- **The Pixel 9a's different label list** — but not for the reason first
+- **The Pixel 9a's different label list**: but not for the reason first
   proposed. See the next section: it is density, not width.
 - **The ~8% crop mismatch** measured earlier from the screenshot: at dpr 2.625
   the uncorrected model was 158.6 against a true 135.1, and the residual after
@@ -406,7 +406,7 @@ Everything in **147.1 – 154.3 dp** scores 46/46; `BAR_MAX_DP = 150` is the
 middle. A fixed max length in dp is also simply how an Android widget gets
 written, so this is the mundane answer rather than a clever one.
 
-Consequences: `scaleMetres`/`scaleLabel` no longer take a width — a label
+Consequences: `scaleMetres`/`scaleLabel` no longer take a width, a label
 depends on **latitude and density**, not on how wide the widget is. The `wpx`
 parameter therefore had no consumer left and is replaced by `dpr` (0 = use this
 device's own). And the `step` field no longer tells pilots to pair by label: the
@@ -415,24 +415,24 @@ launcher shows the dpr-3 list, says so, and asks them to match **bar length**.
 #### Consequence: the configurator had to stop shipping ladder steps
 
 Confirmed on device once the density correction landed: the two scale bars now
-line up. What remained wrong was the *launcher* — `step=25` is 8km on a Pixel 8
+line up. What remained wrong was the *launcher*, `step=25` is 8km on a Pixel 8
 Pro and 6km on a Pixel 9a, so a configurator running on a laptop was picking a
 step for a screen it had never seen.
 
-A ladder step is not a scale. So the pilot now picks a **ground scale in metres**
-— device-independent — and `WG.resolveStep()` turns it into a step on the device,
+A ladder step is not a scale. So the pilot now picks a **ground scale in metres**,
+device-independent, and `WG.resolveStep()` turns it into a step on the device,
 at the real density and the real latitude, nearest in log space because the
 ladder is multiplicative.
 
 Not every scale exists on every screen: a Pixel 9a's ladder runs 6km, 10km with
 no 8km at all, so asking for 8km lands on 10km (10/8 is a smaller factor than
 8/6) and the overlay's own bar says so. The invariant that is tested: **whenever
-a device can print the requested scale, it is what the pilot gets** — 
+a device can print the requested scale, it is what the pilot gets** , 
 checked across both devices' full label lists.
 
 Then the same bug's other half: resolving on the device is no use if the pilot
 cannot *express* the scale. Built from the reference phone's ladder the list had
-no **6km** at all — which a Pixel 9a prints — so that pilot could not choose what
+no **6km** at all. Which a Pixel 9a prints, so that pilot could not choose what
 their own screen was showing. The two failure modes are not symmetric: an option
 this phone cannot reach costs nothing, because nobody picks a number their screen
 never shows, but a scale that IS on their screen and missing from the list cannot
@@ -441,7 +441,7 @@ plausibly has** (`WG.scaleOptions`), 38 entries, generated from the ladder rathe
 than hand-written so it cannot drift from it. Tested: nothing either measured
 device prints is missing.
 
-`step` survives as an explicit override, hidden from the UI by a new marker —
+`step` survives as an explicit override, hidden from the UI by a new marker ,
 `adv:true` at the time, renamed `hidden:true` on 2026-08-11 when a genuine
 Advanced accordion arrived and the two senses of "advanced" collided.
 `ui:false` would have been wrong either way: it also strips the parameter from
@@ -449,7 +449,7 @@ every URL the launcher builds.
 
 **Setting `scale` clears `step`.** The step row is hidden, so a pilot arriving
 from an old `?step=NN` link could pick a new scale, watch the select change, and
-get a URL carrying both — with the pinned step winning and nothing on screen
+get a URL carrying both. With the pinned step winning and nothing on screen
 explaining why the overlay ignored them. Done in `setConfig1`, not in the UI, so
 it holds for any caller. A URL that *only* pins a step still works untouched,
 which is the entire reason the parameter still exists.
@@ -457,7 +457,7 @@ which is the entire reason the parameter still exists.
 Two traps worth recording, both from the same round:
 
 - The scale `<select>` originally walked `sp.min..sp.max`, which for a
-  metres-valued field is 100..2,000,000 — two million iterations producing an
+  metres-valued field is 100..2,000,000, two million iterations producing an
   empty list. It walks the ladder now, via `XCT_STEP_MIN/MAX`. **The headless
   screenshot caught it; every unit test was green.**
 - The first version of the fix added its own `STEP_MIN`/`STEP_MAX` beside the
@@ -472,11 +472,11 @@ screenshot away from settled.
 
 ---
 
-### 2026-08-11 — configurator was labelling at the equator; pair by BARS not labels
+### 2026-08-11: configurator was labelling at the equator; pair by BARS not labels
 
 **A real defect, and it sent the owner to the wrong map scale.** `wg/fields.js`
-called `scaleLabel(step, null, wpx)`. The guard was `lat === undefined ? 47 : lat`
-— and `null` is not `undefined`, so `null` reached `Math.cos`, which returns 1.
+called `scaleLabel(step, null, wpx)`. The guard was `lat === undefined ? 47 : lat`,
+and `null` is not `undefined`, so `null` reached `Math.cos`, which returns 1.
 Every label in the configurator was computed at the **equator**, one whole step
 off:
 
@@ -487,7 +487,7 @@ off:
 | 25 | 10km | 8km |
 
 The owner asked for `15km`, got `step=24`, set their map to 15 km, and the widget
-drew step 24 — which it correctly calls 10 km. Two different scales. Fixed, with
+drew step 24, which it correctly calls 10 km. Two different scales. Fixed, with
 tests for `null`, `undefined` and `NaN`.
 
 #### The design lesson is bigger than the bug
@@ -499,7 +499,7 @@ and the launcher no longer asks pilots to:
 > Set the map roughly, then **fine-tune until the two scale bars are the same
 > length**. Match the bars, not the labels.
 
-The bar lengths are the invariant — that is the whole reason the bar exists.
+The bar lengths are the invariant: that is the whole reason the bar exists.
 
 #### What the same screenshot says about density
 
@@ -514,11 +514,11 @@ Against our ladder at that latitude:
 
 | XCTrack step | model A | model B (× dpr ratio) |
 |---|---|---|
-| 22 | 158.6 — 19% off | **138.7 — 4% off** |
-| 23 | 112.1 — 16% off | 98.1 — 27% off |
+| 22 | 158.6, 19% off | **138.7, 4% off** |
+| 23 | 112.1, 16% off | 98.1, 27% off |
 
 Step 22 under model B is the only close fit. **Suggestive that the owner is right
-about density** — but which step the map actually landed on is unknown, because it
+about density**. But which step the map actually landed on is unknown, because it
 was set from a buggy label. Not proof, and not acted on.
 
 #### The controlled experiment is already available
@@ -530,18 +530,18 @@ comparing two different devices: same screen, same XCTrack, one variable.
 2. Change the device density. Repeat without touching anything else.
 
 If `cal` moves by the DPR ratio, XCTrack works in device pixels and the correction
-is `3 ÷ devicePixelRatio` — computable, with no per-device setting ever. If `cal`
+is `3 ÷ devicePixelRatio`, computable, with no per-device setting ever. If `cal`
 does not move, resolution is density-independent and the residual is something
 else.
 
 ---
 
-### 2026-08-11 — the label list belongs to the SCREEN, not to the ladder
+### 2026-08-11: the label list belongs to the SCREEN, not to the ladder
 
 **Verdict: the √2 ladder was right all along. A correction made earlier today was
 wrong and has been reverted.** The printed scale labels are produced by XCTrack's
 scale bar, which shows the largest "nice" number that fits a maximum width of
-about **0.325 × the widget width** — so two devices print different lists for
+about **0.325 × the widget width**, so two devices print different lists for
 identical resolutions.
 
 #### How the mistake happened, because it is the instructive part
@@ -549,7 +549,7 @@ identical resolutions.
 The owner reported our scale bar short at `10km`. Working from their phone's label
 list, the ratios between consecutive labels were 1.25 and 1.6 rather than √2, so
 the ladder was "corrected" to alternate. That model reproduced the phone's 23
-labels — **because it had been fitted to them** — and the three measured
+labels. **because it had been fitted to them**, and the three measured
 calibration points, which are two steps apart and therefore doubling under either
 model.
 
@@ -569,7 +569,7 @@ is now a test.
 
 The mistake was fitting a model to the one dataset that could not falsify it. The
 label list *looked* like evidence about the ladder and was actually evidence about
-the scale bar — downstream of the thing being measured.
+the scale bar, downstream of the thing being measured.
 
 #### What this changes
 
@@ -578,11 +578,11 @@ the scale bar — downstream of the thing being measured.
   what XCTrack will print, from the widget's own width and the live latitude. The
   overlay uses its real width, so it names the scale the pilot's own device names.
 - `wpx` lets the launcher's dropdown match a target device, defaulting to 448.
-- `XCTrack` prints km only for whole thousands — `1km`, `2km`, but `1200m` and
+- `XCTrack` prints km only for whole thousands, `1km`, `2km`, but `1200m` and
   `2500m`. Cosmetic, but a mismatched label sends the pilot hunting for something
   their device never shows.
 
-#### Can it be pixel density? Probably — and the labels can never tell us
+#### Can it be pixel density? Probably: and the labels can never tell us
 
 Owner's question, and it exposes that the "0.325 × widget width" conclusion above
 is **also underdetermined**. Two models fit every label on both devices:
@@ -598,7 +598,7 @@ pixel under model A              128.7 .. 136.4
 pixel under model B              147.0 .. 155.9   <- overlaps the phone's range
 ```
 
-**The label lists constrain only the PRODUCT** — bar width × resolution — and never
+**The label lists constrain only the PRODUCT**: bar width × resolution, and never
 either factor alone. So they cannot distinguish A from B, and the labels come out
 right under both. That is why `scaleLabel()` is safe either way.
 
@@ -612,7 +612,7 @@ The **resolution** is not safe either way, and that is what places the markers.
 | model B | 128.6 px | 147.0 px | **+14.3%** |
 | measured off the crop | | | about **+8%** |
 
-Leaning B, i.e. the owner is probably right that it is density — but +8% eyeballed
+Leaning B, i.e. the owner is probably right that it is density, but +8% eyeballed
 off a cropped JPEG is exactly the evidence that produced the wrong ladder, so it
 settles nothing.
 
@@ -625,10 +625,10 @@ model A  ->  zEff 10.914      model B  ->  zEff 11.106
 ```
 
 If it lands on B, the correction is `3 / devicePixelRatio` and can be **computed**
-rather than configured — no per-device setting at all. Until then `cal` exists as
+rather than configured, no per-device setting at all. Until then `cal` exists as
 a manual multiplier, defaulting to 1.
 
-### 2026-08-11 — `${lat}` answers before a GPS fix; `getLocation()` does not
+### 2026-08-11: `${lat}` answers before a GPS fix; `getLocation()` does not
 
 **Verdict: every widget URL must carry `?lat=${lat}&lng=${lng}`.** Owner noticed it
 across two widgets running side by side: the one with the placeholders drew the
@@ -639,7 +639,7 @@ The two sources are not equivalent before a lock:
 
 | Source | With no GPS fix |
 |---|---|
-| `XCTrack.getLocation()` | returns the string `"null"` — nothing usable |
+| `XCTrack.getLocation()` | returns the string `"null"`, nothing usable |
 | `${lat}` / `${lng}` | filled with XCTrack's **last known position** |
 
 That is the same position XCTrack's own map is centred on, so an overlay using it
@@ -647,7 +647,7 @@ is consistent with what the pilot is looking at. And it is safe by the rule
 already recorded: remembering a *position* costs nothing because terrain does not
 move, unlike remembering a *reading*.
 
-The chain already preferred the URL when `getLocation()` returned `"null"` — the
+The chain already preferred the URL when `getLocation()` returned `"null"`, the
 gap was that `buildUrl()` never emitted the placeholders, so a URL copied from the
 launcher had no fallback at all. Fixed.
 
@@ -655,17 +655,17 @@ launcher had no fallback at all. Fixed.
 XCTrack looking for a literal it can no longer find, and the widget would lose the
 fallback silently. An unsubstituted token still parses to `NaN` and is ignored, so
 a browser opening the same URL falls through to geolocation rather than rendering
-a wrong position — `hx-call` measured that trap and it is covered by tests.
+a wrong position. `hx-call` measured that trap and it is covered by tests.
 
 **Not a reload risk at refresh rate 0.** The periodic page reload `hx-call`
 documents is the *refresh rate* doing its job; with it set to 0 the substitution
 happens once at load, which is all a bootstrap needs. Worth confirming on device
-that a placeholder URL at refresh 0 really never reloads — if it did, the canvas
+that a placeholder URL at refresh 0 really never reloads, if it did, the canvas
 would be discarded periodically.
 
 ---
 
-### 2026-08-11 — station history exists, is CORS-open, and is tiny
+### 2026-08-11: station history exists, is CORS-open, and is tiny
 
 **Verdict: the detail popup is buildable.** winds.mobi exposes per-station history
 and it costs almost nothing, so a tap-for-trend feature needs no new provider and
@@ -681,7 +681,7 @@ GET https://winds.mobi/api/2/stations/{id}/historic/?duration=7200&keys=_id&keys
 | `meteoswiss-DIS` | 10 | **548** | 600 s, some 1200 s gaps |
 | `holfuy-1636` | 17 | **966** | 360–480 s |
 
-Returns a plain array, **newest first** — `normaliseHistoric()` reverses it so
+Returns a plain array, **newest first**, `normaliseHistoric()` reverses it so
 every caller gets oldest-first for a left-to-right trend, rather than each having
 to remember.
 
@@ -690,14 +690,14 @@ action; prefetching history for every marker would be one call per station for
 data nobody asked to see, which is exactly what winds.mobi's "do not overload"
 rule forbids.
 
-The trend is purely descriptive — the same measured values, over time — so it
+The trend is purely descriptive: the same measured values, over time, so it
 breaks no rule, and it answers the one question a single reading cannot: is this
 building or easing? A live example from the first run at Sattel showed
 `21/33` at 23:20 falling to `5/11` by 23:40, which no snapshot would reveal.
 
 ---
 
-### 2026-08-11 — overlay verified on device, and the scale bars agree
+### 2026-08-11: overlay verified on device, and the scale bars agree
 
 **Verdict:** `widget.html` renders correctly in XCTrack. The last unverified piece
 of Phase 3b is closed, and the scale bar did the job it was built for on its first
@@ -705,7 +705,7 @@ run.
 
 Owner's screenshot, XC map deliberately left empty so the bars stand out:
 
-- **Markers render as designed** — halo, gust rim, average fill, and the
+- **Markers render as designed**: halo, gust rim, average fill, and the
   `avg/gust` pair below each arrow with its white casing. Legible against a black
   map. 12 shown, well spaced by the collision declutter.
 - Badge top-left reads `8km N↑ 12`.
@@ -726,18 +726,18 @@ map, exactly as the overlap-only conflict predicted.
 1. A marker was drawn across both scale bars. A marker over the bar removes the
    check the bar exists for, so the bar and the badge are now keep-out
    rectangles that the declutter avoids.
-2. Owner: "the target area is unobtrusive but very small." The reset — tapping
-   the badge — was a ~110×20 px target. When the scale is offset, resetting *is*
+2. Owner: "the target area is unobtrusive but very small." The reset, tapping
+   the badge, was a ~110×20 px target. When the scale is offset, resetting *is*
    the task, so the badge now becomes a full-width, thumb-sized amber bar for
    exactly as long as it is relevant, and returns to a compact label afterwards.
 
 ---
 
-### 2026-08-11 — tap pass-through: NO. Zoom sync is not possible.
+### 2026-08-11: tap pass-through: NO. Zoom sync is not possible.
 
 **Verdict: Phase 3c is dead.** A tap over the web widget never reaches an
 XCTrack widget underneath it, in any mode or layer order. The widget and the
-zoom buttons are strictly exclusive — one of them gets the tap, never both — so
+zoom buttons are strictly exclusive, one of them gets the tap, never both, so
 there is no way for the overlay to learn that the map zoomed. Built and removed
 the same day; `tools/tap.html` is kept as the evidence and as the way to re-test
 a future XCTrack build.
@@ -778,12 +778,12 @@ IN/touchstart = 2   OUT/touchstart = 2
 | Configuration | Web widget | Map / zoom buttons |
 |---|---|---|
 | `listen`, tapping ON | full chain: pointerdown, touchstart, touchend, mousedown, click | **no zoom** |
-| `prevent`, tapping ON | pointerdown, touchstart, touchend (no mousedown/click — `preventDefault` suppressed the synthetic mouse events, so the control worked) | **no zoom** |
+| `prevent`, tapping ON | pointerdown, touchstart, touchend (no mousedown/click. `preventDefault` suppressed the synthetic mouse events, so the control worked) | **no zoom** |
 | `pe-none`, tapping ON | **nothing** | **no zoom** |
 | tapping OFF, widget foreground | still intercepts; hold-to-reload fires | **no zoom** |
 | tapping OFF, widget **background** | nothing | **zoom buttons work** |
 
-Layer order makes **no difference while tapping is on** — the owner moved the
+Layer order makes **no difference while tapping is on**, the owner moved the
 buttons between foreground and background and the widget intercepted either way.
 
 **`pe-none` is the informative failure.** With `pointer-events: none` the web
@@ -794,7 +794,7 @@ plausible route.
 
 #### The consequence that matters for the shipped widget
 
-Not the dead feature — this one:
+Not the dead feature: this one:
 
 > **With "Allow tapping on the web page when locked" ON, the overlay swallows
 > every tap over its area, so the pilot's own zoom buttons stop working there.**
@@ -812,13 +812,13 @@ the markers.
 
 ---
 
-### 2026-08-10 — provider research: winds.mobi, and the XCTrack widget API
+### 2026-08-10: provider research: winds.mobi, and the XCTrack widget API
 
 **Verdict:** changes Phase 2's data source and closes open decision 4. Also
 answers the `getLocation()` question from the desk, so no second probe run is
 needed for it.
 
-#### winds.mobi — one CORS-open API for 13 station networks
+#### winds.mobi: one CORS-open API for 13 station networks
 
 Found by following what Windspion actually uses: it is a front end for
 **winds.mobi**, not a direct provider integration.
@@ -890,7 +890,7 @@ any notice." Contact is Yann, `info@winds.mobi`.
 
 **Rule 1 cannot be satisfied from a browser.** `User-Agent` is a forbidden header
 name in the Fetch spec, so `fetch()` silently drops any attempt to set it. Rules
-2 and 3 we meet trivially. This needs an email to Yann rather than a workaround —
+2 and 3 we meet trivially. This needs an email to Yann rather than a workaround ,
 the automatic `Origin: https://elgandoz.github.io` header does identify the
 deployment, and proposing that is the obvious ask. **Deferred by the owner** until
 overall feasibility is established; the API works without it in the meantime.
@@ -901,15 +901,15 @@ Every efficiency lever the owner asked for is a server-side parameter:
 
 | Parameter | Use |
 |---|---|
-| `within-pt1-lat/lon`, `within-pt2-lat/lon` | **bounding box** — visible area plus margin |
+| `within-pt1-lat/lon`, `within-pt2-lat/lon` | **bounding box**, visible area plus margin |
 | `near-lat`, `near-lon`, `near-distance` | radius alternative, distance in metres |
 | `last-measure` | **staleness filter, server-side.** Seconds, or an absolute datetime |
-| `keys` | select returned fields — the default set includes temp/hum/rain/pres we never use |
+| `keys` | select returned fields, the default set includes temp/hum/rain/pres we never use |
 | `is-highest-duplicates-rating` | **dedupes co-located stations** |
 | `is-peak`, `status`, `provider`, `ids`, `search` | further filters |
 | `limit` | default 20, **max 500** |
 
-Geometry for a widget at OSM z11 — the scale that pairs with XCTrack's "6 km" —
+Geometry for a widget at OSM z11: the scale that pairs with XCTrack's "6 km" ,
 using the 448×978 CSS px viewport the probe measured, at 47.04°N:
 
 ```
@@ -937,7 +937,7 @@ GET https://winds.mobi/api/2/stations/
 | + `last-measure=1800` | 73 | 18,178 |
 | + `is-highest-duplicates-rating` | 72 | **17,934** |
 
-**One call, ~18 KB, 72 stations, six networks** — 27 SLF, 20 MeteoSwiss, 14
+**One call, ~18 KB, 72 stations, six networks**: 27 SLF, 20 MeteoSwiss, 14
 Holfuy, 7 OpenWindMap, 3 aviationweather, 1 Windline. 49 of the 72 are
 `peak: true`; altitudes span 418–3187 m. Against MeteoSwiss-direct's 190 KB
 single-network file that is a tenfold reduction for six times the coverage, and
@@ -953,7 +953,7 @@ A record at that key set:
  "last":{"_id":1786371600,"w-dir":192,"w-avg":4.3,"w-max":11.9}}
 ```
 
-**Gotcha:** `keys` must be **repeated parameters**, not comma-separated — the
+**Gotcha:** `keys` must be **repeated parameters**, not comma-separated, the
 comma form returns a validation error. Valid values: `pv-id`, `pv-code`,
 `pv-name`, `short`, `name`, `alt`, `peak`, `status`, `tz`, `loc`, `url`, and
 `last.` prefixed `_id`, `w-dir`, `w-avg`, `w-max`, `temp`, `hum`, `rain`, `pres`.
@@ -965,7 +965,7 @@ forces a refetch long before movement does. One call per ~10 minutes serves both
 the display and winds.mobi's "do not overload" rule. The margin is a *cache*
 radius, not a display radius.
 
-#### XCTrack's documented JS interface — altitude answered from the desk
+#### XCTrack's documented JS interface: altitude answered from the desk
 
 `https://xctrack.org/JavaScriptInterface.html` documents `getLocation()` as
 returning a JSON *string* with:
@@ -977,7 +977,7 @@ bearingGps, heading, airspeed
 ```
 
 So the answer to the Phase 0 altitude question is **`altGps`** and
-**`stdBaroAlt`** — no second probe run required. It also confirms the probe's
+**`stdBaroAlt`**: no second probe run required. It also confirms the probe's
 `"null"` result was the documented no-fix return value, and that `getLocation` is
 the only method, matching what the probe enumerated.
 
@@ -996,7 +996,7 @@ Two traps worth writing down:
 #### Widget URL placeholders, and the zoom gap
 
 XCTrack substitutes **`${lat}`** and **`${lng}`** into a Web page widget's URL.
-Zoom is *not* exposed — it must be hardcoded. Two open requests:
+Zoom is *not* exposed, it must be hardcoded. Two open requests:
 
 | Issue | Title | Opened | State |
 |---|---|---|---|
@@ -1010,8 +1010,8 @@ The pattern nevertheless works today with a hardcoded zoom. #1235's author
 writes: "I embed spotair in a widget, and I overlay on top of this widget a
 transparent XC map in order to visualize my track over spotair", using
 `https://www.spotair.mobi/widget/map?lat=${lat}&lng=${lng}&zoom=11&layers=wind,radarmf`.
-XCMaps wants the same thing from the other side — "add XCMaps with transparent
-Base Map as web widget over the XCTrack map" — and is blocked on the same gap.
+XCMaps wants the same thing from the other side, "add XCMaps with transparent
+Base Map as web widget over the XCTrack map", and is blocked on the same gap.
 
 #### XCTrack's map scale ↔ OSM zoom, and it aligns *exactly*
 
@@ -1054,7 +1054,7 @@ z12 → 27.48 (27.47).
 
 **One ladder step is √2 in scale.** That is why 5 km and 10 km never aligned: they
 are steps 26 and 24, exactly half a zoom level off the integers. And because our
-projector takes a fractional zoom, half-steps are not a special case — step 24
+projector takes a fractional zoom, half-steps are not a special case, step 24
 renders at z 10.5, 77.73 m/px. `WG.zoomForStep`, `WG.stepForZoom` and
 `WG.XCT_LADDER` implement this, with tests.
 
@@ -1066,11 +1066,11 @@ Owner's build, steps 12–34 ascending in resolution:
 28 2500m  29 2km    30 1200m  31 1km    32 600m   33 500m   34 300m
 ```
 
-The **labels are build-specific** — chmd's XCTrack printed different ones for the
-same steps — so the label map is cosmetic and the step numbers plus the formula are
+The **labels are build-specific**, chmd's XCTrack printed different ones for the
+same steps. So the label map is cosmetic and the step numbers plus the formula are
 the durable part.
 
-**The labels are build-specific — chmd's do not exist in the owner's XCTrack.**
+**The labels are build-specific. Chmd's do not exist in the owner's XCTrack.**
 Reported 2026-08-10: the zoom slider offers 23 values, none of which are 6 km or
 12 km:
 
@@ -1104,10 +1104,10 @@ against chmd's eleven OSM-aligned steps gives a consistent ~1.25× relabel:
 600 km) sits half a zoom level away and cannot land on an integer OSM zoom, however
 round those numbers look.
 
-### 2026-08-10 — overlay registration MEASURED: XCTrack is not on integer OSM zooms
+### 2026-08-10: overlay registration MEASURED: XCTrack is not on integer OSM zooms
 
 **Verdict: Phase 3b is viable.** The overlay registers against XCTrack's own map,
-but only with a constant scale correction — the scale ladder is *not* on integer
+but only with a constant scale correction, the scale ladder is *not* on integer
 OSM zoom levels, so chmd's table cannot be used as-is.
 
 Measured with `tools/registration.html` stacked on an XCTrack map widget set to
@@ -1140,10 +1140,10 @@ resembles. The label is a setting name, not a resolution, and it is **not** a
 power-of-two OSM step. My earlier ~1.25×-relabel table got the *pairing* right
 (8 km ↔ z11, not z10 or z12) but the *scale* wrong.
 
-No principled derivation was found for 0.942 — it is empirical. It is close to
+No principled derivation was found for 0.942, it is empirical. It is close to
 2√2⁄3 = 0.9428, which is almost certainly numerology; do not build on that.
 
-#### Confirmed at three ladder steps — one constant covers everything
+#### Confirmed at three ladder steps: one constant covers everything
 
 Owner re-ran at 15 km and 4 km without touching the multiplier. "They hold
 perfectly."
@@ -1163,7 +1163,7 @@ second is the one that matters:
    labels are cosmetic; the underlying resolution ladder doubles cleanly.
 2. **XCTrack's scale is a *resolution*, not a fit-to-widget ground distance.** A
    fit-to-widget model with those labels would have produced the 0.907 spacing.
-   It did not — so the setting means metres per pixel, and the correct zoom does
+   It did not: so the setting means metres per pixel, and the correct zoom does
    **not** depend on widget size. This was the biggest remaining structural risk
    and it is now closed by inference from the spacing alone.
 
@@ -1196,7 +1196,7 @@ The same readout closes it. Both fields are present and populated:
 altGps = 536.8      stdBaroAlt = 504.7      hdg = 116.2      brgGps = 162.4
 ```
 
-`altGps` and `stdBaroAlt` differ by **32.1 m** — which is the QNH deviation from
+`altGps` and `stdBaroAlt` differ by **32.1 m**, which is the QNH deviation from
 the 1013.25 hPa standard, exactly the trap recorded earlier. Confirmation that
 `stdBaroAlt` must never be compared against a station's altitude. `heading` and
 `bearingGps` are both live, so a track-up rotation or a radar orientation has the
@@ -1241,9 +1241,9 @@ Two further details from the same comments:
 Other sites already built for this pattern, useful as prior art:
 `spotair.mobi`, `thermik.pumpt.net`, `meteo-parapente.com`, `puretrack.io`.
 
-### 2026-08-10 — XCTrack on Android 17 (Build/CP41.260717.006)
+### 2026-08-10: XCTrack on Android 17 (Build/CP41.260717.006)
 
-**Verdict: the Phase 0 gate is CLEARED — Phase 1 can start.** Every question in
+**Verdict: the Phase 0 gate is CLEARED, Phase 1 can start.** Every question in
 `plan.md`'s feasibility table now has an answer. WebGL is absent, so Canvas is
 settled. The 10 MB blob survives a full app restart, so the offline design holds.
 Quota is ~10 GB. Service Worker, Cache Storage and IndexedDB are all present.
@@ -1253,7 +1253,7 @@ MeteoSwiss serves CORS headers, so no proxy and no backend. Byte ranges return
 What is left is not gating: `persist()` was never tapped (hardening, not a
 precondition), `getLocation()`'s payload shape is unknown but was downgraded out
 of the critical path, and byte ranges against a real `.pmtiles` cannot be tested
-until a pack exists — a Phase 3 risk with a known fallback.
+until a pack exists, a Phase 3 risk with a known fallback.
 
 ```json
 {
@@ -1294,15 +1294,15 @@ until a pack exists — a Phase 3 risk with a known fallback.
 ```
 
 Notes:
-- altitude field name: **UNANSWERED** — `getLocation()` returned `"null"`
-- blob survived restart: **UNANSWERED** — 20 s elapsed, not a restart
+- altitude field name: **UNANSWERED**, `getLocation()` returned `"null"`
+- blob survived restart: **UNANSWERED**, 20 s elapsed, not a restart
 - quota: 10250.1 MB (~10 GB), `persist()` **never requested**
 - CORS: MeteoSwiss 200 with no proxy. Holfuy blocked in-WebView.
 
 #### Settled: no WebGL. Canvas is mandatory, not preferred.
 
 `webgl: false` on Android 17 with a current WebView and 8 GB of RAM. This is
-not an old-device artifact — WebGL is simply not exposed to XCTrack's WebView.
+not an old-device artifact. WebGL is simply not exposed to XCTrack's WebView.
 
 That removes the conditional from `AGENTS.md` ("unless the probe shows WebGL is
 solid") and from `handover.md` ("revisit only if the probe shows WebGL is
@@ -1313,7 +1313,7 @@ Supporting: `canvas2d: true`, `OffscreenCanvas: true`, `webp: true`. WebP means
 the hillshade raster can ship as WebP rather than PNG. OffscreenCanvas means
 tile rasterisation can move off the main thread if it ever needs to.
 
-`screen: 448x978 @3` — device pixel ratio 3, i.e. 1344×2934 physical. Rendering
+`screen: 448x978 @3`: device pixel ratio 3, i.e. 1344×2934 physical. Rendering
 the map at full DPR is ~9× the fill rate of DPR 1 for no legibility gain at
 100 m/px. Cap the canvas backing store at DPR 1–2.
 
@@ -1321,7 +1321,7 @@ the map at full DPR is ~9× the fill rate of DPR 1 for no legibility gain at
 
 200 in 284 ms for the gust endpoint, 298 ms for STAC. Static hosting holds; no
 backend needed. Holfuy is `BLOCKED (Failed to fetch)` from the WebView, matching
-the missing `access-control-allow-origin` seen from curl — so Holfuy is two
+the missing `access-control-allow-origin` seen from curl, so Holfuy is two
 gates, permission **and** a proxy.
 
 #### Settled: storage is abundant and the pack ceiling is a hosting limit.
@@ -1331,7 +1331,7 @@ present; `secureContext: true`. Quota ~10 GB against a ~50 MB pack.
 
 So the "~50 MB per pack" rule in `AGENTS.md` is purely a git/GitHub-Pages
 constraint, never a device one. If packs move to R2, that ceiling lifts and the
-region split can be reconsidered — the device does not care.
+region split can be reconsidered, the device does not care.
 
 #### The 206 result is real but tests the wrong representation.
 
@@ -1353,7 +1353,7 @@ always offers gzip and gets the compressed one.
 
 Why this matters more than the 206: PMTiles computes absolute byte offsets from
 its own directory. Offsets into a gzipped stream are meaningless. And a browser
-**cannot** opt out — `Accept-Encoding` is a forbidden header name in `fetch()`,
+**cannot** opt out. `Accept-Encoding` is a forbidden header name in `fetch()`,
 so the identity workaround that works in curl is unavailable in the client.
 
 This origin does compress `application/octet-stream`:
@@ -1364,7 +1364,7 @@ This origin does compress `application/octet-stream`:
 /.nojekyll   (   0 B)  application/octet-stream  416, content-range */0
 ```
 
-So compression here tracks a size threshold, not the content type — `.gitignore`
+So compression here tracks a size threshold, not the content type, `.gitignore`
 escaped only by being under it. Whether Fastly's on-the-fly gzip has an upper
 size cap that a tens-of-MB `.pmtiles` would exceed is **not established**, and
 it is now the one remaining PMTiles unknown.
@@ -1379,12 +1379,12 @@ curl -s -D- -o /dev/null -r 0-99 \
 ```
 
 Pass = 206, **no** `content-encoding`, and a `content-range` total equal to the
-file's real byte size. Anything else and the packs go to R2 — which is why
+file's real byte size. Anything else and the packs go to R2, which is why
 Phase 3's manifest already holds absolute pack URLs.
 
 #### Settled: the 10 MB blob survives a full XCTrack restart.
 
-**Owner-confirmed** — the JSON above was copied out of XCTrack *after* force-
+**Owner-confirmed**: the JSON above was copied out of XCTrack *after* force-
 closing and reopening the app, and `test blob present: true` with
 `test blob written: 2026-08-10T10:34:58.661Z` is the pre-restart blob being read
 back.
@@ -1407,9 +1407,9 @@ Two things worth drawing out:
   real storage pressure, so check quota and call `persist()` before downloading,
   as Phase 3 already specifies.
 
-#### Still open — nothing that gates Phase 1.
+#### Still open: nothing that gates Phase 1.
 
-1. **`getLocation()`'s payload shape — no longer a blocker.** It returned the
+1. **`getLocation()`'s payload shape, no longer a blocker.** It returned the
    string `"null"`, so `JSON.parse` yielded `null` and `Object.keys(null)` threw
    the reported `Cannot convert undefined or null to object`. That is XCTrack
    saying *no GPS fix*, not a broken bridge. Field names for latitude, longitude
@@ -1417,15 +1417,15 @@ Two things worth drawing out:
 
    **Downgraded the same day.** The owner has ruled that relative altitude is
    not important and that the map must render even with no position at all. So
-   this no longer gates anything — it is now just an unknown to resolve
+   this no longer gates anything, it is now just an unknown to resolve
    opportunistically on the next run with a fix. `plan.md`'s old "no altitude,
    no feature" is withdrawn.
 
    Useful anyway: the bridge *does* enumerate, and exposes exactly one
-   function — `getLocation`. There is no separate altitude accessor, so if
+   function, `getLocation`. There is no separate altitude accessor, so if
    altitude exists it is a field in that payload.
 
-2. **`persist()` — not requested, and no longer a gate.** `persisted (already):
+2. **`persist()`, not requested, and no longer a gate.** `persisted (already):
    false`, and neither `persist() granted` nor `persist()` appears in the JSON,
    so the button was not tapped (or the JSON was copied before the promise
    resolved). Worth doing, but see the blob result below: eviction did not bite
@@ -1443,10 +1443,10 @@ closes.
 
 - **The user-agent is sliced at exactly 110 characters**, which lands precisely
   at the end of `Version/4.0 ` and cuts the `Chrome/xxx.x.x.x Mobile Safari`
-  token — the one field that determines which JS and CSS features are safe. The
+  token. The one field that determines which JS and CSS features are safe. The
   slice needs to be ~180.
 - **A null fix reports as a type error.** `"Cannot convert undefined or null to
-  object"` reads like a probe bug. It should say "no GPS fix — go outside and
+  object"` reads like a probe bug. It should say "no GPS fix, go outside and
   re-run", because that ambiguity is what left question 1 open.
 - **The two manual tests can be silently skipped.** `persist()` and the restart
   check need button taps, and a run that omits them looks complete in the JSON
@@ -1457,21 +1457,21 @@ closes.
 
 ---
 
-### 2026-08-10 — laptop / curl (NOT a WebView run)
+### 2026-08-10: laptop / curl (NOT a WebView run)
 
 **Verdict:** settled CORS and the provider payload shape. Its byte-range
-conclusion was wrong — see the correction in the WebView entry above.
+conclusion was wrong. See the correction in the WebView entry above.
 
 These are `curl` results from macOS, not `probe.html` output.
 
-#### HTTP 206 / byte ranges — GitHub Pages
+#### HTTP 206 / byte ranges: GitHub Pages
 
 Origin: `https://elgandoz.github.io/windgrade/`
 
 > **Superseded 2026-08-13.** The repo moved to the `freeflight-tools` org and
 > was renamed, so the automatic `Origin` the API now sees is
-> `https://freeflight-tools.github.io`. The measurement above stands — the
-> header is still sent and still identifies the deployment — but this is the
+> `https://freeflight-tools.github.io`. The measurement above stands, the
+> header is still sent and still identifies the deployment, but this is the
 > value to quote to winds.mobi, and the one in the question posted to their
 > community. The old origin will never appear again.
 
@@ -1491,7 +1491,7 @@ client change.
 > against the identity representation. That was an artifact of curl sending no
 > `Accept-Encoding` at all. See the WebView entry above.
 
-#### CORS — providers
+#### CORS: providers
 
 ```
 200  acao: *      MeteoSwiss gust 10min   (190 KB, content-type binary/octet-stream)
@@ -1502,7 +1502,7 @@ client change.
 
 MeteoSwiss needs **no proxy**. Static hosting holds.
 
-#### MeteoSwiss payload shape — the 2020 gist URLs still resolve
+#### MeteoSwiss payload shape: the 2020 gist URLs still resolve
 
 155 features. Confirmed live, so the `handover.md` doubt is settled. Two
 endpoints are required, one per colour channel: `boeenspitze` (gust → border)

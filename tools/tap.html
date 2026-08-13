@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>XCTrack Windmap — tap pass-through probe</title>
+<title>XCTrack Windmap. Tap pass-through probe</title>
 <style>
 /* Unpainted body, like the real widget: XCTrack renders white or absent as
    transparent, which is the only way this can sit over a map. */
@@ -22,7 +22,7 @@ html,body{margin:0;padding:0;background:transparent;height:100%;overflow:hidden}
   background:rgba(10,17,22,.72);color:#E8F0F5;font-size:12px;font-weight:700}
 #zout .lab{top:auto;bottom:6px}
 .zone.hit{background:rgba(84,166,220,.28)}
-/* pointer-events:none mode — the zones stop being hit targets at all, which is
+/* pointer-events:none mode. The zones stop being hit targets at all, which is
    the case where a tap may reach XCTrack instead of us. */
 body.pe-none .zone{pointer-events:none;border-style:dotted}
 
@@ -44,8 +44,8 @@ body.pe-none .zone{pointer-events:none;border-style:dotted}
 </head>
 <body>
 
-<div class="zone" id="zin"><span class="lab">IN — tap here</span></div>
-<div class="zone" id="zout"><span class="lab">OUT — tap here</span></div>
+<div class="zone" id="zin"><span class="lab">IN. Tap here</span></div>
+<div class="zone" id="zout"><span class="lab">OUT. Tap here</span></div>
 
 <button id="tog" type="button">≡</button>
 
@@ -63,14 +63,14 @@ body.pe-none .zone{pointer-events:none;border-style:dotted}
 <script>
 "use strict";
 /* ══════════════════════════════════════════════════════════════════════
-   tools/tap.html — does a tap on a web widget ALSO reach a background
+   tools/tap.html. Does a tap on a web widget ALSO reach a background
    XCTrack widget?
 
    ANSWERED 2026-08-11: NO. Not in any mode, and not in either layer order.
    With tapping on, the WebView takes the whole event chain and XCTrack gets
    nothing. With pointer-events:none the page gets nothing AND XCTrack still
    gets nothing, so the WebView consumes the MotionEvent regardless of what the
-   page does — no CSS or JS trick can decline it. Only "tapping OFF + widget in
+   page does, no CSS or JS trick can decline it. Only "tapping OFF + widget in
    the background" lets the zoom buttons work, and then the page is blind.
 
    Zoom sync (Phase 3c) was removed on the strength of this. The file stays so a
@@ -100,7 +100,7 @@ body.pe-none .zone{pointer-events:none;border-style:dotted}
 
    MODES
      listen   normal hit targets, no preventDefault. The realistic case.
-     prevent  calls preventDefault on touchstart — should definitely block
+     prevent  calls preventDefault on touchstart. Should definitely block
               pass-through, so it is the control that proves the test works.
      pe-none  zones set to pointer-events:none, so web content never becomes
               a hit target. If the map zooms only here, that is the finding:
@@ -108,7 +108,7 @@ body.pe-none .zone{pointer-events:none;border-style:dotted}
               it can let XCTrack through.
 
    The log persists in localStorage, because a tap might make XCTrack reload
-   the widget and that would otherwise erase the evidence — a reload is itself
+   the widget and that would otherwise erase the evidence. A reload is itself
    logged, so it cannot be mistaken for a lost tap.
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -198,7 +198,7 @@ function paint(){
     "XCTrack: " + xct + "\n" +
     "viewport: " + window.innerWidth + "x" + window.innerHeight +
     "  dpr" + (window.devicePixelRatio || 1) + "\n\n" +
-    "COUNTS — compare against how many times the map actually zoomed\n" +
+    "COUNTS. Compare against how many times the map actually zoomed\n" +
     counts() + "\n";
   el("log").textContent = state.log.join("\n");
 }
@@ -229,7 +229,7 @@ el("copy").addEventListener("click", function(){
     btn.firstChild.nodeValue = "copied";
     setTimeout(function(){ btn.firstChild.nodeValue = "copy"; }, 1500);
   };
-  /* clipboard works in XCTrack's WebView; window.prompt does not — hx-call
+  /* clipboard works in XCTrack's WebView; window.prompt does not, hx-call
      measured both. So there is no prompt fallback here on purpose. */
   if (navigator.clipboard && navigator.clipboard.writeText)
     navigator.clipboard.writeText(txt).then(done, function(){});

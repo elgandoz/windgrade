@@ -1,10 +1,10 @@
 /* ══════════════════════════════════════════════════════════════════════
-   wg/fields.js — settings controls, generated from WG.SPEC.
+   wg/fields.js, settings controls, generated from WG.SPEC.
 
    One renderer for every page that offers settings, so a new parameter
    needs no hand-written control anywhere and the launcher can never drift
-   from a settings sheet. Markup is deliberately plain — a .field row with a
-   <label>, a <small> hint and one input — and each page styles it.
+   from a settings sheet. Markup is deliberately plain, a .field row with a
+   <label>, a <small> hint and one input, and each page styles it.
 
    The only DOM-touching file besides the pages. core.js stays clean of the
    DOM, which is what keeps the engine testable in node.
@@ -12,7 +12,7 @@
      var f = WG.fields(el, {onChange: fn, skipWidgetOnly: true});
      f.reload();     // pull values back out of WG.getConfig(), e.g. after reset
 
-   Rows are skipped when SPEC says `ui:false` (URL-only, like lat/lng — the
+   Rows are skipped when SPEC says `ui:false` (URL-only, like lat/lng, the
    launcher has no business offering a position field), when `hidden:true`
    marks a parameter that keeps working in URLs but gets no control at all,
    and, optionally, when `only:"widget"` marks a parameter that means nothing
@@ -21,7 +21,7 @@
    LAYOUT: a row with no `grp` goes straight into the container. Everything
    else lands inside ONE collapsed <details>, under a heading per group, in
    SPEC order. Nineteen rows in a flat list is not a configurator, it is an
-   inventory — and the two that decide whether the overlay works at all
+   inventory. And the two that decide whether the overlay works at all
    (`scale`, `alt`) were the hardest to find in it. Groups are headings
    rather than nested accordions on purpose: a second click to reach
    "Scale bar height" buys nothing once the first one has already been paid.
@@ -57,7 +57,7 @@ function buildRow(sp, onInput) {
   var isLadder = (sp.t === "scale");
   var input, o, op;
   if (isLadder) {
-    /* Ground scales, not ladder steps — the value stored is METRES, so the
+    /* Ground scales, not ladder steps. The value stored is METRES, so the
        choice survives a move to a phone with a different pixel density and the
        overlay resolves it there.
 
@@ -67,7 +67,7 @@ function buildRow(sp, onInput) {
 
        Capped at WG.SCALE_OFFER_MAX. Wider than that and the provider's 500
        station limit turns the display into a thin arbitrary sample of half a
-       continent — measured, see scaleOptions() in core.js. A URL may still
+       continent, measured, see scaleOptions() in core.js. A URL may still
        ask for anything, which is what addExtra() below is for: a value with
        no option would leave the select EMPTY, and that bug shipped once. */
     input = document.createElement("select");
@@ -99,7 +99,7 @@ function buildRow(sp, onInput) {
   row.appendChild(input);
 
   /* A scale that arrived by URL and is not in the offered list still has to
-     select. Without this the control renders blank, which reads as broken —
+     select. Without this the control renders blank, which reads as broken,
      and did, once, for a different reason. Marked so it is clear the value
      came from outside the recommended range rather than being a normal
      choice; picking anything else drops it. */

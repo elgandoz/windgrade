@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   wg/qr.js — QR encoder for the launcher page.
+   wg/qr.js, QR encoder for the launcher page.
 
    Byte mode, error correction level M, versions 1-10 (up to 213 bytes).
    A configured widget URL is around 100, so the ceiling is never in sight.
@@ -8,7 +8,7 @@
    network call; a QR web service would also hand someone else the pilot's
    configuration just to draw a square. Neither is worth it for this.
 
-   Loaded only by index.html — widget.html and app.html never pay for it.
+   Loaded only by index.html: widget.html and app.html never pay for it.
    ES5, like every shipped file here; the original used const/let.
    Touches no DOM, in the spirit of core.js: WG.qr(text) hands back a
    square matrix of 0/1 and the page decides how to draw it.
@@ -281,8 +281,8 @@ function penalty(m){
 
   /* rule 3: the 1:1:3:1:1 finder signature preceded *or* followed by four
      light modules. Out of bounds counts as light, since the quiet zone is
-     — that is what catches the real finder patterns, which scanners do
-     confuse. Flanked on both sides is still one occurrence, not two.     */
+     light too. That is what catches the real finder patterns, which scanners
+     do confuse. Flanked on both sides is still one occurrence, not two.  */
   var core = [1,0,1,1,1,0,1];
   function scan(i, vertical){
     function at(t){

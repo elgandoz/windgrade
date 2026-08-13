@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Windmap — social preview card</title>
+<title>Windmap, social preview card</title>
 <!-- ══════════════════════════════════════════════════════════════════════
      Generates og-windmap.png, the 1200x630 image chat apps show when the
      link is pasted. Build-time only: nothing in the shipped pages loads
-     this, and it is deliberately NOT in sw.js's ASSETS — no individual
+     this, and it is deliberately NOT in sw.js's ASSETS. No individual
      tool is, and a scraper-only image has no business in an offline cache.
 
      Two commands, from the repo root, with a server already running:
@@ -15,7 +15,7 @@
 
        # 1. the screenshot, at the exact aspect the frame below expects.
        #    --window-size IS the crop: it captures the top of the page.
-       #    Do NOT crop afterwards with `sips -c` — that crops from the
+       #    Do NOT crop afterwards with `sips -c`: that crops from the
        #    CENTRE, which silently lops the header off and cost an hour.
        "$CH" --headless=new --virtual-time-budget=15000 \
              --window-size=560,668 --screenshot=tools/og-shot.png \
@@ -32,7 +32,7 @@
      2026-08-13: 28 of 56 stale at 34 min after the hour, 16 of 56 eight
      minutes later. Both are correct output; only one makes a good card.
      Holfuy runs ~6 min and is green almost always. On a genuinely calm
-     evening every arrow is near-white and the card looks washed out —
+     evening every arrow is near-white and the card looks washed out,
      that is correct output too. Regenerate on a day with some wind.
 
      `theme=light` is PINNED, not incidental. Without it the capture
@@ -89,7 +89,7 @@
     <div class="nm">XCTrack Windmap</div>
   </div>
   <h1>Wind stations on the terrain</h1>
-  <p>Speed, gust and direction for every station near you — drawn where they actually are.</p>
+  <p>Speed, gust and direction for every station near you, drawn where they actually are.</p>
   <div class="foot"><span></span>Free Flight Tools</div>
 </div>
 <div class="r">
