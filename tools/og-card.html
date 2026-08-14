@@ -9,37 +9,34 @@
      this, and it is deliberately NOT in sw.js's ASSETS. No individual
      tool is, and a scraper-only image has no business in an offline cache.
 
-     Two commands, from the repo root, with a server already running:
+     One command, from the repo root, with a server already running:
 
        CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-
-       # 1. the screenshot, at the exact aspect the frame below expects.
-       #    --window-size IS the crop: it captures the top of the page.
-       #    Do NOT crop afterwards with `sips -c`: that crops from the
-       #    CENTRE, which silently lops the header off and cost an hour.
-       "$CH" --headless=new --virtual-time-budget=15000 \
-             --window-size=560,668 --screenshot=tools/og-shot.png \
-             "http://localhost:8080/app.html?lat=46.02&lng=7.75&size=0&theme=light"
-
-       # 2. the card
        "$CH" --headless=new --virtual-time-budget=5000 \
              --window-size=1200,630 --screenshot=og-windmap.png \
              "http://localhost:8080/tools/og-card.html"
 
-     PICK YOUR MOMENT for step 1. MeteoSwiss and SLF stations report on a
-     ~30 min cadence against a `stale` default of 30, so for part of every
-     cycle a third of the list is legitimately red. Measured at Zermatt on
-     2026-08-13: 28 of 56 stale at 34 min after the hour, 16 of 56 eight
-     minutes later. Both are correct output; only one makes a good card.
-     Holfuy runs ~6 min and is green almost always. On a genuinely calm
-     evening every arrow is near-white and the card looks washed out,
-     that is correct output too. Regenerate on a day with some wind.
+     THE PHONE IS A DEVICE CAPTURE OF THE WIDGET IN FLIGHT, tools/og-phone.png,
+     taken on a real phone with XCTrack's own map underneath and kept with a
+     transparent surround. It replaced a headless capture of app.html on
+     2026-08-14. The list page was the wrong subject for a card: a column of
+     text rows is a grey smear at the size a chat client actually renders
+     this, while terrain with coloured arrows on it survives being shrunk,
+     and it is also the thing the tool exists to do. That is the test for
+     anything put here.
 
-     `theme=light` is PINNED, not incidental. Without it the capture
-     follows the laptop's appearance setting, so the same command
-     produced a light card in the afternoon and a dark one after macOS
-     switched at sunset. The card has a dark ground either way; a light
-     screenshot is what gives it contrast.
+     To replace it, take a fresh capture on a device and:
+
+       magick <capture>.png -trim +repage -resize 520x -strip tools/og-phone.png
+
+     Two things the old app.html capture had to worry about are gone with it:
+     picking a moment when the readings are not legitimately red (MeteoSwiss
+     and SLF report on a ~30 min cadence against a `stale` default of 30, so
+     for part of every cycle a third of the list is stale), and pinning
+     `theme=light` so the capture did not follow the laptop's appearance
+     setting. A device capture has neither problem. It does have its own:
+     whatever the phone showed is in it for good, so check the readings and
+     the map before committing one.
      ═══════════════════════════════════════════════════════════════════ -->
 <style>
   @page{margin:0}
@@ -59,14 +56,16 @@
     font:600 17px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#54A6DC;
   }
   .foot span{width:6px;height:6px;border-radius:50%;background:#54A6DC}
-  .r{width:466px;position:relative;display:flex;align-items:center;padding-right:62px}
-  /* height:auto with a source cropped to the same aspect. object-fit:cover
-     here scaled to fill and cropped the sides off instead. */
-  .r .shot{
-    width:100%;border-radius:16px;border:1px solid #2A3B48;overflow:hidden;
-    box-shadow:0 30px 70px -20px rgba(0,0,0,.9);position:relative;z-index:1;line-height:0;
-  }
-  .r .shot img{display:block;width:100%;height:auto}
+  .r{width:466px;position:relative;display:flex;align-items:flex-end;justify-content:center}
+  /* NO FRAME OF OURS: og-phone.png is a device capture that brings its own
+     frame and a transparent surround, so a border, a radius and
+     overflow:hidden would draw a second frame inside the first. drop-shadow
+     follows the real silhouette; box-shadow would shadow the bounding box.
+     It bleeds off the bottom on purpose, which is also what lets the phone
+     be large enough for the arrows to read at chat-preview size. */
+  .r .ph{width:300px;position:relative;z-index:1;line-height:0;margin-bottom:-84px;
+    filter:drop-shadow(0 26px 48px rgba(0,0,0,.85))}
+  .r .ph img{display:block;width:100%;height:auto}
   .glow{
     position:absolute;inset:auto -140px -180px -60px;height:460px;
     background:radial-gradient(closest-side,rgba(238,138,28,.22),transparent);
@@ -94,7 +93,7 @@
 </div>
 <div class="r">
   <div class="glow"></div>
-  <div class="shot"><img src="og-shot.png" alt=""></div>
+  <div class="ph"><img src="og-phone.png" alt=""></div>
 </div>
 </body>
 </html>
