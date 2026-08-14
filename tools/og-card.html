@@ -4,17 +4,26 @@
 <meta charset="utf-8">
 <title>Windmap, social preview card</title>
 <!-- ══════════════════════════════════════════════════════════════════════
-     Generates og-windmap.png, the 1200x630 image chat apps show when the
+     Generates og-windmap.jpg, the 1200x630 image chat apps show when the
      link is pasted. Build-time only: nothing in the shipped pages loads
      this, and it is deliberately NOT in sw.js's ASSETS. No individual
      tool is, and a scraper-only image has no business in an offline cache.
 
-     One command, from the repo root, with a server already running:
+     From the repo root, with a server already running:
 
        CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
        "$CH" --headless=new --virtual-time-budget=5000 \
-             --window-size=1200,630 --screenshot=og-windmap.png \
+             --window-size=1200,630 --screenshot=/tmp/og-windmap.png \
              "http://localhost:8080/tools/og-card.html"
+       magick /tmp/og-windmap.png -quality 86 -strip og-windmap.jpg
+
+     JPEG, NOT PNG, AND THE SECOND COMMAND IS NOT OPTIONAL. A real terrain
+     photograph put the png at 349 KB, against 124 KB when this card carried
+     flat UI. WhatsApp is the distribution channel for these links and is the
+     strictest client about preview size. JPEG q86 is 91 KB and identical at
+     the size any client renders it, and there is no transparency to lose.
+     Quantising the png instead makes it BIGGER: the dither noise defeats
+     png's compression.
 
      THE PHONE IS A DEVICE CAPTURE OF THE WIDGET IN FLIGHT, tools/og-phone.png,
      taken on a real phone with XCTrack's own map underneath and kept with a
