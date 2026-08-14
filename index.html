@@ -76,6 +76,14 @@ ol ul li::before{content:"·";position:absolute;left:-.8em;color:var(--chart);fo
 footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);
   color:var(--dim);font-size:.76em;line-height:1.6}
 footer p{margin:0 0 10px;font-size:1.1em}
+/* The way back to the family page, in the footer rather than the header:
+   this page protects a single primary action, and a second link at the top
+   competes with it. */
+.fam{padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.fam a{font-weight:600}
+/* a plain inline mark on the text baseline. inline-flex on the anchor put
+   the link on the icon's baseline instead of the sentence's. */
+.fam svg{vertical-align:-.24em;margin-right:6px}
 a{color:var(--chart)}
 #reset:active{background:var(--panel-hi)}
 .tryit:active{filter:brightness(.94)}
@@ -132,7 +140,7 @@ a{color:var(--chart)}
 <body>
 <div class="wrap">
 
-  <h1>XCTrack Windmap</h1>
+  <h1 class="notranslate" translate="no">XCTrack Windmap</h1>
   <!-- The old intro explained what is wrong with other tools before saying what
        this one does. A pilot who has just arrived does not yet care. -->
   <p class="sub">
@@ -270,6 +278,24 @@ a{color:var(--chart)}
     analytics.</p>
 
   <footer>
+    <!-- The mark sits OUTSIDE the anchor: inside it, text-decoration draws
+         through the icon, and an inline-flex anchor takes its baseline from
+         its first item, so the link no longer sat on the same line as the
+         sentence after it. `translate="no"` because it is a name: GTranslate
+         turned it into "Kostenlose Flugtools" in German. -->
+    <p class="fam">
+      <svg width="16" height="16" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="15" fill="#161C23"/>
+        <g fill="none" stroke="#5EA8F0" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 45 L27 24 L34 33 L41 22 L52 45" stroke-width="3.4"/>
+          <path d="M17 51 L27 36 L34 45" stroke-width="2" opacity=".5"/>
+        </g>
+      </svg>
+      <a class="notranslate" translate="no"
+         href="https://freeflight-tools.github.io/">Free Flight Tools</a>
+      &middot; the other small tools for XC pilots.
+    </p>
+
     <p><a href="tools.html">Diagnostic tools →</a>, for checking the overlay
       against XCTrack. Not needed to fly.</p>
 
