@@ -6,7 +6,10 @@
    from ?theme=. The dark media block is guarded by :not([data-theme=light])
    so an explicit light choice still wins on a dark phone.
 
-   --scale comes from ?size= (0-100 -> 1.0-2.0).
+   --scale comes from ?size=, which maps 0-100 to 0.85-1.35 with the default
+   of 50 landing on 1.1. NOT 1.0-2.0, which is what this said and what the
+   code did until `1 + size/100` put the default at 1.5x and overflowed the
+   chip rows on a 430px phone. See wg/fields.js.
 
    NOT loaded by widget.html. That page's <body> must stay unpainted.
    XCTrack renders white or absent as transparent, which is what lets the
