@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated from ARROW in wg/core.js. Regenerate rather than hand-edit. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -32 64 64" width="512" height="512">
-  <rect x="-32" y="-32" width="64" height="64" rx="12" fill="#0A1116"/>
-  <g transform="rotate(35) scale(1.05)" stroke-linejoin="round" stroke-linecap="round">
+<!-- Generated from ARROW in wg/core.js. Regenerate rather than hand-edit.
+
+     THE MARKER ITSELF, not a stylised version of it: the same four layers in
+     the same order that wg/marker.js draws on the map, at the same widths from
+     WG.BANDS (halo 11, outer 8.5, gust 5, inner 1), and the green from
+     PALETTE.green (#31A85A). If the marker changes, this changes with it.
+
+     NO BACKGROUND PLATE. The four layers already carry their own contrast, and
+     that is the whole reason the marker is built this way: the white halo holds
+     it against a dark tab strip, the near-black outer stroke holds it against a
+     light one. A plate would only be a second, redundant answer to a problem
+     the arrow has already solved on terrain.
+
+     The viewBox is the arrow's ROTATED BOUNDING BOX, not the circle its reach
+     describes. Rotated 35 degrees and haloed, the shape occupies x -19.61..12.24
+     and y -15.13..20.29, so the tight square is 35.41 centred on (-3.69, 2.58).
+     Sizing to the radius instead gives 46, which draws the arrow 30% smaller for
+     nothing: a dart is nowhere near its circumscribed circle at the corners.
+     That 30% is the difference between legible and not at a 16px favicon, and
+     without a plate this mark inks less of its square than the other two, so it
+     needs every unit. The old -32..32 was sized around a background plate. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-21.39 -15.13 35.41 35.41"
+     width="512" height="512" role="img" aria-label="XCTrack Windmap">
+  <title>XCTrack Windmap</title>
+  <g transform="rotate(35)" stroke-linejoin="round" stroke-linecap="round">
     <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#FFFFFF" stroke-width="11"/>
     <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#0A1116" stroke-width="8.5"/>
-    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#EE8A1C" stroke-width="5"/>
-    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="#EFCB1F" stroke="#3A4750" stroke-width="1"/>
+    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#31A85A" stroke-width="5"/>
+    <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="#31A85A" stroke="#3A4750" stroke-width="1"/>
   </g>
 </svg>
