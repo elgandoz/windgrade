@@ -438,13 +438,51 @@ back button. The only other lever is the manifest `scope`, and since
 out of scope too. Keep the `_blank`.
 
 **`index.html` is written for a pilot, not for us.** Three numbered steps
-(choose a scale → get the link onto your phone → set it up in XCTrack), one
-primary action at the top, and the measured reasons behind each XCTrack setting
-kept in HTML comments beside the list. Two things not to undo: the page offers
-**one** button and it goes to `app.html`, because a link straight to
-`widget.html` opens a transparent page of arrows on nothing and reads as
-broken; and step 3 prints the pilot's chosen scale live from `#stepScale`, so
-the instruction names a number rather than referring back up the page.
+(choose a scale → get the link onto your phone → set it up in XCTrack), and the
+measured reasons behind each XCTrack setting kept in HTML comments beside the
+list. Three things not to undo:
+
+- **No button at the top, and never one pointing at `widget.html`.** In a normal
+  browser that URL is a transparent page of arrows floating on nothing and reads
+  as broken. The URL box and the QR are how the overlay reaches a phone.
+- **`app.html` is a card AFTER the steps, not the page's opening action.** It
+  used to open the page, which made the overlay, the actual product, read as
+  secondary to a list that has no map. The card must keep naming that limit:
+  *"There is no map in it, so it tells you the numbers but not where the station
+  sits."* This is the opposite of HX Call, where the list IS the whole product
+  and its setup page says so.
+- **Step 3 prints the pilot's chosen scale live from `#stepScale`**, so the
+  instruction names a number rather than referring back up the page.
+
+**The two setup pages share one visual language, and it comes from the family
+page** (`freeflight-tools.github.io`). Change one, change the other. Each tool
+owns a single `--accent`, declared on bare `:root` and re-declared in both dark
+blocks: Windmap the amber of its own arrow, HX Call the blue of its handset. It
+appears on the mono kicker above the `<h1>` (with that tool's glyph, wording
+verbatim from the family page's band), on the `.pick` card, and on the one
+filled action.
+
+- **Exactly one stadium per page**, and it is the action the page exists for:
+  Copy link. Everything you can *open* is a `.pick` card, never a stadium.
+- **Neither setup page links to its own `widget.html`.** Both did once and both
+  rendered a white page: the widget is transparent by design, so in a browser it
+  is arrows on nothing (Windmap) or blank until a zone is in range (HX Call).
+  The URL box and the QR are the only ways the widget URL leaves these pages.
+  HX Call's `refreshLinks()` no longer touches a `#towidget`, and re-adding one
+  without the element would throw and take the whole page's link building with
+  it.
+- **The `.pick` card carries the tool's `--wash`**, its band colour from the
+  family page, not the neutral `--panel` every other box uses, and it leads with
+  a phone-and-app-tile glyph. It is the one thing on the page that *opens*
+  something, so it should not read as another note. On the Windmap page it sits
+  **before** "Optional: tapping and zoom" for that reason: below it, its warm
+  wash stacked directly on the amber `.warn` and the two read as siblings.
+- Body links and settings checkboxes stay blue on both pages, deliberately.
+  Amber is the tool's identity, but an amber tick in a form row reads as a
+  warning.
+- `.wrap` gets 52px of top padding under 380px, because the GTranslate switcher
+  is `position:fixed` at `top:12px right:12px` and would otherwise sit on the
+  kicker.
 
 A headless browser is available for visual checks, which beats shipping UI blind:
 

@@ -30,14 +30,59 @@ body{padding:0 0 40px}
 h1{margin:0 0 4px;font-size:1.5em;letter-spacing:-.01em}
 .sub{margin:0 0 20px;color:var(--dim);font-size:.92em;line-height:1.5}
 .sub b{color:var(--fg)}
-h2{margin:26px 0 8px;font-size:.82em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+h2{margin:26px 0 8px;font-size:.82em;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
 
-/* The one thing a first-time visitor can do without reading anything. Full
-   width and in the accent colour, because everything below it is setup. */
-.tryit{display:block;padding:14px 16px;background:var(--chart);border-radius:4px;
-  text-decoration:none;color:#fff}
-.tryit b{display:block;font-size:1.05em}
-.tryit span{display:block;font-size:.82em;opacity:.85;margin-top:3px}
+/* ── family styling ──────────────────────────────────────────────────
+   Follows freeflight-tools.github.io, where each tool owns one colour and
+   the band is where that colour lives: Windmap the amber of its own arrow,
+   HX Call the blue of its handset. Here it is the kicker above the title
+   and the two actions the page exists for, and nothing else.
+
+   What deliberately stays blue: body links, exactly as they do on the
+   family page's amber band, and the settings checkboxes, because an amber
+   tick in a form row reads as a warning rather than as a brand.
+
+   Declared on bare :root FIRST and then again in both dark blocks, so no
+   colour has its only definition inside a media query. Same rule base.css
+   follows. */
+:root{--accent:#B4620A;--wash:#FFF8ED;--wash-line:#EFDCBB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --accent:#F0A24A;--wash:#171208;--wash-line:#3D2C10}}
+[data-theme="dark"]{--accent:#F0A24A;--wash:#171208;--wash-line:#3D2C10}
+
+/* The kicker from the family page's tool bands, with the same arrow glyph.
+   `em`-based rather than the family page's fixed 11px, so it still follows
+   ?size= like the rest of this page. */
+.eyebrow{margin:0 0 7px;display:flex;align-items:center;gap:8px;
+  font:600 .78em/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent)}
+.eyebrow svg{flex:none}
+/* The GTranslate switcher is position:fixed at top:12px right:12px, and the
+   kicker is now the first line on the page. The kicker runs ~254px and the
+   switcher's left edge is at width-84 with "EN" (wider in a language with a
+   longer native name), so the two collide below ~372px. Start the page under
+   the switcher there rather than beside it: a wrapped two-line kicker in
+   letterspaced uppercase looks far worse than 32px of space, and if the CDN
+   is unreachable the only cost is that space. */
+@media (max-width:380px){ .wrap{padding-top:52px} }
+
+/* ── the other thing you can open ─────────────────────────────────────
+   A CARD, not a stadium. The stadium marks the one action a page exists
+   for, and on this page that is Copy link: everything here is in service
+   of getting the overlay onto XCTrack. The list is a second product, so
+   it gets a card that says what it is and what it is not.
+
+   Identical component on the HX Call setup page. It carries the tool's own
+   wash rather than the neutral panel every other box on the page uses, so
+   the one thing here that OPENS something does not read as another note.
+   The wash is the tool's band colour from the family page. */
+.pick{display:grid;gap:10px;margin:0}
+.pick a{display:flex;gap:12px;align-items:flex-start;padding:14px 15px;
+  background:var(--wash);border:1px solid var(--wash-line);border-radius:10px;
+  text-decoration:none;color:var(--fg);box-shadow:var(--shadow)}
+.pick svg{flex:none;color:var(--accent);margin-top:2px}
+.pick b{display:block;font-size:1em;margin-bottom:4px;color:var(--accent)}
+.pick span{display:block;font-size:.82em;color:var(--dim);line-height:1.45}
 
 
 button{font:600 .9em var(--sans);cursor:pointer}
@@ -46,8 +91,16 @@ button{font:600 .9em var(--sans);cursor:pointer}
 #url{width:100%;padding:11px;margin-top:12px;background:var(--panel);color:var(--fg);
   border:1px solid var(--rule);border-radius:3px;font:400 .82em var(--mono);
   word-break:break-all;resize:none}
-#copy{width:100%;padding:12px;margin-top:8px;background:var(--chart);border:0;
-  border-radius:3px;color:#fff;font:700 .95em var(--sans)}
+/* THE action this page exists for, and the only stadium on it: the family
+   page uses that shape for the single action per band. Full width rather
+   than the family page's inline pill, because this is tapped on a phone.
+   The gradient and its near-black text are fixed in both themes, exactly as
+   on the family page: amber this saturated carries dark text in either
+   palette, so there is nothing to swap. `#reset` stays a neutral panel
+   button, since it undoes work rather than advancing it. */
+#copy{width:100%;padding:13px;margin-top:8px;border:0;border-radius:999px;
+  background:linear-gradient(96deg,#EFCB1F,#EE8A1C);
+  color:#181104;font:700 .95em var(--sans)}
 /* Dark-on-white in every theme: plenty of scanners refuse an inverted symbol,
    and this exists to be read by a phone camera. */
 .qr{margin-top:10px;padding:14px;display:flex;flex-direction:column;align-items:center;
@@ -62,7 +115,7 @@ ol li{margin-bottom:4px}
    the widget the step just told you to add. */
 ol ul{margin:4px 0 6px;padding-left:1.1em;list-style:none}
 ol ul li{position:relative;padding-left:.1em}
-ol ul li::before{content:"·";position:absolute;left:-.8em;color:var(--chart);font-weight:700}
+ol ul li::before{content:"·";position:absolute;left:-.8em;color:var(--accent);font-weight:700}
 .note{margin:12px 0 0;padding:10px 12px;background:var(--panel);border:1px solid var(--rule);
   border-radius:3px;color:var(--dim);font-size:.84em;line-height:1.5}
 .note b{color:var(--fg)}
@@ -86,14 +139,16 @@ footer p{margin:0 0 10px;font-size:1.1em}
    the link on the icon's baseline instead of the sentence's. */
 .fam svg{vertical-align:-.24em;margin-right:6px}
 a{color:var(--chart)}
-#reset:active{background:var(--panel-hi)}
-.tryit:active{filter:brightness(.94)}
+#reset:active,.pick a:active{background:var(--panel-hi)}
 #copy:active{filter:brightness(.92)}
 @media (hover:hover) and (pointer:fine){
-  #reset,#copy,.tryit{transition:background-color .12s,border-color .12s,filter .12s}
-  #reset:hover{border-color:var(--chart)}
-  #copy:hover,.tryit:hover{filter:brightness(1.08)}
+  #reset,#copy,.pick a{transition:background-color .12s,border-color .12s,filter .12s,transform .14s}
+  #reset:hover,.pick a:hover{border-color:var(--accent)}
+  /* the family page's lift, same numbers. Gated behind a fine pointer with
+     everything else here: on a touch screen :hover sticks after a tap. */
+  #copy:hover{filter:brightness(1.06);transform:translateY(-1px)}
 }
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 
 /* ── language switcher (GTranslate) ─────────────────────────────────
    Setup page only. Never app.html or widget.html: those are read in the
@@ -141,29 +196,42 @@ a{color:var(--chart)}
 <body>
 <div class="wrap">
 
+  <!-- The same kicker and the same arrow glyph as this tool's band on the
+       family page, so the two pages read as one product. The wording is the
+       family page's eyebrow verbatim; if one changes, change both. -->
+  <p class="eyebrow">
+    <svg width="15" height="15" viewBox="0 0 64 64" aria-hidden="true">
+      <g transform="translate(32 32) rotate(35)" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M0,-13 L10,13 L0,5.2 L-10,13 Z" fill="currentColor" stroke="currentColor" stroke-width="6"/>
+      </g>
+    </svg>
+    Live wind station readings
+  </p>
   <h1 class="notranslate" translate="no">XCTrack Windmap</h1>
   <!-- The old intro explained what is wrong with other tools before saying what
-       this one does. A pilot who has just arrived does not yet care. -->
+       this one does. A pilot who has just arrived does not yet care.
+
+       The last sentence used to be "Seeing where it is can.", a callback to
+       "can't tell you" two clauses earlier. Read on its own it says nothing,
+       which is how it reads on a phone. -->
   <p class="sub">
     Wind stations near you, drawn <b>on the terrain they sit on</b>. One arrow
     per station, coloured by how strong the wind is. A station name can't tell
-    you whether a reading came from a valley floor or a summit. Seeing where it
-    is can.
+    you whether a reading came from a valley floor or a summit. <b>Its position
+    on the map does.</b>
   </p>
 
-  <!-- One button, not two. The old pair offered "XCTrack overlay ->" pointing
-       straight at widget.html, which in a normal browser is a transparent page
-       of arrows floating on nothing - it looks broken, and it is not how anyone
-       should get the overlay. The URL box and the QR below are. The list, on
-       the other hand, works anywhere and is the only thing that shows a
-       stranger what this is in one tap, so it stays and it goes first. -->
-  <a class="tryit" id="toapp" href="app.html">
-    <b>See the stations near me →</b>
-    <span>Works right now, in this browser. No setup.</span>
-  </a>
+  <!-- NO BUTTON AT THE TOP. The widget is the product; the list is the extra,
+       and it now sits in its own card after the setup steps. Sending a first
+       visitor straight to the list made the page's own subject look secondary.
 
+       What still must NOT appear anywhere on this page is a button pointing
+       at widget.html: in a normal browser that is a transparent page of arrows
+       floating on nothing, and it reads as broken. The URL box and the QR are
+       how the overlay gets onto a phone. -->
   <p class="sub" style="margin:22px 0 0">
-    To get the arrows <b>on top of XCTrack's own map</b>, there are three steps.
+    The arrows sit <b>on top of XCTrack's own map</b>. Three steps to get them
+    there.
   </p>
 
   <h2>Step 1: choose what you'll see</h2>
@@ -241,6 +309,34 @@ a{color:var(--chart)}
     at the end let XCTrack hand over its last known position, so the arrows
     appear immediately instead of after the GPS locks on.
   </p>
+
+  <!-- The list, demoted from the top of the page to here. It is a real
+       product and it is the only thing that works with no setup at all, so
+       it keeps a card of its own rather than becoming a footer link. What
+       the card must keep saying is the LIMIT: no map. That is the whole
+       reason it is the extra and the overlay is the point. -->
+  <h2>Also: the station list</h2>
+  <div class="pick">
+    <a id="toapp" href="app.html">
+      <!-- A phone with one app tile on it: this link opens something you can
+           keep, not another page of instructions. Same glyph on the HX Call
+           setup page, in that tool's colour. -->
+      <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="17" y="5" width="30" height="54" rx="7.5" fill="none"
+              stroke="currentColor" stroke-width="4.5"/>
+        <rect x="25.5" y="20" width="13" height="13" rx="3.6" fill="currentColor"/>
+        <path d="M27.5 47 h9" fill="none" stroke="currentColor" stroke-width="4"
+              stroke-linecap="round"/>
+      </svg>
+      <span>
+        <b>Open the station list →</b>
+        The same readings as a plain list, closest first. Works in any browser
+        with no setup at all, iPhone included, and can be added to your home
+        screen. There is no map in it, so it tells you the numbers but not where
+        the station sits.
+      </span>
+    </a>
+  </div>
 
   <h2>Optional: tapping and zoom</h2>
   <p class="note">
