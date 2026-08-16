@@ -69,6 +69,31 @@ h2.apart{
   border-top:2px solid var(--accent);
 }
 
+/* ── the widget in flight, in the header ──────────────────────────────
+   FLOATED RIGHT, so the intro wraps round it rather than sitting in a
+   column beside it: at 340px a two-column header leaves the prose about
+   190px and every line breaks twice. Right rather than left so the text
+   keeps the page's left margin, which every other block on the page
+   starts from, and the eye is not asked to step in and out again.
+
+   Small on purpose. The family page sells with a 330px phone; by the time
+   a reader is here they have already chosen, and the picture only has to
+   answer "what does it actually look like". 112px displayed from a 140px
+   file, so it stays sharp on a 1.25x screen without carrying a 2x asset.
+
+   `h2{clear:both}` matters: without it a section rule draws straight
+   across the phone whenever the intro is shorter than the image. */
+.shot{float:right;width:112px;margin:2px 0 8px 18px}
+/* On a phone the float is competing for the same line. 112px leaves about
+   200px of prose at 340px wide, roughly 28 characters, so it steps down. */
+@media (max-width:430px){ .shot{width:92px;margin-left:14px} }
+.shot img{display:block;width:100%;height:auto;border-radius:3px;
+  filter:drop-shadow(0 5px 13px rgba(15,26,33,.20))}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .shot img{
+  filter:drop-shadow(0 5px 15px rgba(0,0,0,.6))}}
+[data-theme="dark"] .shot img{filter:drop-shadow(0 5px 15px rgba(0,0,0,.6))}
+h2{clear:both}
+
 /* ── family styling ──────────────────────────────────────────────────
    Follows freeflight-tools.github.io, where each tool owns one colour and
    the band is where that colour lives: Windmap the amber of its own arrow,
@@ -331,6 +356,19 @@ a{color:var(--chart)}
     </svg>
     Live wind station readings
   </p>
+
+  <!-- AFTER the kicker, before the title. A float has to precede whatever
+       wraps round it, and putting it first stole the kicker's line: at
+       390px "LIVE WIND STATION READINGS" broke into two. Here the kicker
+       keeps a full-width line and only the title and prose wrap. -->
+  <figure class="shot">
+    <picture>
+      <source srcset="img/widget.webp" type="image/webp">
+      <img src="img/widget.png" width="140" height="294" decoding="async"
+           alt="The widget running over XCTrack's own map: wind arrows drawn on the terrain, each labelled with its speed and gust.">
+    </picture>
+  </figure>
+
   <h1 class="notranslate" translate="no">XCTrack Windmap</h1>
   <!-- The old intro explained what is wrong with other tools before saying what
        this one does. A pilot who has just arrived does not yet care.
