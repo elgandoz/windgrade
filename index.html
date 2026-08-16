@@ -50,6 +50,32 @@ h2{margin:26px 0 8px;font-size:.82em;letter-spacing:.16em;text-transform:upperca
   --accent:#F0A24A;--wash:#171208;--wash-line:#3D2C10}}
 [data-theme="dark"]{--accent:#F0A24A;--wash:#171208;--wash-line:#3D2C10}
 
+/* ── breadcrumb ───────────────────────────────────────────────────────
+   The way back to the family page, moved up from the footer. It can sit at
+   the top NOW because the page no longer opens on a button: "a second link
+   at the top competes with the single primary action" was the whole reason
+   it was pushed into the footer, and there is no longer a primary action up
+   here to compete with.
+
+   Dim, not accent, and it has to stay that way: the kicker directly below is
+   the accent, and two coloured mono lines stacked read as one confused
+   heading rather than as a trail and a label. Slightly smaller and less
+   tracked than the kicker for the same reason.
+
+   A RULE UNDER IT, not just a margin. It mirrors the one above the footer,
+   so the page is bracketed the same way at both ends, and it makes the
+   breadcrumb a header strip rather than a stray line crowding the kicker.
+   The border is on the wrapper and NOT on the anchor: an `a` set to
+   `display:flex` is block-level, which would stretch the tap target across
+   the whole column and navigate on a tap far to the right of the words.
+   `inline-flex` keeps the target on the words. */
+.top{margin:0 0 18px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
+.crumb{display:inline-flex;align-items:center;gap:7px;
+  font:600 .74em/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);text-decoration:none}
+.crumb svg{flex:none}
+@media (hover:hover) and (pointer:fine){ .crumb:hover{color:var(--fg)} }
+
 /* The kicker from the family page's tool bands, with the same arrow glyph.
    `em`-based rather than the family page's fixed 11px, so it still follows
    ?size= like the rest of this page. */
@@ -130,14 +156,6 @@ ol ul li::before{content:"·";position:absolute;left:-.8em;color:var(--accent);f
 footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);
   color:var(--dim);font-size:.76em;line-height:1.6}
 footer p{margin:0 0 10px;font-size:1.1em}
-/* The way back to the family page, in the footer rather than the header:
-   this page protects a single primary action, and a second link at the top
-   competes with it. */
-.fam{padding-bottom:12px;border-bottom:1px solid var(--rule)}
-.fam a{font-weight:600}
-/* a plain inline mark on the text baseline. inline-flex on the anchor put
-   the link on the icon's baseline instead of the sentence's. */
-.fam svg{vertical-align:-.24em;margin-right:6px}
 a{color:var(--chart)}
 #reset:active,.pick a:active{background:var(--panel-hi)}
 #copy:active{filter:brightness(.92)}
@@ -195,6 +213,29 @@ a{color:var(--chart)}
 </head>
 <body>
 <div class="wrap">
+
+  <!-- Breadcrumb. The mark sits INSIDE the anchor here, unlike the footer
+       version it replaces: that one had to keep the icon outside because
+       text-decoration drew straight through it and an inline-flex anchor
+       took its baseline from its first item. Neither applies to a flex row
+       with no underline. `translate="no"` because it is a name, and
+       GTranslate turned it into "Kostenlose Flugtools" in German. -->
+  <div class="top">
+    <a class="crumb notranslate" translate="no" href="https://freeflight-tools.github.io/">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M19 12H6M12 5l-7 7 7 7"/>
+    </svg>
+    <svg width="15" height="15" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="15" fill="#161C23"/>
+      <g fill="none" stroke="#5EA8F0" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 45 L27 24 L34 33 L41 22 L52 45" stroke-width="3.4"/>
+        <path d="M17 51 L27 36 L34 45" stroke-width="2" opacity=".5"/>
+      </g>
+    </svg>
+      Free Flight Tools
+    </a>
+  </div>
 
   <!-- The same kicker and the same arrow glyph as this tool's band on the
        family page, so the two pages read as one product. The wording is the
@@ -375,24 +416,7 @@ a{color:var(--chart)}
     analytics.</p>
 
   <footer>
-    <!-- The mark sits OUTSIDE the anchor: inside it, text-decoration draws
-         through the icon, and an inline-flex anchor takes its baseline from
-         its first item, so the link no longer sat on the same line as the
-         sentence after it. `translate="no"` because it is a name: GTranslate
-         turned it into "Kostenlose Flugtools" in German. -->
-    <p class="fam">
-      <svg width="16" height="16" viewBox="0 0 64 64" aria-hidden="true">
-        <rect width="64" height="64" rx="15" fill="#161C23"/>
-        <g fill="none" stroke="#5EA8F0" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M13 45 L27 24 L34 33 L41 22 L52 45" stroke-width="3.4"/>
-          <path d="M17 51 L27 36 L34 45" stroke-width="2" opacity=".5"/>
-        </g>
-      </svg>
-      <a class="notranslate" translate="no"
-         href="https://freeflight-tools.github.io/">Free Flight Tools</a>
-      &middot; the other small tools for XC pilots.
-    </p>
-
+    <!-- The family link moved to the breadcrumb at the top of the page. -->
     <p><a href="tools.html">Diagnostic tools →</a>, for checking the overlay
       against XCTrack. Not needed to fly.</p>
 
