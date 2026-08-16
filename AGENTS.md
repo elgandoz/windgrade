@@ -463,7 +463,19 @@ verbatim from the family page's band), on the `.pick` card, and on the one
 filled action.
 
 - **Exactly one stadium per page**, and it is the action the page exists for:
-  Copy link. Everything you can *open* is a `.pick` card, never a stadium.
+  **Copy link**, worded identically on both. It carries a clipboard icon that
+  swaps to a tick while the label reads *Copied*. Write that label through
+  `#copyTxt`, never through the button's own `textContent`, which deletes the
+  two icons with it, and restore the **same** string it started from: Windmap's
+  said "Copy link" at rest and restored itself as "Copy overlay URL", so the
+  button renamed itself the first time you used it. The reset timer is cleared
+  before it is re-armed, or repeated clicks stack timers and an early one wipes
+  the label while a later copy still reads as fresh.
+- Everything you can *open* is a `.pick` card, never a stadium. Its hover
+  deepens the wash to `--wash-hi` and lifts 1px; `border-color:var(--accent)`
+  on hover did nothing once the resting border became the accent. `:active`
+  uses `--wash-hi` too, **not** `--panel-hi`, which replaced the wash and turned
+  the card grey under a finger.
 - **Neither setup page links to its own `widget.html`.** Both did once and both
   rendered a white page: the widget is transparent by design, so in a browser it
   is arrows on nothing (Windmap) or blank until a zone is in range (HX Call).
@@ -474,9 +486,38 @@ filled action.
 - **The `.pick` card carries the tool's `--wash`**, its band colour from the
   family page, not the neutral `--panel` every other box uses, and it leads with
   a phone-and-app-tile glyph. It is the one thing on the page that *opens*
-  something, so it should not read as another note. On the Windmap page it sits
-  **before** "Optional: tapping and zoom" for that reason: below it, its warm
-  wash stacked directly on the amber `.warn` and the two read as siblings.
+  something, so it should not read as another note. Its border is the **accent**,
+  not `--wash-line`: the card, the `.warn` and the `.priv` are all tinted rounded
+  rectangles, and the accent outline is the one thing none of the notes has. Not
+  a left bar, which would have made it *more* like `.warn`, not less. `hr.sep`
+  then closes the section, because the disclaimers have no heading of their own
+  and the app section otherwise ran straight into them.
+- **Order is: numbered steps, then Optional, then the app, always last.** On the
+  Windmap page that puts a warm wash directly above the amber `.warn`. The
+  separators are the `h2` rule and the **3px left bar** on `.warn`, which is
+  what makes one of the two a warning rather than a second tinted rectangle. If
+  that stops being enough, change the CARD, not the warning.
+- **Section heads are `1.06em/700` in `--fg`, each opening with a hairline**, and
+  they carry an accent badge (`h2 .n`) instead of the words "Step 1:". They were
+  `.82em` uppercase in `--dim`, which is kicker styling: right for a label, too
+  quiet for the thing a pilot scrolls to find. Three badges, three ranks:
+  **numbers** for the steps, a **star** for the bonus step (Optional), an **app
+  grid** for the app. The grid is drawn from filled rects, not a stroked phone
+  outline, which goes mushy at 12px. Badge text colour is `--on-accent`,
+  declared beside `--accent` in all three theme blocks.
+- **`h2.apart` ends the sequence.** The app is not step 4, and with the steps'
+  own heading treatment it read as one. A full band of space plus a 2px rule in
+  the **accent** rather than the hairline, so the eye registers a different kind
+  of boundary before it reads a word. The spacing does most of the work.
+- **Both pages say "The standalone app" and "Open the app", word for word**, both
+  open the blurb with *"A separate page from the widget, and it needs none of the
+  setup above"*, and both name the platforms: *iPhone, Android and any desktop
+  browser*. Only the clause after that differs: Windmap's names the limit (no
+  map), HX Call's names the freedom (no XCTrack at all). Keep the frame identical
+  and let the distinction live in one clause.
+- `.pick span > b:first-child` is the card title; a bare `.pick b` rule also
+  caught the inline emphasis in the blurb and turned it into accent-coloured
+  block elements that broke the sentence apart.
 - Body links and settings checkboxes stay blue on both pages, deliberately.
   Amber is the tool's identity, but an amber tick in a form row reads as a
   warning.
