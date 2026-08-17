@@ -16,9 +16,12 @@ Everything numeric below was measured against the live winds.mobi API on
 2. **The gap is national networks, not APIs.** winds.mobi is dense where a
    country's official network feeds it and thin where none does. Piemonte has
    **zero** Italian stations.
-3. **The fix belongs upstream.** A winds.mobi provider for ARPA Piemonte or
-   Agenzia ItaliaMeteo lights up the Western Alps for every winds.mobi client
-   and needs **no change to this repo at all**.
+3. **The fix belongs upstream.** A winds.mobi provider lights up the Western
+   Alps for every winds.mobi client and needs **no change to this repo at all**.
+4. **The target is MeteoNetwork, not ARPA Piemonte** (established 2026-08-17,
+   section 7). It is CC-BY 4.0, it has a bulk `lat`/`lon`/`range` call returning
+   every field we need, and it already aggregates the Italian regional networks
+   and MET Norway as sub-networks. One provider instead of twenty.
 
 ---
 
@@ -131,6 +134,12 @@ plus Sigfox connectivity, free for the first year then about €20/year.
 
 **winds.mobi: possible, two routes.**
 
+- **Shortest route, if a winds.mobi MeteoNetwork provider exists.** Register the
+  stations with **MeteoNetwork** (section 7) and they arrive through the same
+  provider as everything else, with no per-station step on the winds.mobi side
+  at all. Ecowitt into MeteoNetwork is well-trodden: the MeteoNetwork forum has
+  a long-running thread on it, and the station owner supplies a station id and
+  an API key to the uploader. This is the route to prefer.
 - **Short route.** Ecowitt firmware uploads to **Weather Underground
   natively** (a built-in target alongside ecowitt.net and Weathercloud). Windy
   can also import from a Wunderground station. Either way the station then
@@ -145,6 +154,74 @@ paraglider pilot far less than a ridge station, and this tool's whole premise
 is that where a reading was taken is what makes it mean something. Worth saying
 to anyone offering a station.
 
+## 7. MeteoNetwork: the target
+
+Established 2026-08-17 from the OpenAPI spec at
+<https://api.meteonetwork.it/swagger.yaml> (REV5, 18/05/2023). This is what
+step 2 of the plan was for, and it answers it.
+
+**It is an aggregator, not just an amateur network.** Stations carry a
+`subnets` array, and the `subnet_exclude` parameter documents its own example
+as `"metno,mistral"`. **Mistral** is the Arpae/ItaliaMeteo open-data platform
+that MeteoHub is built on, and **metno** is MET Norway. So the two largest
+names on the SeeYou list that winds.mobi lacks appear to arrive here as
+sub-networks of a single API, alongside MeteoNetwork's own Italian stations.
+
+**The shape fits what we already do.** `GET /v3/data-realtime` is a bulk call
+taking `lat`, `lon`, `range` (km), which is our `range` parameter almost
+exactly, or `country` / `region` / `subnet`.
+
+Every field Windmap needs is in the `Realtime` schema:
+
+| we need | MeteoNetwork field |
+|---|---|
+| speed | `wind_speed` |
+| gust | `wind_gust` |
+| direction | `wind_direction_degree` (added REV3; `wind_direction` is a compass string) |
+| position | `latitude`, `longitude` |
+| altitude | `altitude` (integer) |
+| staleness clock | `observation_time_utc` |
+| name / place | `name`, `place`, `region_name` |
+
+`GET /v3/stations` adds the metadata a provider needs once per station, and
+some of it is unusually good for siting: `altitude`, `soil_height`,
+`tipology`, `shielding`, `buildings_distance`.
+
+**Licence: CC-BY 4.0**, declared in the spec's `info.license` block and in the
+collaboration terms. Two caveats, both real:
+
+- It is **opt-in per contributor**, not blanket. The terms bind those who
+  accepted them, and MeteoNetwork may sub-licence under CC-BY 4.0 "o una altra
+  licenza gratuita e di carattere aperto". So the licence on a given station is
+  a per-station fact, not a network-wide one.
+- Attribution is described as at the copyright holder's discretion, which is
+  looser than CC-BY normally reads. A provider should attribute anyway.
+
+**Access.** A free myMeteoNetwork account (<https://my.meteonetwork.it>),
+then `POST /v3/login` for a Bearer token. **The bulk methods need a `BULK`
+token, which is granted on request** with "additional information about the
+activity you are going to perform". That is a gate, but a soft one, and a
+winds.mobi provider is exactly the kind of activity it exists to vet. Rate
+limits are 1 request/second and 1 thread.
+
+**This does not reach us directly.** The token makes it a server-side API, so
+it cannot be called from `wg/windsmobi.js` in the browser. That is an argument
+*for* the upstream route, not against the source.
+
+### And ItaliaMeteo directly, if MeteoNetwork's mistral subnet disappoints
+
+MeteoHub (<https://meteohub.agenziaitaliameteo.it>) is the first-party route to
+the same regional data: 4000+ stations from "reti di proprietà regionale",
+free registration, CC-BY on the *Osservazioni idro-meteo stazioni al suolo*
+dataset, BUFR or JSON.
+
+**Its API shape is worse for us**: it is a batch extraction service, not a
+query. `POST /api/data` submits a request, `GET /api/requests` polls its status,
+`GET /api/data/{filename}` downloads the result, with a default of **10
+requests per hour** and a 15-minute floor on scheduled extractions. Workable
+for a scheduled provider at our ~10 minute cadence, awkward, and strictly more
+code than MeteoNetwork. Treat it as the fallback.
+
 ---
 
 ## The plan
@@ -157,34 +234,42 @@ There is an **open email thread with Yann at winds.mobi** (see `todo.md`, the
 `User-Agent` and `ETag` questions, sent 2026-08-12). Add to it:
 
 - Are Italian or Austrian national networks on the roadmap?
-- Would a PR for **ARPA Piemonte** be welcome, and is there a preferred shape?
-- Can a handful of **Ecowitt-via-Wunderground** stations be added to the
-  curated table, and what does he need for that?
+- Would a PR for a **MeteoNetwork** provider be welcome (CC-BY 4.0, bulk
+  `lat`/`lon`/`range` call, and it appears to carry the Italian regional
+  networks and MET Norway as sub-networks; see section 7)? Is there a reason it
+  was not done already, which would be worth knowing before writing it?
+- Can a handful of **Ecowitt** stations be added, and by which route: the
+  curated Wunderground table, or MeteoNetwork if that provider lands?
 
 Cheapest possible step and it may make steps 2 and 3 unnecessary or better
 aimed.
 
-### Step 2: check the licence before the code
+### Step 2: measure the source before writing the provider
 
-**Do this before writing a line.** ARPA Piemonte publishes open data
-(<https://www.arpa.piemonte.it/dato/open-data>, API docs at
-<https://utility.arpa.piemonte.it/docs/>) with real-time wind from a subset of
-its network, updated every 15 minutes. Agenzia ItaliaMeteo has its own catalogue
-(<https://dati.agenziaitaliameteo.it/>).
+The licence and API questions this step was written for are **answered** in
+section 7: CC-BY 4.0 (opt-in per contributor), free account, bulk call, wind
+speed, gust, direction, coordinates and altitude all present. What is left is
+the thing no spec can tell you: **whether the stations are actually there, and
+whether they are worth drawing.**
 
-What has to be true before it is worth building:
+Get a `BULK` token and count, in the same boxes as section 4:
 
-- redistribution is permitted, and under what attribution;
-- **live** wind speed, gust and direction are available, not just daily or
-  monthly aggregates. The historical archive is not useful here;
-- station altitude and coordinates are published, because Windmap draws
-  markers on terrain and prints altitude;
-- an update cadence that is not slower than the ~10 minute cadence we already
-  poll at. 15 minutes is acceptable; hourly is not.
+- how many stations `data-realtime` returns for Piemonte, and how that compares
+  to the 32 winds.mobi gives us today;
+- how many carry a **non-null `wind_speed`**. A network built around
+  temperature and rain may report wind on a minority of stations, and a
+  station without wind is not a station as far as this tool is concerned;
+- how many are in the `mistral` and `metno` subnets, which is what would
+  confirm the aggregation claim rather than inferring it from a parameter's
+  example value;
+- what the **altitude distribution** looks like. This is the one that decides
+  whether it is worth it. Amateur networks skew to gardens in valleys, and per
+  the product rules a valley-floor reading drawn on a ridge is not a bonus, it
+  is noise. `tipology`, `soil_height` and `buildings_distance` are in the
+  `stations` payload for exactly this judgement.
 
-Note that SeeYou credits **ItaliaMeteo**, not ARPA Piemonte, so ItaliaMeteo may
-already aggregate the regional agencies. If so it is one provider instead of
-twenty, and is the better target. Establish this first.
+If wind coverage or siting is poor, say so and stop. A thin provider is worse
+than no provider, because it makes the map look answered.
 
 ### Step 3: write the provider, upstream
 
@@ -224,7 +309,16 @@ seam to copy, and `prepare()` must stay the only thing that ranks and culls.
   a matched comparison. It would be settled by picking one station visible in
   SeeYou and absent from Windmap and identifying its operator.
 - **PanoCloud**: could not identify what this is.
-- **ARPA Piemonte and ItaliaMeteo licences**: not read. Step 2 exists for this.
+- **Every MeteoNetwork number.** Section 7 is read off the OpenAPI spec and the
+  licence pages, not off the API: no token was requested and no call was made.
+  Station counts, wind coverage and altitude distribution are all unmeasured,
+  which is exactly what step 2 is now for. In particular, `metno` and `mistral`
+  are **inferred from the `subnet_exclude` parameter's example value**, which is
+  suggestive but is not a list of subnets.
+- **ARPA Piemonte**: superseded rather than investigated. If MeteoNetwork's
+  Italian coverage disappoints, the regional agencies are still there
+  (<https://www.arpa.piemonte.it/dato/open-data>) and their licences are
+  still unread.
 - **Windy/Wunderground global usage**: sampled Europe only.
 - **MET Norway, GeoSphere, the Lawinenwarndienst services**: not investigated
   as APIs. Listed here only as the gap, not as a recommendation.
@@ -234,6 +328,11 @@ seam to copy, and `prepare()` must stay the only thing that ranks and culls.
 - OpenWindMap API: <https://developers.pioupiou.fr/>,
   <https://github.com/OpenWindMap/api-v1-doc>
 - winds.mobi providers: <https://github.com/winds-mobi/winds-mobi-providers>
+- MeteoNetwork API spec: <https://api.meteonetwork.it/swagger.yaml>, rendered at
+  <https://api.meteonetwork.it/documentation.html>; registration at
+  <https://my.meteonetwork.it>; licence terms at
+  <https://www.meteonetwork.it/informative/termini-di-licenza-e-di-collaborazione/>
+- MeteoHub API guide: <https://meteohub.agenziaitaliameteo.it/ui/user-guide>
 - ARPA Piemonte open data: <https://www.arpa.piemonte.it/dato/open-data>
 - Agenzia ItaliaMeteo: <https://dati.agenziaitaliameteo.it/>
 - Windy PWS: <https://stations.windy.com/>

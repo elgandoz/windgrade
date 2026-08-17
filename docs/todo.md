@@ -80,9 +80,16 @@ also records why there is no generation cycle to synchronise our poll with.
 **Two more things to put in the same thread**, see `docs/data-sources.md`:
 whether Italian or Austrian national networks are on the winds.mobi roadmap and
 whether a provider PR for them would be welcome, and whether a few Ecowitt
-stations reaching Weather Underground can be added to the curated table that
-`providers/wunderground.py` reads. Both are one paragraph in a reply he already
-owes us, and both are cheaper than any code.
+stations can be added. Both are one paragraph in a reply he already owes us, and
+both are cheaper than any code.
+
+**Name MeteoNetwork specifically** (`docs/data-sources.md` §7, established
+2026-08-17): CC-BY 4.0, free account, a bulk `lat`/`lon`/`range` call carrying
+wind speed, gust, direction, coordinates and altitude, and apparently the
+Italian regional networks and MET Norway as sub-networks. The useful question is
+not "may I write it" but **"is there a reason it has not been written"**, which
+is the kind of thing only he knows and which would cost a wasted weekend to
+discover by writing it.
 
 **If he says yes to `ETag`:** the provider is the only file that changes. Keep
 the last `ETag` per bbox, send `If-None-Match`, and treat 304 as "keep what is
