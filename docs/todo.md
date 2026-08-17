@@ -77,6 +77,13 @@ polls into a 304, which is bandwidth saved on both sides and squarely in the
 spirit of their "do not overload" rule. See `docs/findings.md` 2026-08-12, which
 also records why there is no generation cycle to synchronise our poll with.
 
+**Two more things to put in the same thread**, see `docs/data-sources.md`:
+whether Italian or Austrian national networks are on the winds.mobi roadmap and
+whether a provider PR for them would be welcome, and whether a few Ecowitt
+stations reaching Weather Underground can be added to the curated table that
+`providers/wunderground.py` reads. Both are one paragraph in a reply he already
+owes us, and both are cheaper than any code.
+
 **If he says yes to `ETag`:** the provider is the only file that changes. Keep
 the last `ETag` per bbox, send `If-None-Match`, and treat 304 as "keep what is
 on screen and refresh `lastFetch`", the staleness clock must still advance, or

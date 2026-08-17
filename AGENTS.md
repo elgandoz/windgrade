@@ -378,6 +378,18 @@ viewport that page does not have, while it sorted purely by distance: 20 km east
 dropped, 20 km north kept, and no way for a reader to tell why. `scale` and
 `pad` are `only:"widget"`; `range` is `only:"app"`. Do not reunify them.
 
+**The station coverage gap is UPSTREAM, not in our code.** winds.mobi is dense
+where a national network feeds it (Switzerland via SLF and MeteoSwiss, France
+via FFVL) and thin where none does: measured 2026-08-17, Piemonte returns 32
+stations and **not one is Italian**, while Valais returns 106. OpenWindMap is a
+single network rather than an aggregator and we already have it as the
+`pioupiou` provider, so switching to it would cut Valais from 106 to 7. The
+answer is a winds.mobi provider for the missing national networks, contributed
+upstream, which reaches this app through the same one bounding-box call we
+already make. **Do not add a second provider here** without reading
+`docs/data-sources.md` first: it costs a merge-and-dedupe layer, two staleness
+clocks and a second set of terms to honour, and the doc says what to try first.
+
 **winds.mobi's `name` and `short` are the opposite way round from what they
 sound like.** For openwindmap.org, `name` is a geocoded municipality and
 `short` is the name the station's owner gave it, "Decollo TRUCETTI 980m" is
