@@ -561,6 +561,21 @@ against *the pages you set up on*: `app.html` and `widget.html` still say "no
 analytics" and still mean it. Adding a beacon to either would make the page lie
 about itself, which is the one thing this project cannot do.
 
+**`icon-512.png` and `icon-512-maskable.png` are two different pictures, and
+merging them undoes both.** The maskable one is a full-bleed square with a
+plate, because Android crops it to the launcher's shape and treats the outer
+fifth as disposable; the `any` one is what browsers show in bookmarks and the
+install prompt, composited on their own surface, so a plate there is a visible
+square. Windmap's `any` icons are therefore TRANSPARENT (that white box behind
+the arrow was this), while its apple-touch `icon-180.png` stays opaque because
+iOS composites alpha onto black. Regenerate with
+`freeflight-tools.github.io/tools/make-icons.py`, which holds the full table.
+
+**The OG card embeds the icon art rather than linking it, so it goes stale
+silently.** `tools/og-card.html` had the pre-rename artwork long after the
+favicon changed, which means every link ever shared showed a different logo
+from the site. Re-render it whenever `icon.svg` changes.
+
 ## Conventions
 
 - Plain ES5-compatible JS in shipped pages. Old Android WebViews.

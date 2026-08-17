@@ -84,14 +84,18 @@
 <body>
 <div class="l">
   <div class="brand">
-    <!-- ARROW from wg/core.js, same four stacked strokes as icon.svg -->
-    <svg width="58" height="58" viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="15" fill="#151F27"/>
-      <g transform="translate(32 32) rotate(35)" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#FFF" stroke-width="11"/>
+    <!-- THE SAME ART AS icon.svg, and it must stay that way: this card is the
+         first thing anyone sees of the tool in a chat app, so a stale logo
+         here is a different product as far as a reader is concerned. Four
+         stacked strokes from wg/core.js at WG.BANDS widths, PALETTE.green,
+         and no plate, exactly as the favicon draws it. viewBox is the
+         rotated bounding box, not the reach circle. -->
+    <svg width="58" height="58" viewBox="-21.39 -15.13 35.41 35.41" aria-hidden="true">
+      <g transform="rotate(35)" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#FFFFFF" stroke-width="11"/>
         <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#0A1116" stroke-width="8.5"/>
-        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#EE8A1C" stroke-width="5"/>
-        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="#EFCB1F" stroke="#3A4750" stroke-width="1"/>
+        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="none" stroke="#31A85A" stroke-width="5"/>
+        <path d="M0,-11.75 L9,11.75 L0,4.75 L-9,11.75 Z" fill="#31A85A" stroke="#3A4750" stroke-width="1"/>
       </g>
     </svg>
     <div class="nm">XCTrack Windmap</div>
