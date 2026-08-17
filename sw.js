@@ -25,7 +25,7 @@
    the background revalidation picks those up on its own.
    ═══════════════════════════════════════════════════════════════════ */
 
-var CACHE = "windmap-v6";
+var CACHE = "windmap-v7";
 
 var ASSETS = [
   "./",

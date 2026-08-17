@@ -554,8 +554,10 @@ a{color:var(--chart)}
        for GPS on first launch wants this answered, and burying it in the
        disclaimer reads as though it were also a liability caveat. -->
   <p class="priv"><b>Your position stays on your phone.</b> Only the area around
-    you is sent to winds.mobi, to ask which stations are in it. No accounts, no
-    analytics.</p>
+    you is sent to winds.mobi, to ask which stations are in it. No accounts, and
+    no profile of you anywhere. <b>This setup page counts visits</b> (Cloudflare
+    Web Analytics: page views and country, no cookies, nothing stored on your
+    device). The overlay and the list never do.</p>
 
   <footer>
     <!-- The family link moved to the breadcrumb at the top of the page. -->
@@ -685,6 +687,36 @@ refreshLinks();
 <div class="gtranslate_wrapper"></div>
 <script>window.gtranslateSettings = {"default_language":"en","native_language_names":true,"detect_browser_language":true,"languages":["en","de","fr","it","es"],"wrapper_selector":".gtranslate_wrapper","switcher_horizontal_position":"right","switcher_vertical_position":"top","float_switcher_open_direction":"bottom"}</script>
 <script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>
+
+<!-- ══ VISIT COUNTING ═══════════════════════════════════════════════════
+     Cloudflare Web Analytics, on THIS PAGE ONLY. Never app.html and never
+     widget.html: those are read in the air, HX Call exists to work with no
+     data connection at all, and a beacon there would put a network request
+     inside that guarantee. Same rule as the translation widget above, and
+     for the same reason.
+
+     Cookieless by design. It stores nothing on the device and builds no
+     cross-site profile, which is what keeps it out of consent-banner
+     territory. The small print says so in plain words, because the page
+     promised "no analytics" before this existed and must not now be wrong
+     about itself.
+
+     THE TOKEN IS INJECTED, not hardcoded into a <script src>. An
+     unconfigured page then makes NO request at all: until a real 32-hex
+     token is pasted in, this does nothing and costs nothing. Fail closed,
+     so the page is safe to ship before the account exists.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  var TOKEN = "2537f91a24654d4c8ed453f8c445c6b9";
+  if (!/^[a-f0-9]{32}$/.test(TOKEN)) return;      /* not set up yet */
+  var s = document.createElement("script");
+  s.defer = true;
+  s.src = "https://static.cloudflareinsights.com/beacon.min.js";
+  s.setAttribute("data-cf-beacon", '{"token":"' + TOKEN + '"}');
+  document.head.appendChild(s);
+})();
+</script>
 
 </body>
 </html>
