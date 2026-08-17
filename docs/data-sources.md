@@ -18,10 +18,12 @@ Everything numeric below was measured against the live winds.mobi API on
    **zero** Italian stations.
 3. **The fix belongs upstream.** A winds.mobi provider lights up the Western
    Alps for every winds.mobi client and needs **no change to this repo at all**.
-4. **The target is MeteoNetwork, not ARPA Piemonte** (established 2026-08-17,
-   section 7). It is CC-BY 4.0, it has a bulk `lat`/`lon`/`range` call returning
-   every field we need, and it already aggregates the Italian regional networks
-   and MET Norway as sub-networks. One provider instead of twenty.
+4. **Try MeteoNetwork first** (established 2026-08-17, section 7). CC-BY 4.0, a
+   bulk `lat`/`lon`/`range` call returning every field we need, and it appears
+   to carry the Italian regional networks and MET Norway as sub-networks. One
+   provider instead of twenty. Behind it, in order: **MeteoHub/ItaliaMeteo**
+   (same regional data first-hand, clumsier batch API) and **ARPA Piemonte**
+   (one region, but it lights up the Western Alps where this started).
 
 ---
 
@@ -154,7 +156,13 @@ paraglider pilot far less than a ridge station, and this tool's whole premise
 is that where a reading was taken is what makes it mean something. Worth saying
 to anyone offering a station.
 
-## 7. MeteoNetwork: the target
+## 7. Candidate sources, best first
+
+Three routes to the same missing networks. They are ordered by how much they
+buy per unit of work, not by how good the data is; all three are plausible, and
+the ordering is the part most likely to be wrong once someone measures.
+
+### MeteoNetwork, the one to try first
 
 Established 2026-08-17 from the OpenAPI spec at
 <https://api.meteonetwork.it/swagger.yaml> (REV5, 18/05/2023). This is what
@@ -220,7 +228,31 @@ query. `POST /api/data` submits a request, `GET /api/requests` polls its status,
 `GET /api/data/{filename}` downloads the result, with a default of **10
 requests per hour** and a 15-minute floor on scheduled extractions. Workable
 for a scheduled provider at our ~10 minute cadence, awkward, and strictly more
-code than MeteoNetwork. Treat it as the fallback.
+code than MeteoNetwork.
+
+Note SeeYou credits **ItaliaMeteo**, not the individual agencies, which is the
+first hint that the aggregation is real and that nobody needs twenty providers.
+
+### And the regional agencies directly, as the last resort
+
+**ARPA Piemonte** was the original target and remains the floor under both
+options above. It publishes open data at
+<https://www.arpa.piemonte.it/dato/open-data>, with API documentation at
+<https://utility.arpa.piemonte.it/docs/>, carrying real-time wind from a subset
+of its network on a **15-minute** update. Its licence has **not been read**.
+
+Why it is the last resort rather than the first: it is one region. The gap in
+section 4 spans Italy, Austria, Bavaria and Norway, and closing it agency by
+agency is a dozen providers, a dozen licences and a dozen things to keep
+working. Both routes above collapse that into one. But if MeteoNetwork's
+Italian coverage disappoints and MeteoHub's extraction API proves impractical,
+a single well-made ARPA Piemonte provider still lights up the Western Alps,
+which is where this investigation started.
+
+The other names on the SeeYou list are unexamined and would each need the same
+qualification: GeoSphere Austria, the Lawinenwarndienst services of Tirol,
+Salzburg and Bayern, Friuli Venezia Giulia civil protection, MET Norway.
+Several are already CC-BY 4.0 per SeeYou's own credit line.
 
 ---
 
@@ -237,21 +269,36 @@ There is an **open email thread with Yann at winds.mobi** (see `todo.md`, the
 - Would a PR for a **MeteoNetwork** provider be welcome (CC-BY 4.0, bulk
   `lat`/`lon`/`range` call, and it appears to carry the Italian regional
   networks and MET Norway as sub-networks; see section 7)? Is there a reason it
-  was not done already, which would be worth knowing before writing it?
+  was not done already, which would be worth knowing before writing it? If he
+  would rather have a first-party regional source, say **ARPA Piemonte** is the
+  fallback and ask which he would prefer to receive.
 - Can a handful of **Ecowitt** stations be added, and by which route: the
   curated Wunderground table, or MeteoNetwork if that provider lands?
 
 Cheapest possible step and it may make steps 2 and 3 unnecessary or better
 aimed.
 
-### Step 2: measure the source before writing the provider
+### Step 2: qualify the source before writing the provider
 
-The licence and API questions this step was written for are **answered** in
-section 7: CC-BY 4.0 (opt-in per contributor), free account, bulk call, wind
-speed, gust, direction, coordinates and altitude all present. What is left is
-the thing no spec can tell you: **whether the stations are actually there, and
-whether they are worth drawing.**
+**Five things must be true of any candidate**, whichever one you are looking at.
+This list is source-agnostic on purpose; it was written for ARPA Piemonte and it
+outlived the choice of source, so do not let it collapse into notes about
+whichever API was read most recently:
 
+1. **Redistribution is permitted**, and it is clear what attribution is owed.
+2. **Live** wind speed, gust and direction, not a daily or monthly aggregate.
+   The historical archive is useless here.
+3. **Station altitude and coordinates are published.** Windmap draws markers on
+   terrain and prints altitude; a reading without a position is not a reading we
+   can show.
+4. **A cadence no slower than the ~10 minutes we already poll at.** 15 minutes is
+   acceptable, hourly is not.
+5. **Siting worth drawing.** Not a licence question, and the one most easily
+   skipped. See the altitude bullet below.
+
+For **MeteoNetwork**, 1–4 are answered in section 7 (CC-BY 4.0 opt-in per
+contributor, free account, bulk call, all fields present). What is left is 5,
+plus the thing no spec can tell you: **whether the stations are actually there.**
 Get a `BULK` token and count, in the same boxes as section 4:
 
 - how many stations `data-realtime` returns for Piemonte, and how that compares
@@ -315,10 +362,12 @@ seam to copy, and `prepare()` must stay the only thing that ranks and culls.
   which is exactly what step 2 is now for. In particular, `metno` and `mistral`
   are **inferred from the `subnet_exclude` parameter's example value**, which is
   suggestive but is not a list of subnets.
-- **ARPA Piemonte**: superseded rather than investigated. If MeteoNetwork's
-  Italian coverage disappoints, the regional agencies are still there
-  (<https://www.arpa.piemonte.it/dato/open-data>) and their licences are
-  still unread.
+- **ARPA Piemonte's licence**: still not read. It is now the third-choice route
+  (section 7), but "third choice" is a judgement about API shape and breadth,
+  not a finding about ARPA, and nothing here rules it out.
+- **The other SeeYou networks**: GeoSphere Austria, the three
+  Lawinenwarndienst services, Friuli VG and MET Norway have not been examined
+  as APIs at all.
 - **Windy/Wunderground global usage**: sampled Europe only.
 - **MET Norway, GeoSphere, the Lawinenwarndienst services**: not investigated
   as APIs. Listed here only as the gap, not as a recommendation.
