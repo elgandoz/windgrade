@@ -629,6 +629,13 @@ function closePop(){
   var p = document.getElementById("pop");
   p.hidden = true;
   p.innerHTML = "";
+  /* `data-for` says WHICH STATION THE SHELL IN THE DOM BELONGS TO, so it has to
+     die with the shell. Leaving it set meant reopening the SAME station hit
+     paintPop's "already built, only repaint the trend" path, and paintTrend
+     then found no `.trend` to write into because innerHTML had just been
+     emptied: an empty panel, open, with nothing in it. Only for the same
+     station, because any other id failed the check and rebuilt properly. */
+  p.removeAttribute("data-for");
   tick();                       /* and it has to come off again */
 }
 
