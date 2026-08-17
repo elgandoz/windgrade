@@ -206,11 +206,39 @@ collaboration terms. Two caveats, both real:
   looser than CC-BY normally reads. A provider should attribute anyway.
 
 **Access.** A free myMeteoNetwork account (<https://my.meteonetwork.it>),
-then `POST /v3/login` for a Bearer token. **The bulk methods need a `BULK`
-token, which is granted on request** with "additional information about the
-activity you are going to perform". That is a gate, but a soft one, and a
-winds.mobi provider is exactly the kind of activity it exists to vet. Rate
-limits are 1 request/second and 1 thread.
+then `POST /v3/login` for a Bearer token that never expires (cache it; a new
+one can only be generated hourly). Rate limits are 1 request/second, 1 thread.
+
+**The `BULK` token is a harder gate than it first looks, and this is the single
+most important operational fact in this document.** Read off the `Credentials`
+schema, 2026-08-17:
+
+> *BULK token type is **reserved to institutions, no-profit organizations or
+> companies**. To request a bulk token you need to provide additional
+> information about your business.*
+
+The request takes `company`, `description`, and a **`contribution`** field that
+is an enum of `service` or `donation`, with: *"You will be contacted by our team
+for the contribution you have chosen. If you don't reply to our team, your token
+will be disabled."*
+
+Three consequences, none of them optional:
+
+1. **Every bulk method is gated**, so `/stations` and `/data-realtime` are both
+   out of reach without it. An individual with a STANDARD token can only query
+   station codes they already know, which is no way to count a network. **The
+   step 2 measurement cannot be done without clearing this gate.**
+2. **winds.mobi is the natural applicant, not us.** It is an established service
+   with a public benefit, exactly the kind of user this gate is written for, and
+   it would hold one token for every client rather than each app holding its own.
+   This is now the strongest argument for the upstream route.
+3. **Requesting a token creates an obligation**, to a service or a donation, and
+   a person will follow up expecting an answer. That is a commitment to make
+   deliberately, not a checkbox on the way to a measurement.
+
+MeteoNetwork is a non-profit association funded by members and donors. If this
+project ends up depending on them, contributing is the right thing to do
+regardless of what the token requires.
 
 **This does not reach us directly.** The token makes it a server-side API, so
 it cannot be called from `wg/windsmobi.js` in the browser. That is an argument
@@ -272,6 +300,17 @@ There is an **open email thread with Yann at winds.mobi** (see `todo.md`, the
   was not done already, which would be worth knowing before writing it? If he
   would rather have a first-party regional source, say **ARPA Piemonte** is the
   fallback and ask which he would prefer to receive.
+- **The one that unblocks everything: would winds.mobi request the `BULK`
+  token?** It is restricted to institutions and non-profits and carries a
+  contribution obligation (section 7), winds.mobi fits that description far
+  better than one pilot with a side project, and one token upstream serves every
+  client. Without it nobody can even count the stations.
+
+**Meanwhile, the one thread that needs no permission from anyone:** read the
+ARPA Piemonte licence. It is open data, no account, no gate, and it is the
+fallback the whole plan rests on if MeteoNetwork does not work out. Doing it
+while waiting for a reply costs nothing and removes the last unknown from the
+third route.
 - Can a handful of **Ecowitt** stations be added, and by which route: the
   curated Wunderground table, or MeteoNetwork if that provider lands?
 
@@ -299,7 +338,11 @@ whichever API was read most recently:
 For **MeteoNetwork**, 1–4 are answered in section 7 (CC-BY 4.0 opt-in per
 contributor, free account, bulk call, all fields present). What is left is 5,
 plus the thing no spec can tell you: **whether the stations are actually there.**
-Get a `BULK` token and count, in the same boxes as section 4:
+
+**This measurement is blocked on a `BULK` token**, which is restricted to
+institutions and carries a contribution obligation, see section 7. Do not start
+here: settle who applies, in step 1, first. Once a token exists, count in the
+same boxes as section 4:
 
 - how many stations `data-realtime` returns for Piemonte, and how that compares
   to the 32 winds.mobi gives us today;
