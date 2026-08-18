@@ -4,6 +4,96 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-18: ARPA Piemonte has the best-sited wind stations available, and publishes them four hours late
+
+Measured against <https://utility.arpa.piemonte.it/api_realtime/> (FastAPI, spec
+at `/openapi.json`, **no authentication of any kind**).
+
+**The registry is excellent.** `GET /pie_anag?page_size=2000` returns **374
+stations** with `name`, `lat`, `lng`, **`quote` (altitude)**, `municipality`,
+`province` and a `station_type` letter code. Letter **`V`** is *vento*:
+
+| letter | stations | |
+|---|---|---|
+| P | 286 | pluviometro |
+| T | 277 | temperatura |
+| H | 143 | idrometro |
+| **V** | **90** | **anemometro** |
+| N | 79 | neve |
+
+**46 of the 90 fall in the Piemonte box this repo has used throughout**, against
+winds.mobi's **32 stations there of which none is Italian**. And the siting is
+what no amateur network can match:
+
+| altitude | name | |
+|---|---|---|
+| 4560 m | CAPANNA MARGHERITA | |
+| 3320 m | MONVISO | |
+| 3272 m | GRAN VAUDALA | |
+| 2745 m | RIFUGIO VACCARONE | |
+| 2700 m | MONTE FRAITEVE | |
+
+32 anemometers sit above 1500 m and 21 above 2000 m. Median 729 m.
+
+**The readings carry everything needed.** `GET /data_pie?station_code=…` returns
+`wind`, `wind_direction`, `gust_of_wind`, `gust_direction` and a proper ISO
+timestamp with offset (`2026-08-18T07:00:00+02:00`).
+
+**And here is why it fails anyway.** Checked across the highest stations, all
+agreeing:
+
+- **the cadence is hourly**, not 10 or 15 minutes;
+- **the newest sample was 251 minutes old**, on every station, at 11:11 local.
+
+Four hours late is not "realtime" for deciding whether to fly, and it breaks
+this project's own rule that stale data must announce itself: 90 new markers
+that are *always* four hours old would render permanently stale. That is worse
+than not having them, because it fills the map with things a pilot must learn to
+ignore.
+
+**Not found: a fresher feed.** The live map at
+`/rischi_naturali/snippets_arpa_graphs/map_sensori/` pulls
+`/rischi_naturali/data/tr/vels/vels.geojson` (89 features) and a sibling
+`velv.geojson` (79). Both regenerate every few minutes, `creation_date` was 9
+minutes old, but **both are station registries and carry no measurement at all**.
+So either the map reads values from the same lagging API, or there is an
+endpoint I did not find. **Cheap way to settle it: open the map, click a
+station, and see what timestamp it shows.** If it is recent, a fresher feed
+exists.
+
+**Licence: CC-BY 4.0**, per the `NOTICE` of the sibling `paragliding-kubernetes`
+project: *"any use must cite Arpa Piemonte"*. Not confirmed from ARPA directly.
+
+**Verdict: the best siting on offer and unusable as it stands.** The one
+question worth asking ARPA is whether a lower-latency feed exists or could. They
+are a public authority publishing open data, so it is a fair thing to ask, and
+the answer decides whether 46 well-sited alpine anemometers become available to
+every winds.mobi client or none of them do.
+
+---
+
+### 2026-08-18: MeteoNetwork's Piemonte stations are sited in valley-bottom courtyards
+
+Owner's own inspection of the live map, and it is the criterion no API spec
+could answer: **many are amateur installations in town courtyards at the bottom
+of valleys.**
+
+This is the risk `data-sources.md` flagged as acceptance criterion 5 and it has
+now materialised. It does not make MeteoNetwork worthless, but it removes the
+assumption that station *count* is the thing to optimise. A hundred valley-floor
+readings do not help a pilot at 2000 m, and by this project's rules they are
+noise drawn on terrain where they mean something quite different.
+
+Together with the ARPA entry above, the two candidates now trade off cleanly and
+neither wins outright:
+
+| | siting | freshness | access |
+|---|---|---|---|
+| **ARPA Piemonte** | **excellent**, 21 above 2000 m | **hourly, 4 h late** | open, CC-BY |
+| **MeteoNetwork** | **poor**, valley courtyards | good | bulk gated to institutions |
+
+---
+
 ### 2026-08-18: the Ecowitt unit trap, found independently by another project
 
 `paragliding-kubernetes`, a sibling app by a pilot in the same club, documents

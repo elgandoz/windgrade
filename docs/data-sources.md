@@ -219,7 +219,11 @@ an institution; ItaliaMeteo is clumsier but gates nothing:
   gate easily, one token upstream serves every client, and the API is a plain
   area query.
 - **If this is done by one person without winds.mobi's backing, ItaliaMeteo
-  wins**, because there is no gate to clear at all. Its 10 requests/hour sounds
+  wins**, because there is no gate to clear at all.
+- **On siting, ARPA beats both** and MeteoNetwork loses badly: inspected
+  2026-08-18, many of its Piemonte stations sit in **town courtyards on valley
+  floors**, which is criterion 5 failing in practice. Station count is not the
+  thing to optimise. Its 10 requests/hour sounds
   restrictive but is not: a provider polling every 10 minutes needs 6, and one
   extraction can cover a whole country.
 
@@ -371,7 +375,35 @@ code than MeteoNetwork.
 Note SeeYou credits **ItaliaMeteo**, not the individual agencies, which is the
 first hint that the aggregation is real and that nobody needs twenty providers.
 
-### And the regional agencies directly, as the last resort
+### ARPA Piemonte, measured 2026-08-18: best siting, unusable latency
+
+**Promoted from last resort to first choice on merit, and blocked on one
+question.** Full numbers in `findings.md`; the short form:
+
+- **90 anemometers**, 46 inside the Piemonte box, against winds.mobi's 32 there
+  of which none is Italian.
+- **The siting is the best available anywhere in this document**: Monviso at
+  3320 m, Monte Fraiteve at 2700 m, 21 stations above 2000 m. These are the
+  strategic ridge and summit sites XC pilots actually care about, maintained by
+  a public authority rather than by hobbyists.
+- **No authentication.** `GET /pie_anag` for the registry with `quote`
+  (altitude) and coordinates, `GET /data_pie` for `wind`, `wind_direction`,
+  `gust_of_wind`, `gust_direction` and a proper ISO timestamp.
+- **CC-BY 4.0**, citing "Arpa Piemonte".
+
+**It fails acceptance criterion 4 and it fails it badly: the feed is hourly and
+runs about four hours behind.** Measured on every high station, all agreeing.
+That is not a live wind source, and adding it would put 90 permanently-stale
+markers on a map whose central rule is that stale data must announce itself.
+
+**So the single question that decides this route is whether ARPA has, or would
+publish, a lower-latency feed.** They are a public authority with an open-data
+mandate, so it is a reasonable thing to ask, and unlike every other blocker in
+this document it needs no token, no institution status and no favour. **Ask
+them.** If the answer is yes, ARPA becomes the clear first choice and most of
+section 7 is moot.
+
+### And the other regional agencies, as the last resort
 
 **ARPA Piemonte** was the original target and remains the floor under both
 options above. It publishes open data at
