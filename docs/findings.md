@@ -4,6 +4,48 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-18: the Weather Underground provider IS alive — earlier conclusion corrected
+
+**`winds.mobi/api/2/stations/` accepts a `provider=` filter**, which nobody here
+knew. It settles a question two earlier entries could only guess at:
+
+```
+provider=wunderground   ->  9 stations
+provider=windy          ->  0
+provider=pioupiou       ->  500 (capped)
+```
+
+**The earlier claim was drawn from a sample and was wrong in the part that
+mattered.** "No `wunderground-` station in 560 European stations" was true and
+led to *"the integration is clearly not a meaningful source of coverage today"*,
+which implied dormant. It is not dormant. It is **tiny**: nine stations, in South
+Africa, Norway and Austria, none of which fell in the boxes sampled.
+
+**Eight of the nine are `status: red`. One is green, and it is genuinely live:**
+
+```
+wunderground-INZIDE9  Nüziders (AT)  557 m  status green
+  last: { _id: 1787061420, w-dir: 187, w-avg: 4.0, w-max: 5.0, temp: 22.0 }
+  -> 2026-08-18 13:57 UTC, 10 minutes old
+```
+
+**That single green station is the whole finding.** The pipeline fetches, parses,
+timestamps and publishes correctly *today*, so the hard-coded API key in
+`wunderground.py` still works and the module still runs. The eight reds are
+individual stations that stopped reporting, which is what happens to
+privately-owned kit; they are not evidence about the provider.
+
+**Verdict: route 1 is viable.** Getting the club's Ecowitt stations onto Weather
+Underground and asking for two ids to be added is a path that demonstrably ends
+in a live marker. It remains the cheapest of the three, and it is now the only
+one proven end to end.
+
+**Method note, worth keeping.** Absence in a sample was treated as absence in the
+population for a week. The `provider=` filter answered it in one call. Look for
+the filter before generalising from a sample.
+
+---
+
 ### 2026-08-18: CORS decides the architecture — everything must go through winds.mobi
 
 Measured with a browser `Origin` header from the deployed origin:

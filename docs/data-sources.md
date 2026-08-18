@@ -123,11 +123,20 @@ rather than discovering stations:
   Its API key is **hard-coded in the source**, with a comment noting it has not
   changed in years. Fragile.
 
-**No `windy-` or `wunderground-` station appeared in any European box I
-sampled** (560 stations across the three boxes above). Absence in a sample is
-not proof of zero globally, but the integration is clearly not a meaningful
-source of coverage today. Stations must be added by hand on the winds.mobi
-side.
+**Corrected 2026-08-18.** `winds.mobi/api/2/stations/?provider=…` filters by
+provider, which settles this directly: **`wunderground` has 9 stations, `windy`
+has 0.** None fell in the 560-station European sample taken on 2026-08-17, which
+is why they looked absent.
+
+Nine is tiny, so "not a meaningful source of coverage" stands. **But it is not
+dormant**: `wunderground-INZIDE9` (Nüziders, AT) was `status: green` with a
+reading **10 minutes old**, which proves the module still runs and its hard-coded
+API key still works. Eight of the nine are red, which is those stations having
+stopped, not the provider.
+
+**So adding stations by hand on the winds.mobi side is a route that works
+today**, and it is the cheapest way to get the club's Ecowitt stations onto the
+map. See `findings.md`.
 
 ## 6. Ecowitt stations
 
