@@ -156,6 +156,28 @@ plus Sigfox connectivity, free for the first year then about €20/year.
   `windspeedmph` while the unit is a per-device preference that may be km/h**.
   Read the `unit` field or publish readings 1.61× too fast.
 
+**Who can actually change what, checked 2026-08-18.** The stations belong to a
+club member, not to us, and he is not technical. That is a routing constraint,
+not a footnote:
+
+| setting | where it lives | can we do it remotely? |
+|---|---|---|
+| Coordinates, elevation, units | ecowitt.net dashboard | **Only with the owner's login.** Share links are read-only and Ecowitt documents no delegated editing |
+| **Weather Underground upload** | **the device, over the LAN** | **No.** WS View Plus or the web UI at `192.168.4.1`, so somebody must be on the station's own network |
+| Registering the WU station itself | wunderground.com | **Yes**, by anyone. It yields a station ID and key to hand over |
+| Reading a share link | nothing to change | **Yes**, and it needs nothing from the owner at all |
+
+**This reorders the Ecowitt routes.** The Weather Underground route looked
+cheapest because winds.mobi already has that provider, but its cost is not code,
+it is **getting a non-technical person onto a mountain-top network with a phone
+app**. The share-link route's cost is entirely code, which is the kind of cost
+this project can actually pay. If the club is quick to help, WU still wins; if
+not, the ranking flips.
+
+The one part that *is* remote is worth using: register the WU stations yourself
+and hand over two short strings to type in. That reduces the on-site job to
+about two minutes.
+
 **Siting matters more than plumbing.** A garden station at 300 m tells a
 paraglider pilot far less than a ridge station, and this tool's whole premise
 is that where a reading was taken is what makes it mean something. Worth saying
