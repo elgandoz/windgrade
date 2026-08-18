@@ -240,6 +240,40 @@ MeteoNetwork is a non-profit association funded by members and donors. If this
 project ends up depending on them, contributing is the right thing to do
 regardless of what the token requires.
 
+### Without a BULK token: a hand-curated station list
+
+**The single-station endpoints need no BULK token**, and this is the escape
+hatch. `GET /v3/data-realtime/{station_code}` and `GET /v3/stations/{code}`
+return the same `Realtime` and `Station` schemas as the bulk calls, so every
+field is still there. What you lose is discovery: you must already know the
+codes.
+
+**There is precedent upstream.** `providers/windy.py` and
+`providers/wunderground.py` do exactly this, reading a curated table of station
+ids and polling each one. So a `meteonetwork` provider built this way fits a
+pattern winds.mobi already runs rather than inventing one.
+
+**The ceiling is the throttle: 5 requests per minute** on the single-station
+endpoint, which is much tighter than the 1 request/second that applies
+elsewhere. At our ~10 minute cadence that is **about 50 stations**, and 15
+minutes buys 75. Fine for a handful, useless for a region: the ~300 stations it
+would take to close the Piemonte gap would need an hour per poll.
+
+So the two goals want different answers:
+
+| goal | BULK needed? |
+|---|---|
+| Get a few known stations onto the map, e.g. the Ecowitt ones | **No.** Curate the codes by hand |
+| Count the network to decide whether to build at all (step 2) | **Yes.** There is no way to enumerate without it |
+| Close the Italian coverage gap | **Yes.** 300 stations at 5/min is an hour |
+
+**Unconfirmed:** the spec lists a 405 *"token not authorized for bulk methods"*
+among the responses for the single-station endpoints too, though their summaries
+are not marked `(Bulk method)` the way `/stations` and `/data-realtime` are.
+Almost certainly boilerplate copied across the endpoints, but it is the one
+thing that would sink this route, and **one call with a STANDARD token settles
+it**. Do that before planning around this.
+
 **This does not reach us directly.** The token makes it a server-side API, so
 it cannot be called from `wg/windsmobi.js` in the browser. That is an argument
 *for* the upstream route, not against the source.
