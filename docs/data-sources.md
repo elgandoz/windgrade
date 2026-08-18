@@ -11,21 +11,26 @@ Everything numeric below was measured against the live winds.mobi API on
 
 ## The short version
 
-1. **OpenWindMap is a network, not an aggregator, and we already have it.**
-   Swapping to it would cost us most of our stations everywhere.
-2. **The gap is national networks, not APIs.** winds.mobi is dense where a
-   country's official network feeds it and thin where none does. Piemonte has
-   **zero** Italian stations.
-3. **The fix belongs upstream.** A winds.mobi provider lights up the Western
-   Alps for every winds.mobi client and needs **no change to this repo at all**.
-4. **Try MeteoNetwork first** (established 2026-08-17, section 7). CC-BY 4.0, a
-   bulk `lat`/`lon`/`range` call returning every field we need, and it appears
-   to carry the Italian regional networks and MET Norway as sub-networks. One
-   provider instead of twenty. Behind it, in order: **MeteoHub/ItaliaMeteo**
-   (same regional data first-hand, clumsier batch API) and **ARPA Piemonte**
-   (one region, but it lights up the Western Alps where this started).
+**The plan is: get the club's Ecowitt stations onto Weather Underground, and ask
+winds.mobi to add them. Everything else in this document is later work.**
 
----
+1. **The gap is hardware, not APIs.** Nobody has put anemometers on the ridges
+   of the Western Alps except ARPA and a handful of pilots. Two days of hunting
+   for an aggregator that already held the missing stations found none, because
+   none exists. Section 7.
+2. **CORS decides the architecture.** Ecowitt and MeteoNetwork send no
+   `access-control-allow-origin`; winds.mobi sends `*`. Windmap is static with no
+   server, so **winds.mobi is the only door**, and upstream stopped being the
+   tidy option and became the only one. `findings.md` 2026-08-18.
+3. **Weather Underground is the way in, and it is proven.** Its provider carries
+   only nine stations, but one of them was live with a 10-minute-old reading, so
+   the pipeline works end to end today. Adding a station is a request, not a
+   pull request. Section 5.
+4. **OpenWindMap is a network, not an aggregator, and we already have it** as
+   `pioupiou`. Swapping to it would cut Valais from 106 stations to 7. Section 2.
+5. **Later, and only later**: ARPA Piemonte has the only mountain instruments
+   that matter but publishes four hours late; MeteoNetwork has a clean API and,
+   in the Western Alps, nothing above the valley floor. Section 7.
 
 ## 1. What SeeYou lists
 
@@ -111,7 +116,7 @@ So the difference against SeeYou is exactly **ItaliaMeteo, the Austrian
 avalanche services, GeoSphere Austria, LWD Bayern and MET Norway**, and none of
 it is reachable through OpenWindMap.
 
-## 5. Windy and Weather Underground: present, effectively unused
+## 5. Windy and Weather Underground: tiny, and Weather Underground works
 
 Both providers exist, and **both read a curated list from a database table**
 rather than discovering stations:
@@ -220,8 +225,13 @@ Three routes to the same missing networks. They are ordered by how much they
 buy per unit of work, not by how good the data is; all three are plausible, and
 the ordering is the part most likely to be wrong once someone measures.
 
-**The ordering flips depending on who is asking, and that matters more than the
-APIs do.** MeteoNetwork has the better shape but gates bulk access behind being
+**Superseded 2026-08-18 for the near term.** The club's stations go via Weather
+Underground (see The plan), which needs none of what follows. Everything in this
+section is about the *wider* Piemonte gap, which is a hardware problem more than
+an API one, and is optional.
+
+**Among these three, the ordering flips depending on who is asking, and that
+matters more than the APIs do.** MeteoNetwork has the better shape but gates bulk access behind being
 an institution; ItaliaMeteo is clumsier but gates nothing:
 
 - **If winds.mobi requests the bulk token, MeteoNetwork wins.** They clear that
@@ -308,7 +318,7 @@ example names `mistral`, which is ItaliaMeteo's platform. That is why it looks
 like a superset. **It is a hint from an example value, not a verified fact**, and
 if it turns out to be wrong then ItaliaMeteo is simply the better target.
 
-### MeteoNetwork, the one to try first
+### MeteoNetwork: clean API, wrong stations for the Western Alps
 
 Established 2026-08-17 from the OpenAPI spec at
 <https://api.meteonetwork.it/swagger.yaml> (REV5, 18/05/2023). This is what
@@ -447,7 +457,7 @@ code than MeteoNetwork.
 Note SeeYou credits **ItaliaMeteo**, not the individual agencies, which is the
 first hint that the aggregation is real and that nobody needs twenty providers.
 
-### ARPA Piemonte, measured 2026-08-18: best siting, unusable latency
+### ARPA Piemonte: the only mountain instruments, four hours late
 
 **Promoted from last resort to first choice on merit, and blocked on one
 question.** Full numbers in `findings.md`; the short form:
@@ -500,111 +510,88 @@ Several are already CC-BY 4.0 per SeeYou's own credit line.
 
 ## The plan
 
-Ordered by cost. Each step is useful on its own.
+**Now: the club's stations.** Everything after step 2 is optional and later.
 
-### Step 1: ask, before writing anything
+### Step 1: two Ecowitt stations onto Weather Underground, then into winds.mobi
 
-There is an **open email thread with Yann at winds.mobi** (see `todo.md`, the
-`User-Agent` and `ETag` questions, sent 2026-08-12). Add to it:
+Proven end to end (`findings.md` 2026-08-18). Three parts, and only the first
+needs anybody else:
 
-- Are Italian or Austrian national networks on the roadmap?
-- Would a PR for a **MeteoNetwork** provider be welcome (CC-BY 4.0, bulk
-  `lat`/`lon`/`range` call, and it appears to carry the Italian regional
-  networks and MET Norway as sub-networks; see section 7)? Is there a reason it
-  was not done already, which would be worth knowing before writing it? If he
-  would rather have a first-party regional source, say **ARPA Piemonte** is the
-  fallback and ask which he would prefer to receive.
-- **The one that unblocks everything: would winds.mobi request the `BULK`
-  token?** It is restricted to institutions and non-profits and carries a
-  contribution obligation (section 7), winds.mobi fits that description far
-  better than one pilot with a side project, and one token upstream serves every
-  client. Without it nobody can even count the stations.
+1. **The club enables Weather Underground upload** on each station. This is the
+   only step that cannot be done remotely: Ecowitt gateways are configured over
+   the **local network**, with WS View Plus or the device's web UI, so somebody
+   has to be on the station's own WiFi. Section 6 has the table of who can change
+   what.
+2. **We register the stations at wunderground.com** and hand over an ID and key
+   per station. Entirely ours to do, and it shrinks the on-site job to typing two
+   short strings.
+3. **Ask winds.mobi to add the two IDs** to the table `providers/wunderground.py`
+   reads. A request on their Discord, not a pull request.
 
-**Meanwhile, the one thread that needs no permission from anyone:** read the
-ARPA Piemonte licence. It is open data, no account, no gate, and it is the
-fallback the whole plan rests on if MeteoNetwork does not work out. Doing it
-while waiting for a reply costs nothing and removes the last unknown from the
-third route.
-- Can a handful of **Ecowitt** stations be added, and by which route: the
-  curated Wunderground table, or MeteoNetwork if that provider lands?
+Ask with the homework done: *"`wunderground-INZIDE9` is reporting normally, so
+the provider clearly still works. Could two Ecowitt stations from our club in
+Piemonte be added? They are on masts at paragliding take-offs, 1267 m and
+1700 m."*
 
-Cheapest possible step and it may make steps 2 and 3 unnecessary or better
-aimed.
+### Step 2: make the third station cheaper than the second
 
-### Step 2: qualify the source before writing the provider
+The point is not two stations, it is that **the club keeps installing them**. So
+write down what actually worked, in the club's language rather than ours: which
+Ecowitt setting, what to register, who to ask. If adding station five is
+paperwork rather than a project, this succeeds; if each one costs another week of
+investigation, it does not.
 
-**Five things must be true of any candidate**, whichever one you are looking at.
-This list is source-agnostic on purpose; it was written for ARPA Piemonte and it
-outlived the choice of source, so do not let it collapse into notes about
-whichever API was read most recently:
+Also worth passing on once, and only once: **coordinates and altitude come from
+the device record, never from us.** Ask owners to set them properly at install
+time. The two current stations are ~150 m out and have no altitude at all.
 
-1. **Redistribution is permitted**, and it is clear what attribution is owed.
-2. **Live** wind speed, gust and direction, not a daily or monthly aggregate.
-   The historical archive is useless here.
-3. **Station altitude and coordinates are published.** Windmap draws markers on
-   terrain and prints altitude; a reading without a position is not a reading we
-   can show.
-4. **A cadence no slower than the ~10 minutes we already poll at.** 15 minutes is
-   acceptable, hourly is not.
-5. **Siting worth drawing.** Not a licence question, and the one most easily
-   skipped. See the altitude bullet below.
+### Step 3 and beyond: more integrations, when there is a reason
 
-For **MeteoNetwork**, 1–4 are answered in section 7 (CC-BY 4.0 opt-in per
-contributor, free account, bulk call, all fields present). What is left is 5,
-plus the thing no spec can tell you: **whether the stations are actually there.**
+None of these is needed for the club's stations. Take them on when something
+concrete demands it, not to be thorough.
 
-**This measurement is blocked on a `BULK` token**, which is restricted to
-institutions and carries a contribution obligation, see section 7. Do not start
-here: settle who applies, in step 1, first. Once a token exists, count in the
-same boxes as section 4:
+- **An `ecowitt` provider** reading share links. Fully reverse-engineered already
+  (section 6, `findings.md`), and the **only route needing nothing from station
+  owners**: no LAN visit, no account changes, just a link. That makes it the
+  right answer if the Weather Underground step stalls on getting someone onto a
+  mountain-top network, or if the club grows faster than that step scales. Carry
+  the unit trap across: pin the wind cookie to `7` **and** assert the returned
+  `unit`.
+- **A `meteonetwork` provider.** Clean API, CC-BY 4.0, and its bulk half is gated
+  behind institution status. Worth it for Italy generally; **worth nothing for
+  the Western Alps**, where the network's stations are valley courtyards. If it
+  is ever written, the siting filter belongs in the provider, because winds.mobi
+  normalises the siting fields away.
+- **ARPA Piemonte.** The only body with instruments on the ridges: 46 anemometers
+  in the box, 21 above 2000 m. **Blocked on one question**, whether the ~4 hour
+  publication lag can be reduced. If it can, this is worth more than everything
+  else here combined. If it cannot, it is unusable for live wind and the answer
+  to the regional gap is "pilots, one mast at a time".
 
-- how many stations `data-realtime` returns for Piemonte, and how that compares
-  to the 32 winds.mobi gives us today;
-- how many carry a **non-null `wind_speed`**. A network built around
-  temperature and rain may report wind on a minority of stations, and a
-  station without wind is not a station as far as this tool is concerned;
-- how many are in the `mistral` and `metno` subnets, which is what would
-  confirm the aggregation claim rather than inferring it from a parameter's
-  example value;
-- what the **altitude distribution** looks like. This is the one that decides
-  whether it is worth it. Amateur networks skew to gardens in valleys, and per
-  the product rules a valley-floor reading drawn on a ridge is not a bonus, it
-  is noise. `tipology`, `soil_height` and `buildings_distance` are in the
-  `stations` payload for exactly this judgement.
+### The acceptance criteria, for any of them
 
-If wind coverage or siting is poor, say so and stop. A thin provider is worse
-than no provider, because it makes the map look answered.
+Unchanged, source-agnostic, and written for ARPA originally. Do not let them
+collapse into notes about whichever API was read most recently:
 
-### Step 3: write the provider, upstream
+1. Redistribution permitted, attribution clear.
+2. **Live** wind, not a daily or monthly aggregate.
+3. Station altitude and coordinates published.
+4. Cadence no slower than ~10 minutes. 15 is acceptable, hourly is not.
+5. **Siting worth drawing.** The one most easily skipped, and the one that
+   killed MeteoNetwork here.
 
-`winds-mobi/winds-mobi-providers` is **AGPL v3** and takes pull requests:
-"Fork this repository and open a pull request with your new provider code",
-with `providers/myexample.py` as the template. Some providers need
-`winds-mobi-admin` running locally for station metadata.
+### What not to do: a second provider inside Windmap
 
-**This repo does not change.** A new upstream provider reaches Windmap through
-the same single bounding-box call we already make, and reaches every other
-winds.mobi client at the same time. That is the whole argument for doing it
-there rather than here.
+**CORS now settles what used to be an argument.** Ecowitt and MeteoNetwork send
+no `access-control-allow-origin` at all, so a static page cannot fetch them
+whatever we write, and MeteoNetwork would additionally need a Bearer token that
+a static page cannot hold without publishing it. Proxying is explicitly "a
+finding to report, not a licence to add a backend" (`AGENTS.md`).
 
-### Step 4 (only if 1–3 fail): a second provider in Windmap
-
-**Resist this.** `wg/windsmobi.js` is one provider behind one bounding-box call
-per ~10 minutes, and that discipline is what keeps us inside winds.mobi's "do
-not overload" rule and keeps the tick loop cheap. A second source would add:
-
-- a merge-and-dedupe layer, since networks overlap and the same mast can appear
-  twice under two ids;
-- two staleness clocks with different semantics, against a product rule that
-  says stale data must announce itself;
-- a second failure mode per poll, and a second set of terms to honour;
-- a second `normalise()`, and with it a second chance to disagree about what
-  `name` versus `short` means. See the winds.mobi name/short swap in AGENTS.md.
-
-If it ever happens anyway, the provider interface in `wg/windsmobi.js` is the
-seam to copy, and `prepare()` must stay the only thing that ranks and culls.
-
----
+The older reasons still stand and are worth keeping: a merge-and-dedupe layer,
+two staleness clocks with different semantics, a second failure mode per poll, a
+second set of terms to honour, and a second `normalise()` to disagree with the
+first.
 
 ## Not verified
 

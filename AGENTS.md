@@ -386,10 +386,14 @@ single network rather than an aggregator and we already have it as the
 `pioupiou` provider, so switching to it would cut Valais from 106 to 7. The
 answer is a winds.mobi provider for the missing national networks, contributed
 upstream, which reaches this app through the same one bounding-box call we
-already make. The identified target is **MeteoNetwork**: CC-BY 4.0, a bulk
-`lat`/`lon`/`range` call carrying speed, gust, direction, coordinates and
-altitude, and apparently an aggregator of the Italian regional networks and MET
-Norway rather than only the amateur network it looks like.
+already make. **The near-term route is Weather Underground**: its winds.mobi provider is small
+but demonstrably alive (a station reporting 10 minutes old, measured 2026-08-18),
+so a club station reaching WU becomes a marker by *asking* rather than by writing
+code. **And CORS makes winds.mobi the only door**: Ecowitt and MeteoNetwork send
+no `access-control-allow-origin`, so a static page cannot fetch them whatever we
+write. The wider gap is a *hardware* problem: only ARPA Piemonte and
+pilot-installed masts have instruments on the ridges, and ARPA publishes ~4 hours
+late.
 **Do not add a second provider here** without reading
 `docs/data-sources.md` first: it costs a merge-and-dedupe layer, two staleness
 clocks and a second set of terms to honour, and the doc says what to try first.
