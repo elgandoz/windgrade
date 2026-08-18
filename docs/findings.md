@@ -4,6 +4,33 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-18: the Ecowitt unit trap, found independently by another project
+
+`paragliding-kubernetes`, a sibling app by a pilot in the same club, documents
+the identical hazard in its `docs/CONFIGURATION.md`, reached without any contact
+between the two investigations:
+
+> Unit gotcha: the field keys are `windspeedmph`/`windgustmph` regardless of the
+> actual unit, two stations on the *same* account can declare
+> `units: ["km/h","km/h"]` and mph respectively. `sources/ecowittParse.ts`
+> converts from the declared `units`, never from the key name. Do not
+> "simplify" that.
+
+Two independent discoveries of the same trap, with the same conclusion, is about
+as much corroboration as a finding like this can get. Whoever writes the
+winds.mobi provider should treat it as settled.
+
+That project also names two keyless feeds worth knowing:
+
+- **meteocloud** (`https://www.meteocloud.it/rete/api.php?action=stations`), 302
+  stations, coordinates and live wind, **no name and no altitude**. Measured
+  2026-08-18: only **9** fall in the Piemonte box this repo uses, so it is *not*
+  an answer to the coverage gap, against winds.mobi's 32 there.
+- **Holfuy's public marker feed** (`https://holfuy.com/puget/mkrs.php`), ~1170
+  stations. winds.mobi already carries Holfuy, so this adds nothing here.
+
+---
+
 ### 2026-08-18: Ecowitt share links expose live wind with no key, and the field name lies about the unit
 
 Probed two stations the owner shared as public links (Monte Cucetto and Punta
