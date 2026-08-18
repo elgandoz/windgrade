@@ -4,6 +4,47 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-18: CORS decides the architecture — everything must go through winds.mobi
+
+Measured with a browser `Origin` header from the deployed origin:
+
+| source | status | `access-control-allow-origin` |
+|---|---|---|
+| `www.ecowitt.net` | 200 | **none at all** |
+| `api.meteonetwork.it` | 401 | **none** |
+| `winds.mobi` | 200 | **`*`** |
+
+**Windmap is static hosting with no server, so a source without CORS is simply
+unreachable from it**, whatever we write. That rules out fetching the club's
+Ecowitt stations directly, even though the share-link endpoints work perfectly
+from `curl` and need no credentials.
+
+MeteoNetwork is doubly ruled out: no CORS *and* a Bearer token, which a static
+page cannot hold without publishing it to every visitor.
+
+Reported rather than worked around, per `AGENTS.md`: *"If a data provider needs a
+proxy to satisfy CORS, that is a finding to report, not a licence to add a
+backend without discussion."*
+
+**So there is exactly one way for the club's stations to reach Windmap: through
+winds.mobi.** That is not a preference any more, it is the only door. Every
+"could we just fetch it ourselves" shortcut considered over the last two days
+dies here, and the upstream-provider strategy stops being the tidy choice and
+becomes the only one.
+
+Three ways in, cheapest first, all needing winds.mobi to act:
+
+1. **Weather Underground**, *if* that provider is alive. Club enables WU upload
+   (someone on the station's LAN), we register the WU stations, Yann adds two
+   ids. **No new code anywhere.**
+2. **MeteoNetwork registration**, needs a `meteonetwork` provider written. The
+   route is proven: pmn503 is an `ECOWITT WS3900`.
+3. **A new `ecowitt` provider** reading share links. Fully reverse-engineered
+   already (endpoints, the unit cookies, the traps) and it is **the only route
+   needing nothing from the station owners** — no LAN visit, no account changes.
+
+---
+
 ### 2026-08-18: MeteoNetwork publishes real siting metadata, and a filter is writable
 
 Three Piemonte stations pulled with an ordinary account (`GET /v3/stations/{code}`,
