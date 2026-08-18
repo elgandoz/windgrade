@@ -255,9 +255,15 @@ pattern winds.mobi already runs rather than inventing one.
 
 **The ceiling is the throttle: 5 requests per minute** on the single-station
 endpoint, which is much tighter than the 1 request/second that applies
-elsewhere. At our ~10 minute cadence that is **about 50 stations**, and 15
+elsewhere. At a ~10 minute cadence that is **about 50 stations**, and 15
 minutes buys 75. Fine for a handful, useless for a region: the ~300 stations it
 would take to close the Piemonte gap would need an hour per poll.
+
+**The throttle applies to winds.mobi's polling job, once, globally.** It is not
+per pilot and it does not scale with how many people use Windmap. Windmap makes
+one call to winds.mobi; winds.mobi's provider is what talks to MeteoNetwork.
+Worth stating because the number reads alarmingly small until you see where it
+applies: for two or three stations it is not a constraint at all.
 
 So the two goals want different answers:
 
