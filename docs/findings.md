@@ -74,10 +74,19 @@ saying which to trust:
 | Monte Cucetto | 44.977974, 7.239856 | 44.9765610, 7.2396800 | ~158 m |
 | Punta Ceresa | 44.963284, 7.170651 | 44.9646320, 7.1711940 | ~156 m |
 
-Not the same direction in each case, so this is imprecision rather than a datum
-offset. ~150 m is under a pixel at most scales Windmap draws, so it changes
-nothing today. It is worth the owner correcting **in Ecowitt**, because every
-route considered here reads the device's own coordinates, not ours.
+**The owner's are the accurate ones**, taken from Google Maps at the mast
+itself; the device's were entered roughly and are the ~150 m out. Not the same
+direction in each case, so imprecision rather than a datum offset.
+
+~150 m is under a pixel at most scales Windmap draws, so nothing renders wrong
+today. **Correct it in Ecowitt anyway**, because every route considered here
+reads the device's own coordinates and never ours, so the good figures are
+currently sitting in the one place nothing reads.
+
+**Both stations are mast-mounted beside a paragliding take-off.** That is the
+best case this tool has: not a garden, not a rooftop, but the exact spot a pilot
+is about to launch from. It is also why the owner's own figures are worth having
+in the device record rather than a rough pin.
 
 **Re-probed 2026-08-18, after the owner set the units to km/h: Cucetto still
 returned `mph`.** Ceresa was already km/h and stayed there. Whether that is

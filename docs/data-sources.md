@@ -161,6 +161,28 @@ paraglider pilot far less than a ridge station, and this tool's whole premise
 is that where a reading was taken is what makes it mean something. Worth saying
 to anyone offering a station.
 
+**A hand-curated list is the right design here, not a compromise.** The owner's
+two stations (`findings.md` 2026-08-18) are mast-mounted beside take-offs, at
+1267 m and 1700 m, and he intends to submit **only stations relevant to flying**.
+That reframes the whole plan, because it separates two goals that have been
+tangled together throughout this document:
+
+| goal | shape | what it needs |
+|---|---|---|
+| **A.** Put a handful of take-off stations on the map | curated list of ids | no bulk access, no institution gate, ~50 stations is ample |
+| **B.** Close the Piemonte coverage gap wholesale | whole-network fetch | a bulk token or ItaliaMeteo, and everything in section 7 |
+
+**Goal A is what was actually asked for**, and almost all the difficulty in this
+document belongs to goal B. For A the ranking inverts: Weather Underground first
+because its provider already exists, then a small `ecowitt` provider, and
+MeteoNetwork only if it is wanted for its own sake. **The `BULK` token, the
+institution gate and the ItaliaMeteo comparison are all goal-B problems**, and
+none of them blocks goal A.
+
+A curated list also beats a network import on quality for this tool. A pilot
+choosing which masts matter is doing something no bulk fetch can: filtering for
+whether the reading means anything to someone about to launch.
+
 ## 7. Candidate sources, best first
 
 Three routes to the same missing networks. They are ordered by how much they
