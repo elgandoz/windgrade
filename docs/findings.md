@@ -61,6 +61,31 @@ Three smaller problems, each real:
 Verdict: **it works, and it should still not be the first choice.** It proves a
 fallback exists rather than settling the route.
 
+**Altitudes, supplied by the owner 2026-08-18**, since neither endpoint carries
+one: **Punta Ceresa 1267 m**, **Monte Cucetto 1700 m**. Both are summit sites,
+which is what makes them worth drawing at all.
+
+**The coordinates disagree slightly with the owner's**, and Windmap's whole
+premise is that where a reading was taken is what it means, so it is worth
+saying which to trust:
+
+| station | owner | `get_device_info` | apart |
+|---|---|---|---|
+| Monte Cucetto | 44.977974, 7.239856 | 44.9765610, 7.2396800 | ~158 m |
+| Punta Ceresa | 44.963284, 7.170651 | 44.9646320, 7.1711940 | ~156 m |
+
+Not the same direction in each case, so this is imprecision rather than a datum
+offset. ~150 m is under a pixel at most scales Windmap draws, so it changes
+nothing today. It is worth the owner correcting **in Ecowitt**, because every
+route considered here reads the device's own coordinates, not ours.
+
+**Re-probed 2026-08-18, after the owner set the units to km/h: Cucetto still
+returned `mph`.** Ceresa was already km/h and stayed there. Whether that is
+propagation delay, the wrong device, or a share-view setting held separately
+from the account, the lesson is the same and it is now demonstrated rather than
+predicted: **the unit cannot be assumed from the key, from the account setting,
+or from a sibling station.** Read the `unit` field on every reading.
+
 ---
 
 ### 2026-08-12: winds.mobi has no generation cycle to sync to, and no cache validator
