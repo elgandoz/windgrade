@@ -146,10 +146,15 @@ plus Sigfox connectivity, free for the first year then about €20/year.
   natively** (a built-in target alongside ecowitt.net and Weathercloud). Windy
   can also import from a Wunderground station. Either way the station then
   needs its id adding to the curated table above, which means asking Yann.
-- **Long route.** A native `ecowitt` provider PR. Ecowitt's cloud API is
-  per-account (application key + API key), so it does not fit the "fetch a
-  whole network in one call" shape the other providers use. Try the short route
-  first.
+- **Long route.** A native `ecowitt` provider PR. **Viable, and cheaper than
+  this once said**: probed 2026-08-18 (see `findings.md`), a *public share link*
+  answers `index/get_device_info` and `index/home` with live speed, gust and
+  direction and **no key at all**, so a curated list of `(device_id, authorize)`
+  pairs works like `windy.py` does. The earlier claim that Ecowitt is
+  per-account only was wrong. It is still the last route to try, for four
+  reasons in `findings.md`, the sharpest being that **the JSON key is always
+  `windspeedmph` while the unit is a per-device preference that may be km/h**.
+  Read the `unit` field or publish readings 1.61× too fast.
 
 **Siting matters more than plumbing.** A garden station at 300 m tells a
 paraglider pilot far less than a ridge station, and this tool's whole premise

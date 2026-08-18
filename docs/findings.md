@@ -4,6 +4,65 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-18: Ecowitt share links expose live wind with no key, and the field name lies about the unit
+
+Probed two stations the owner shared as public links (Monte Cucetto and Punta
+Ceresa, both summit sites in the Piemonte gap). **The `authorize` codes and
+`device_id`s are deliberately not recorded here**, since committing them to a
+public repo would publish them far more permanently than a shared link implies.
+They are reproducible from the share URLs the owner supplies.
+
+Two undocumented endpoints answer with nothing but the share link's own
+parameters, no account, no API key:
+
+    GET https://www.ecowitt.net/index/get_device_info?device_id=…&authorize=…
+    GET https://www.ecowitt.net/index/home?device_id=…&authorize=…
+
+`get_device_info` returns name, latitude, longitude, model and timezone.
+`index/home` returns grouped live readings; the `wind` group carries
+`windspeedmph`, `windgustmph`, `winddir`, plus daily maxima.
+
+**This overturns what `data-sources.md` said**, that Ecowitt is per-account only
+and so cannot be fetched network-wide. A curated list of `(device_id,
+authorize)` pairs works exactly like `windy.py` and `wunderground.py` upstream.
+
+**THE TRAP, and it is a wrong-reading one.** Both stations belong to the same
+account (`uid` 74223) and are the same model (WH2650). Same field name, verbatim
+from the two responses on 2026-08-18 at 09:29 local:
+
+| station | key | value | `unit` |
+|---|---|---|---|
+| Cucetto | `windspeedmph` | `0.9` | `mph` |
+| Ceresa | `windspeedmph` | `0.0` | `km/h` |
+| Cucetto | `windgustmph` | `5.8` | `mph` |
+| Ceresa | `windgustmph` | `1.8` | `km/h` |
+
+**The key is always `…mph`; the unit is a per-device display preference.** Read
+the sibling `unit` field, never the key name. Anyone assuming mph from the key
+would publish Ceresa 1.61× too fast, which for a wind display read by pilots is
+the serious kind of wrong. The station owner can flip it at any time from their
+account, so this is not a one-off quirk to hard-code around.
+
+Three smaller problems, each real:
+
+- **No altitude anywhere**, in either endpoint. Windmap prints station altitude,
+  and nudged markers always print it. It would have to come from a DEM lookup or
+  from the owner.
+- **The timestamp is display text**, `"Today 09:29"`, with a separate
+  `UTC_offset` in seconds. There is no ISO timestamp. Staleness is the one rule
+  that protects a pilot from an old reading, so parsing prose for it is a poor
+  foundation.
+- **Both endpoints are internal to their web app**, not a published API. They
+  can change without notice, and their terms have not been checked. The
+  documented route is `api.ecowitt.net/api/v3` with an application key and an
+  API key, which the owner can generate; both stations sharing one `uid` means
+  **one key pair would cover both**.
+
+Verdict: **it works, and it should still not be the first choice.** It proves a
+fallback exists rather than settling the route.
+
+---
+
 ### 2026-08-12: winds.mobi has no generation cycle to sync to, and no cache validator
 
 Asked whether the 10 minute poll could be aligned to winds.mobi's own update
