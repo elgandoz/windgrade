@@ -51,15 +51,29 @@ that are *always* four hours old would render permanently stale. That is worse
 than not having them, because it fills the map with things a pilot must learn to
 ignore.
 
-**Not found: a fresher feed.** The live map at
-`/rischi_naturali/snippets_arpa_graphs/map_sensori/` pulls
-`/rischi_naturali/data/tr/vels/vels.geojson` (89 features) and a sibling
-`velv.geojson` (79). Both regenerate every few minutes, `creation_date` was 9
-minutes old, but **both are station registries and carry no measurement at all**.
-So either the map reads values from the same lagging API, or there is an
-endpoint I did not find. **Cheap way to settle it: open the map, click a
-station, and see what timestamp it shows.** If it is recent, a fresher feed
-exists.
+**No fresher feed exists, checked properly.** The map at
+`/rischi_naturali/snippets_arpa_graphs/map_sensori/` reads exactly five
+properties from `vels.geojson`: `name`, `quote`, `sensor`, `station_type`,
+`creation_date`. **It never renders a measurement.** It is a map of *where the
+anemometers are*, not of what they are reading. `velv.geojson` and
+`dirv.geojson` are the same shape. So the only source of values is `/data_pie`.
+
+**"Realtime" here almost certainly means UNVALIDATED, not low-latency.** That is
+the standard meteorological usage: the provisional feed as opposed to the
+quality-controlled archive published later. ItaliaMeteo says the same of its
+own real-time data, that it "lacks validation" and is "for informational
+purposes". Do not read the endpoint's name as a latency promise.
+
+**Confirmed on a second pass**, six stations from 4560 m to 74 m: newest sample
+`07:00` on every one, all 79 gaps exactly 60 minutes, no missing hours, and the
+age grew from 251 to 257 minutes across two checks six minutes apart. So the
+series is complete and simply late, rather than patchy.
+
+**Still unverified: whether four hours is normal or today was late.** This is one
+day, sampled across ten minutes. Re-run the same probe in the afternoon: if the
+newest sample tracks exactly four hours behind the clock it is systematic; if it
+has caught up, today's pipeline was merely slow and the objection is much
+weaker.
 
 **Licence: CC-BY 4.0**, per the `NOTICE` of the sibling `paragliding-kubernetes`
 project: *"any use must cite Arpa Piemonte"*. Not confirmed from ARPA directly.
