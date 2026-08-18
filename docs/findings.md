@@ -4,6 +4,52 @@ Probe results. Paste raw JSON plus a one-line verdict. Newest first.
 
 ---
 
+### 2026-08-18: MeteoNetwork publishes real siting metadata, and a filter is writable
+
+Three Piemonte stations pulled with an ordinary account (`GET /v3/stations/{code}`,
+**not** a bulk method, so no `BULK` token was needed):
+
+| code | place | alt | `tipology` | `soil_height` | `buildings_distance` | hardware |
+|---|---|---|---|---|---|---|
+| pmn150 | Villar Perosa, Via Cavour 10 | 530 | `E` extra-urban | 300 | **0** | Davis Vantage Pro 2 Plus |
+| pmn503 | Vigone | 260 | `U` urban | 400 | 18 | **ECOWITT WS3900** |
+| pmn117 | Rivalta di Torino | 297 | `S` semi-urban | 200 | 6 | Davis Vantage Pro2 |
+
+**The fields are populated and they discriminate.** Nobody is claiming to be
+perfectly sited; the values vary and they are specific. That was the open
+question and the answer is yes, so **a siting filter is writable in principle**.
+
+Four things the sample settles, three of them traps:
+
+- **`tipology` is self-declared and demonstrably unreliable.** pmn150 calls
+  itself **extra-urban** while reporting **0 m to the nearest building**, and its
+  own name is a street address. **`buildings_distance` is the harder number**;
+  filter on it, not on the letter.
+- **`shielding` and `shielding_type` are irrelevant here.** The enum is about
+  *radiation shields* (`X` none, `C` meteorological, `P` naturally ventilated,
+  `W` forced) which is a **temperature** concern. It says nothing about wind
+  exposure. Do not filter a wind source on it.
+- **`soil_height` is documented in metres and is plainly not.** The schema says
+  "Height of weather station sensors from soil (m)" with example `220`, and these
+  report 200, 300, 400. As metres that is absurd; as centimetres it is 2, 3 and
+  4 m, which is exactly a mast. **Same family as the Ecowitt unit trap: the
+  declared unit is wrong and only the magnitude reveals it.**
+- **The standard token is far tighter than documented.** The spec says 1
+  request/second; **HTTP 429 arrived after about four calls spaced 1.1 s apart**,
+  with *"Too many attempts. Please limit your requests"*. The probe scripts now
+  wait 15 s. Two of the five codes never returned because of this.
+
+**The test is only half done.** All three are valley or plain stations, 260 m to
+530 m. **No ridge or summit station was sampled**, so we still cannot say whether
+the metadata separates good siting from bad, only that it separates *these three
+kinds of bad*. Re-run with three or four mountain stations to finish it.
+
+**Incidental but useful: pmn503 is an `ECOWITT WS3900`.** Ecowitt hardware does
+reach MeteoNetwork in practice, which is the route proposed in section 6 for the
+owner's club stations, now observed rather than assumed.
+
+---
+
 ### 2026-08-18: ARPA Piemonte has the best-sited wind stations available, and publishes them four hours late
 
 Measured against <https://utility.arpa.piemonte.it/api_realtime/> (FastAPI, spec
