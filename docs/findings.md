@@ -95,6 +95,54 @@ from the account, the lesson is the same and it is now demonstrated rather than
 predicted: **the unit cannot be assumed from the key, from the account setting,
 or from a sibling station.** Read the `unit` field on every reading.
 
+### Same day, later: the unit is a request cookie, so a caller can pin it
+
+The owner noticed that changing units on the share page adds
+`&units=1,3,7,12,16,24,28` to the URL. That parameter is **not** forwarded to
+the API. Reading the share page's chunk (`c2.js`), it is fanned out into
+cookies:
+
+    document.cookie = "ousaite_unit_cookie_" + _[r] + "=" + n[r] + ";path=/"
+
+and the data call itself is only `indexHome({device_id, authorize})`. The server
+reads the cookies. So **the unit is chosen by the caller, not by the device**,
+and the earlier entry's "you are stuck with whatever the owner set" is wrong.
+
+Confirmed against Cucetto, the station stuck on mph, holding the other six
+cookies at `1,3,7,12,16,24,28` and varying the third:
+
+| `ousaite_unit_cookie_3` | unit returned | value |
+|---|---|---|
+| 6 | `m/s` | 0.1 |
+| **7** | **`km/h`** | **0.4** |
+| 8 | `knots` | 0.2 |
+| 9 | `mph` | 0.2 |
+| 5 | `mmHg` | 0.0 |
+
+The four wind values agree to rounding (0.1 m/s = 0.36 km/h = 0.19 kt = 0.22
+mph), so the server is converting properly rather than relabelling.
+
+**Two traps remain, and the second is nastier than the first.**
+
+- **The full set must be sent.** Setting `ousaite_unit_cookie_3` alone had no
+  effect at all: the response stayed on the device's own default. Send all
+  seven or the request is silently ignored.
+- **The id space is shared across categories and is not validated.** `5` is a
+  *pressure* id, and asking for it in the wind slot returned `mmHg` rather than
+  an error. So a wrong id does not fail, it returns a plausible-looking number
+  in a unit from another quantity entirely.
+
+**Recipe, for whoever writes this:** send all seven cookies with the wind slot
+pinned to `7`, then **assert the returned `unit` is exactly `km/h` and drop the
+reading if it is not.** Pinning alone is not enough, precisely because a wrong
+id fails silently.
+
+This lowers the severity of the previous entry but does not retire it: reading
+the `unit` field is still mandatory, now as the check on the pin rather than as
+the only defence. It also deepens the "not a published API" caveat, since the
+mechanism is now undocumented *cookie names* rather than merely undocumented
+endpoints.
+
 ---
 
 ### 2026-08-12: winds.mobi has no generation cycle to sync to, and no cache validator
