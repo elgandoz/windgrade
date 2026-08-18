@@ -241,6 +241,44 @@ Windmap there is nothing left to filter on but altitude. Whatever judgement gets
 made must be made upstream, which also means it must be defensible as a rule
 rather than as taste, because someone else will maintain it.
 
+**Settled 2026-08-18, and it retires MeteoNetwork for this purpose.** The three
+Piemonte stations sampled were 260 m, 297 m and 530 m, and the owner confirms
+**those are already the closest MeteoNetwork has to the mountains in his area.**
+So the filter question is moot: a rule is writable (`findings.md` has the fields
+and the traps) but in the Western Alps it would exclude the entire network. You
+cannot filter your way to stations that were never installed.
+
+**The wider conclusion, and it reframes this whole document: the Piemonte gap is
+not an API problem, it is a hardware problem.** Every route here was a search for
+an aggregator that already had the stations. Counting what actually exists:
+
+| source | in/near the Piemonte box | siting |
+|---|---|---|
+| ARPA Piemonte | 46 anemometers | **mountain, 21 above 2000 m** |
+| winds.mobi today | 32, of which 18 pioupiou | **pilot-installed, on take-offs** |
+| MeteoNetwork | valley and plain only | courtyards |
+| meteocloud | 9 | mixed, mostly low |
+
+**Only two of those have stations where a pilot needs them, and one is ARPA.**
+The other is pilots putting up their own hardware, which is already in winds.mobi
+through the `pioupiou` provider. No aggregator can conjure an anemometer onto a
+ridge nobody has climbed with one.
+
+So there are exactly two ways forward and they are not alternatives:
+
+1. **ARPA, if and only if the four-hour latency can be resolved.** It is the only
+   body with instruments on the ridges. That makes the latency question the whole
+   of goal B rather than a detail of it: drop the question and goal B has no
+   answer at all.
+2. **One station at a time, which is what the club is already doing.** Each mast
+   a pilot puts on a take-off is worth more than a hundred courtyards. The job
+   here is to make each addition *cheap*: a working route from an Ecowitt on a
+   mast to a marker in winds.mobi, so that adding the next one is paperwork
+   rather than a project.
+
+Route 2 is unblocked, proven, and already has two stations waiting. Route 1 needs
+one email to a public authority.
+
 **This is testable now, without a `BULK` token.** `GET /v3/stations/{code}` is
 not a bulk method, so a free account can inspect individual stations. Take a
 handful of codes off MeteoNetwork's public live map, half of them the courtyard
