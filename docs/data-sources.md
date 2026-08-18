@@ -162,6 +162,27 @@ Three routes to the same missing networks. They are ordered by how much they
 buy per unit of work, not by how good the data is; all three are plausible, and
 the ordering is the part most likely to be wrong once someone measures.
 
+**The ordering flips depending on who is asking, and that matters more than the
+APIs do.** MeteoNetwork has the better shape but gates bulk access behind being
+an institution; ItaliaMeteo is clumsier but gates nothing:
+
+- **If winds.mobi requests the bulk token, MeteoNetwork wins.** They clear that
+  gate easily, one token upstream serves every client, and the API is a plain
+  area query.
+- **If this is done by one person without winds.mobi's backing, ItaliaMeteo
+  wins**, because there is no gate to clear at all. Its 10 requests/hour sounds
+  restrictive but is not: a provider polling every 10 minutes needs 6, and one
+  extraction can cover a whole country.
+
+So **step 1 is not just polite, it decides the target.** Do not pick between
+these two before Yann answers.
+
+Also worth remembering how MeteoNetwork entered this document: ItaliaMeteo's own
+catalogue lists a MeteoNetwork dataset, and MeteoNetwork's `subnet_exclude`
+example names `mistral`, which is ItaliaMeteo's platform. That is why it looks
+like a superset. **It is a hint from an example value, not a verified fact**, and
+if it turns out to be wrong then ItaliaMeteo is simply the better target.
+
 ### MeteoNetwork, the one to try first
 
 Established 2026-08-17 from the OpenAPI spec at
