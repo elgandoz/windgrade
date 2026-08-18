@@ -223,7 +223,32 @@ an institution; ItaliaMeteo is clumsier but gates nothing:
 - **On siting, ARPA beats both** and MeteoNetwork loses badly: inspected
   2026-08-18, many of its Piemonte stations sit in **town courtyards on valley
   floors**, which is criterion 5 failing in practice. Station count is not the
-  thing to optimise. Its 10 requests/hour sounds
+  thing to optimise.
+
+**A badly sited station is not merely useless here, it is subtractive.** Windmap
+declutters by collision, so two markers closer together than a marker is wide
+cannot both be drawn and one is evicted. Import a valley full of courtyard
+stations and they compete for space with the ridge station a pilot actually
+needs, in the very place where markers are densest. The `alt` line under the
+speed mitigates the reading being misread, but it does nothing about a good
+marker being pushed off the screen by a bad one.
+
+**So MeteoNetwork stays viable only if the good stations can be selected, and
+the selection has to happen in the provider.** winds.mobi normalises every
+source to a common shape, so `tipology`, `soil_height`, `shielding` and
+`buildings_distance` do not survive the trip: by the time a station reaches
+Windmap there is nothing left to filter on but altitude. Whatever judgement gets
+made must be made upstream, which also means it must be defensible as a rule
+rather than as taste, because someone else will maintain it.
+
+**This is testable now, without a `BULK` token.** `GET /v3/stations/{code}` is
+not a bulk method, so a free account can inspect individual stations. Take a
+handful of codes off MeteoNetwork's public live map, half of them the courtyard
+ones and half the ones that looked fine, and check whether `tipology`,
+`buildings_distance` and `soil_height` actually separate them. If those fields
+are populated and honest, a filter is writable and MeteoNetwork is back in play.
+If they are blank or everyone claims to be perfectly sited, no rule can be
+written and the network can only be curated by hand, station by station. Its 10 requests/hour sounds
   restrictive but is not: a provider polling every 10 minutes needs 6, and one
   extraction can cover a whole country.
 
